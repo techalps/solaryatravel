@@ -35,15 +35,9 @@ class SendBookingReminders extends Command
         $bookings = Booking::where('status', BookingStatus::CONFIRMED)
             ->whereBetween('booking_date', [$windowStart->toDateString(), $windowEnd->toDateString()])
             ->whereNull('reminder_48h_sent_at')
-            ->whereNull('participants_completed_at')
             ->get();
 
         foreach ($bookings as $booking) {
-            if ($booking->hasAllParticipantsDetails()) {
-                $booking->update(['participants_completed_at' => now()]);
-                continue;
-            }
-
             try {
                 Mail::to($booking->customer_email)->send(new BookingReminder48h($booking));
                 $booking->update(['reminder_48h_sent_at' => now()]);

@@ -80,6 +80,29 @@
                     </div>
                 </div>
 
+                {{-- Nomi degli adulti aggiuntivi (il primo coincide con l'intestatario, gestito sotto) --}}
+                @if($adultsCount > 1)
+                    <div class="bk-children-wrap mb-15">
+                        @for ($i = 1; $i < $adultsCount; $i++)
+                            <div class="bk-child-row" wire:key="adult-{{ $i }}">
+                                <div class="bk-child-row-head">
+                                    <span class="bk-child-num">Adulto {{ $i + 1 }}</span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="text" wire:model.blur="adults.{{ $i }}.first_name" class="bk-input" placeholder="Nome *">
+                                        @error('adults.'.$i.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" wire:model.blur="adults.{{ $i }}.last_name" class="bk-input" placeholder="Cognome *">
+                                        @error('adults.'.$i.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        @endfor
+                    </div>
+                @endif
+
                 @if($this->childBrackets->isNotEmpty())
                     {{-- Bambini --}}
                     <div class="tg-tour-about-tickets mb-10">
@@ -122,6 +145,16 @@
                                     <div class="bk-child-row-head">
                                         <span class="bk-child-num">Bambino {{ $idx + 1 }}</span>
                                         <button type="button" wire:click="removeChild({{ $idx }})" class="bk-child-remove" title="Rimuovi"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6">
+                                            <input type="text" wire:model.blur="children.{{ $idx }}.first_name" class="bk-input" placeholder="Nome *">
+                                            @error('children.'.$idx.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="text" wire:model.blur="children.{{ $idx }}.last_name" class="bk-input" placeholder="Cognome *">
+                                            @error('children.'.$idx.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                        </div>
                                     </div>
                                     <label class="bk-label">Data di nascita <span class="text-danger">*</span></label>
                                     <input type="date" wire:model.live="children.{{ $idx }}.dob" class="bk-input" max="{{ now()->toDateString() }}">
@@ -209,15 +242,19 @@
             <div class="tg-tour-about-border-doted mb-15"></div>
 
             {{-- Customer fields --}}
-            <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-regular fa-user text-primary me-1"></i>I tuoi dati</span>
+            <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-regular fa-user text-primary me-1"></i>Dati intestatario</span>
             <div class="row g-2 mb-10">
                 <div class="col-6">
-                    <input type="text" wire:model="customer_first_name" class="bk-input" placeholder="Nome *">
+                    <input type="text" wire:model.live.debounce.300ms="customer_first_name" class="bk-input" placeholder="Nome *">
                     @error('customer_first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-6">
-                    <input type="text" wire:model="customer_last_name" class="bk-input" placeholder="Cognome *">
+                    <input type="text" wire:model.live.debounce.300ms="customer_last_name" class="bk-input" placeholder="Cognome *">
                     @error('customer_last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                </div>
+                <div class="col-12">
+                    <input type="text" wire:model.blur="customer_tax_code" class="bk-input text-uppercase" placeholder="Codice fiscale *" maxlength="16">
+                    @error('customer_tax_code') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-12">
                     <input type="email" wire:model="customer_email" class="bk-input" placeholder="Email *">

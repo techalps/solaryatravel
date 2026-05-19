@@ -10,6 +10,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\BoardingController as AdminBoardingController;
+use App\Http\Controllers\Admin\DepartureAssignmentController as AdminDepartureAssignmentController;
 use App\Http\Controllers\Admin\CatamaranController as AdminCatamaranController;
 use App\Http\Controllers\Admin\TourController as AdminTourController;
 use App\Http\Controllers\Admin\AddonController;
@@ -44,7 +45,6 @@ Route::get('/prenotazione/{booking:uuid}', [BookingController::class, 'show'])->
 Route::get('/prenotazione/{booking:uuid}/conferma', [BookingController::class, 'confirmation'])->name('booking.confirmation');
 Route::get('/prenotazione/{booking:uuid}/qr', [BookingController::class, 'qrCode'])->name('booking.qr');
 Route::get('/prenotazione/{booking:uuid}/biglietti', [BookingController::class, 'tickets'])->name('booking.tickets');
-Route::get('/prenotazione/{booking:uuid}/partecipanti', [BookingController::class, 'participants'])->name('booking.participants');
 Route::get('/biglietti/{seat:qr_code}/qr', [BookingController::class, 'seatQr'])->name('booking.seat.qr');
 
 // Payment
@@ -100,6 +100,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/imbarco/{departure}/state', [AdminBoardingController::class, 'state'])->name('boarding.state');
     Route::post('/imbarco/{departure}/scan', [AdminBoardingController::class, 'scan'])->name('boarding.scan');
     Route::post('/imbarco/{departure}/seats/{seat}/toggle', [AdminBoardingController::class, 'toggle'])->name('boarding.toggle');
+
+    // Assegnazione catamarani
+    Route::get('/assegnazione', [AdminDepartureAssignmentController::class, 'index'])->name('assignments.index');
+    Route::get('/assegnazione/{departure}', [AdminDepartureAssignmentController::class, 'show'])->name('assignments.show');
 
     Route::resource('bookings', AdminBookingController::class);
     Route::get('/bookings-api/tours/{tour}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');

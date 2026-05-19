@@ -70,6 +70,11 @@
                             <i class="bi bi-qr-code-scan me-2"></i>Imbarco
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.assignments.index') }}" class="nav-link {{ request()->routeIs('admin.assignments.*') ? 'active' : '' }}">
+                            <i class="bi bi-arrow-left-right me-2"></i>Assegnazione
+                        </a>
+                    </li>
 
                     <li class="px-2 pt-3 pb-1"><div class="section-title text-uppercase fw-bold">Gestione</div></li>
 

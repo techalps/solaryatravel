@@ -20,18 +20,26 @@ class TourController extends Controller
     public function index(Request $request): View
     {
         $validated = $request->validate([
+            'tour' => 'nullable|integer|exists:tours,id',
             'date' => 'nullable|date',
-            'guests' => 'nullable|integer|min:1|max:200',
-            'sort' => 'nullable|in:default,price_asc,price_desc,duration',
+            'adults' => 'nullable|integer|min:0|max:50',
+            'children' => 'nullable|integer|min:0|max:50',
         ]);
+
+        $tourId = $validated['tour'] ?? null;
         $date = $validated['date'] ?? null;
-        $guests = (int) ($validated['guests'] ?? 0);
-        $sort = $validated['sort'] ?? 'default';
-        $isSearch = $request->filled('date') || $request->filled('guests');
+        $adults = (int) ($validated['adults'] ?? 2);
+        $children = (int) ($validated['children'] ?? 0);
+        $guests = $adults + $children;
+        $isSearch = $request->filled('tour') || $request->filled('date');
 
         $query = Tour::active()
             ->ordered()
             ->with(['images' => fn ($q) => $q->orderBy('sort_order')]);
+
+        if ($tourId) {
+            $query->where('id', $tourId);
+        }
 
         $tours = $query->get();
 
@@ -51,23 +59,26 @@ class TourController extends Controller
         // Pre-carica fasce per il "from" price
         $tours->load('ageBrackets');
 
-        // Sorting
-        $tours = match ($sort) {
-            'price_asc' => $tours->sortBy(fn (Tour $t) => $t->price_from ?? PHP_INT_MAX)->values(),
-            'price_desc' => $tours->sortByDesc(fn (Tour $t) => $t->price_from ?? 0)->values(),
-            'duration' => $tours->sortBy(fn (Tour $t) => (float) $t->duration_hours)->values(),
-            default => $tours,
-        };
-
         $search = [
             'isSearch' => $isSearch,
             'date' => $date,
             'guests' => $guests,
-            'sort' => $sort,
+            'tour_id' => $tourId,
             'results' => $tours->count(),
         ];
 
-        return view('tours.index', compact('tours', 'search'));
+        $searchTours = Tour::active()->ordered()->get(['id', 'name']);
+        $tourSearch = [
+            'tour' => $tourId,
+            'date' => $date,
+            'adults' => $adults,
+            'children' => $children,
+        ];
+        $minBookingDate = \Carbon\Carbon::now()
+            ->addHours(config('booking.advance_hours', 24))
+            ->toDateString();
+
+        return view('tours.index', compact('tours', 'search', 'searchTours', 'tourSearch', 'minBookingDate'));
     }
 
     public function show(string $slug, Request $request): View

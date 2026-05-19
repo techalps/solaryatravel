@@ -22,37 +22,14 @@
         </div>
     </div>
 
-    {{-- ============= LISTING ============= --}}
-    <div class="tg-listing-area pt-90 pb-100">
-        <div class="container">
+    {{-- Search box (stesso della home) --}}
+    <div class="pt-30 pb-20">
+        @include('partials.public.tour-search')
+    </div>
 
-            {{-- Filter form --}}
-            <form method="GET" action="{{ route('tours.index') }}" class="mb-4">
-                <div class="row g-2 align-items-end bg-light rounded-4 p-3">
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold mb-1">Data</label>
-                        <input type="date" name="date" value="{{ $search['date'] }}" class="form-control" min="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold mb-1">Persone</label>
-                        <input type="number" name="guests" value="{{ $search['guests'] ?: '' }}" class="form-control" min="1" max="50" placeholder="Numero ospiti">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold mb-1">Ordina per</label>
-                        <select name="sort" class="form-select">
-                            <option value="default" {{ $search['sort']==='default' ? 'selected' : '' }}>Predefinito</option>
-                            <option value="price_asc" {{ $search['sort']==='price_asc' ? 'selected' : '' }}>Prezzo crescente</option>
-                            <option value="price_desc" {{ $search['sort']==='price_desc' ? 'selected' : '' }}>Prezzo decrescente</option>
-                            <option value="duration" {{ $search['sort']==='duration' ? 'selected' : '' }}>Durata</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100 rounded-pill fw-semibold">
-                            <i class="fa-solid fa-magnifying-glass me-1"></i> Cerca
-                        </button>
-                    </div>
-                </div>
-            </form>
+    {{-- ============= LISTING ============= --}}
+    <div class="tg-listing-area pt-30 pb-100">
+        <div class="container">
 
             @if($search['isSearch'])
                 <p class="text-muted mb-3">

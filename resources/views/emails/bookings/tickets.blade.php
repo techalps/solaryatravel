@@ -20,8 +20,8 @@
                     <td style="padding:28px;">
                         <p style="margin:0 0 12px 0;font-size:16px;">Ciao <strong>{{ $booking->customer_first_name }}</strong>,</p>
                         <p style="margin:0 0 16px 0;line-height:1.6;">
-                            il pagamento è andato a buon fine. Qui sotto trovi <strong>un biglietto per ogni passeggero</strong>:
-                            mostralo al personale (da stampa o dal cellulare) al momento dell'imbarco. Verrà scansionato il QR code per registrare la tua presenza.
+                            il pagamento è andato a buon fine. In allegato a questa email trovi il <strong>PDF con i biglietti</strong> di tutti i passeggeri.
+                            Stampalo o mostralo dal cellulare al momento dell'imbarco: ogni biglietto ha un QR code che verrà scansionato per registrare la presenza.
                         </p>
 
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;padding:14px;margin:12px 0 20px 0;">
@@ -36,62 +36,24 @@
                             </tr>
                             @endif
                             <tr>
+                                <td style="padding:4px 0;font-size:13px;color:#64748b;">Passeggeri</td>
+                                <td style="padding:4px 0;font-size:14px;">{{ $booking->seatRecords->count() }}</td>
+                            </tr>
+                            <tr>
                                 <td style="padding:4px 0;font-size:13px;color:#64748b;">Prenotazione</td>
                                 <td style="padding:4px 0;font-size:14px;font-family:ui-monospace,Menlo,monospace;">#{{ $booking->booking_number }}</td>
                             </tr>
                         </table>
 
-                        @foreach($tickets as $t)
-                            @php($seat = $t['seat'])
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:2px dashed #0066cc;border-radius:14px;margin-bottom:16px;background:linear-gradient(135deg,#ffffff 0%,#f7faff 100%);">
-                                <tr>
-                                    <td style="padding:18px;width:55%;vertical-align:top;">
-                                        <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:600;">Passeggero</div>
-                                        <div style="font-size:20px;font-weight:800;color:#0066cc;margin-top:2px;">
-                                            @if($seat->is_primary)<span style="color:#f59e0b;">★</span>@endif
-                                            {{ $seat->guest_full_name ?: $booking->customer_full_name }}
-                                        </div>
-                                        @if($seat->ageBracket)
-                                            <div style="display:inline-block;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;font-size:12px;color:#475569;margin-top:6px;">
-                                                {{ $seat->ageBracket->label }}
-                                            </div>
-                                        @endif
-
-                                        <div style="border-top:1px solid #e5e7eb;margin:14px 0;"></div>
-
-                                        <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:600;">Posto</div>
-                                        <div style="font-size:14px;font-weight:700;color:#0f172a;">#{{ $seat->seat_number ?? $loop->iteration }}</div>
-
-                                        @if($seat->catamaran)
-                                            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:600;margin-top:10px;">Catamarano</div>
-                                            <div style="font-size:14px;font-weight:700;color:#0f172a;">{{ $seat->catamaran->name }}</div>
-                                        @endif
-                                    </td>
-                                    <td style="padding:18px;width:45%;text-align:center;border-left:2px dashed #cbd5e1;vertical-align:middle;">
-                                        <img src="{{ $t['qr_data'] }}" alt="QR biglietto" style="display:block;margin:0 auto;width:180px;height:180px;background:#fff;padding:6px;border-radius:6px;">
-                                        <div style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#475569;margin-top:8px;">{{ $seat->qr_code }}</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        @endforeach
-
-                        @if(!$booking->hasAllParticipantsDetails())
-                            <div style="background:#fee2e2;border:1px solid #fca5a5;padding:18px;border-radius:10px;margin-top:18px;">
-                                <p style="margin:0 0 10px 0;font-size:14px;color:#991b1b;font-weight:700;">
-                                    ⚠️ Manca un passaggio: dati partecipanti
-                                </p>
-                                <p style="margin:0 0 14px 0;font-size:13px;color:#7f1d1d;line-height:1.6;">
-                                    Per legge serve nome, cognome e codice fiscale di ogni passeggero. Senza questi dati l'imbarco non potrà essere effettuato.
-                                </p>
-                                <a href="{{ $booking->participantsUrl() }}" style="display:inline-block;background:#dc2626;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
-                                    Compila ora i dati partecipanti
-                                </a>
-                            </div>
-                        @endif
+                        <div style="background:#dbeafe;border-left:4px solid #0066cc;padding:14px;border-radius:6px;margin-top:6px;">
+                            <p style="margin:0;font-size:14px;color:#0c4a6e;line-height:1.6;">
+                                <strong>📎 In allegato:</strong> biglietti-{{ $booking->booking_number }}.pdf
+                            </p>
+                        </div>
 
                         <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:6px;margin-top:18px;">
                             <p style="margin:0;font-size:13px;color:#78350f;line-height:1.6;">
-                                <strong>Suggerimento:</strong> presentati al molo almeno 15 minuti prima della partenza con il QR code di ogni passeggero (anche dal cellulare).
+                                <strong>Suggerimento:</strong> presentati al molo almeno 15 minuti prima della partenza con il PDF dei biglietti (stampato o sul cellulare).
                             </p>
                         </div>
                     </td>

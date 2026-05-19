@@ -3,12 +3,14 @@
 namespace App\Mail;
 
 use App\Models\Booking;
+use App\Services\QrCodeService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class BookingTickets extends Mailable
 {
@@ -27,25 +29,37 @@ class BookingTickets extends Mailable
     {
         $this->booking->loadMissing(['tour', 'departure', 'seatRecords.ageBracket', 'seatRecords.catamaran']);
 
-        // Pre-generate QR PNG bytes per ogni seat (per essere embeddabili nel template)
-        $tickets = $this->booking->seatRecords->map(function ($seat) {
-            $png = QrCode::format('png')
-                ->size(280)
-                ->margin(1)
-                ->errorCorrection('H')
-                ->generate($seat->qr_code);
-            return [
-                'seat' => $seat,
-                'qr_data' => 'data:image/png;base64,' . base64_encode($png),
-            ];
-        });
-
         return new Content(
             view: 'emails.bookings.tickets',
             with: [
                 'booking' => $this->booking,
-                'tickets' => $tickets,
             ],
         );
+    }
+
+    /**
+     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     */
+    public function attachments(): array
+    {
+        $this->booking->loadMissing(['tour', 'departure', 'seatRecords.ageBracket', 'seatRecords.catamaran']);
+
+        $qr = app(QrCodeService::class);
+        $tickets = $this->booking->seatRecords->map(fn ($seat) => [
+            'seat' => $seat,
+            'qr_data' => $qr->pngDataUri($seat->qr_code, 320, 10),
+        ]);
+
+        $pdf = Pdf::loadView('pdf.tickets', [
+            'booking' => $this->booking,
+            'tickets' => $tickets,
+        ])->setPaper('a4');
+
+        $filename = 'biglietti-' . $this->booking->booking_number . '.pdf';
+
+        return [
+            Attachment::fromData(fn () => $pdf->output(), $filename)
+                ->withMime('application/pdf'),
+        ];
     }
 }

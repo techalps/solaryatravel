@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Completa i dati dei partecipanti</title>
+<title>Prenotazione annullata</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#0f172a;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 0;">
@@ -10,9 +10,9 @@
         <td align="center">
             <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,.06);">
                 <tr>
-                    <td style="background:linear-gradient(135deg,#0066cc 0%,#0ea5e9 100%);padding:32px 28px;color:#ffffff;">
+                    <td style="background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%);padding:32px 28px;color:#ffffff;">
                         <div style="font-size:14px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">{{ config('app.name') }}</div>
-                        <div style="font-size:22px;font-weight:700;margin-top:4px;">Manca solo un passaggio</div>
+                        <div style="font-size:24px;font-weight:700;margin-top:4px;">Prenotazione annullata</div>
                     </td>
                 </tr>
 
@@ -20,19 +20,8 @@
                     <td style="padding:28px;">
                         <p style="margin:0 0 12px 0;font-size:16px;">Ciao <strong>{{ $booking->customer_first_name }}</strong>,</p>
                         <p style="margin:0 0 16px 0;line-height:1.6;">
-                            grazie per aver completato il pagamento della prenotazione <strong>#{{ $booking->booking_number }}</strong>.
-                            Per legge dobbiamo registrare i dati di tutti i passeggeri prima dell'imbarco.
+                            ti confermiamo che la tua prenotazione <strong>#{{ $booking->booking_number }}</strong> è stata annullata.
                         </p>
-                        <p style="margin:0 0 16px 0;line-height:1.6;">
-                            Compila <strong>nome, cognome e codice fiscale</strong> di ciascun partecipante (per i bambini la data di nascita
-                            è già salvata): ti basta un minuto.
-                        </p>
-
-                        <div style="margin:24px 0;text-align:center;">
-                            <a href="{{ $url }}" style="display:inline-block;background:#0066cc;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
-                                Compila i dati partecipanti
-                            </a>
-                        </div>
 
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;padding:14px;margin:12px 0 20px 0;">
                             <tr>
@@ -46,25 +35,28 @@
                             </tr>
                             @endif
                             <tr>
-                                <td style="padding:4px 0;font-size:13px;color:#64748b;">Partecipanti</td>
-                                <td style="padding:4px 0;font-size:14px;">{{ $booking->seatRecords()->count() }} posti</td>
+                                <td style="padding:4px 0;font-size:13px;color:#64748b;">Annullata il</td>
+                                <td style="padding:4px 0;font-size:14px;">{{ optional($booking->cancelled_at)->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i') }}</td>
                             </tr>
                         </table>
 
-                        <p style="margin:0 0 8px 0;font-size:13px;color:#64748b;line-height:1.6;">
-                            ⚠️ Senza i dati dei partecipanti l'imbarco non potrà essere effettuato. Ricordati di completarli prima della partenza.
-                        </p>
+                        @if($reason)
+                            <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px;border-radius:6px;margin-top:6px;">
+                                <p style="margin:0 0 6px 0;font-size:12px;color:#991b1b;text-transform:uppercase;letter-spacing:.08em;font-weight:700;">Motivazione</p>
+                                <p style="margin:0;font-size:14px;color:#7f1d1d;line-height:1.6;">{{ $reason }}</p>
+                            </div>
+                        @endif
 
-                        <p style="margin:16px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;">
-                            Se il link sopra non funziona, copia questo nel browser:<br>
-                            <span style="word-break:break-all;font-family:ui-monospace,Menlo,monospace;">{{ $url }}</span>
+                        <p style="margin:18px 0 0 0;line-height:1.6;">
+                            Se hai dubbi o ritieni che ci sia stato un errore, rispondi a questa email o contattaci.
+                            Per eventuali rimborsi ti aggiorneremo con una mail dedicata.
                         </p>
                     </td>
                 </tr>
 
                 <tr>
-                    <td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8;">
-                        © {{ now()->year }} {{ config('app.name') }}
+                    <td style="background:#f8fafc;padding:18px 28px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;text-align:center;">
+                        © {{ date('Y') }} {{ config('app.name') }}
                     </td>
                 </tr>
             </table>

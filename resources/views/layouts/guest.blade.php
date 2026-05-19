@@ -13,7 +13,7 @@
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body style="background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 50%, #fefce8 100%); min-height: 100vh;">
+<body style="background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 50%, #ffffff 100%); min-height: 100vh;">
     <div class="d-flex flex-column align-items-center justify-content-center px-3 py-5 min-vh-100">
 
         <a href="{{ route('home') }}" class="text-decoration-none mb-4">

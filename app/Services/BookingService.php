@@ -128,7 +128,6 @@ class BookingService
                 'locale' => app()->getLocale(),
                 'ip_address' => request()?->ip(),
                 'user_agent' => request()?->userAgent(),
-                'participants_token' => \Illuminate\Support\Str::random(48),
                 'metadata' => [
                     'pricing' => $pricing,
                     'distribution' => $assignment,
@@ -460,10 +459,11 @@ class BookingService
 
         $seatNumber = 1;
         $countingIdx = 0;
+        $guestIdx = 0; // indice nell'array $guests (parallelo all'ordine: adulti, poi bambini come passati)
 
         // Adulti
         for ($a = 0; $a < $adultsCount; $a++) {
-            $guest = $guests[$countingIdx] ?? [];
+            $guest = $guests[$guestIdx] ?? [];
             BookingSeat::create([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
@@ -473,20 +473,25 @@ class BookingService
                 'guest_first_name' => $guest['first_name'] ?? null,
                 'guest_last_name' => $guest['last_name'] ?? null,
                 'guest_date_of_birth' => $guest['date_of_birth'] ?? null,
+                'tax_code' => $a === 0 ? ($guest['tax_code'] ?? null) : null, // CF solo sull'intestatario
                 'is_primary' => $a === 0,
             ]);
             $countingIdx++;
+            $guestIdx++;
         }
 
-        // Bambini: prima quelli che occupano un posto (counts_as_seat=true), poi gli infanti
+        // Bambini: prima quelli che occupano un posto (counts_as_seat=true), poi gli infanti.
+        // Manteniamo per ciascun bambino il riferimento all'indice originale così da recuperare
+        // nome/cognome dall'array $guests (passato nell'ordine: adulti, poi bambini in ordine).
         $countingChildren = [];
         $nonCountingChildren = [];
-        foreach ($children as $child) {
+        foreach ($children as $childIdx => $child) {
             $bracket = $brackets->get($child['bracket_id']);
             if (!$bracket) {
                 continue;
             }
-            $entry = ['child' => $child, 'bracket' => $bracket];
+            $guest = $guests[$adultsCount + $childIdx] ?? [];
+            $entry = ['child' => $child, 'bracket' => $bracket, 'guest' => $guest];
             if ($bracket->counts_as_seat) {
                 $countingChildren[] = $entry;
             } else {
@@ -502,6 +507,8 @@ class BookingService
                 'catamaran_id' => $catamaranQueue[$countingIdx] ?? null,
                 'tour_age_bracket_id' => $bracket->id,
                 'price_paid' => (float) $bracket->price * (float) $booking->departure->price_modifier,
+                'guest_first_name' => $entry['guest']['first_name'] ?? ($entry['child']['first_name'] ?? null),
+                'guest_last_name' => $entry['guest']['last_name'] ?? ($entry['child']['last_name'] ?? null),
                 'guest_date_of_birth' => $entry['child']['dob'],
                 'is_primary' => false,
             ]);
@@ -518,6 +525,8 @@ class BookingService
                 'catamaran_id' => $defaultCatamaran,
                 'tour_age_bracket_id' => $bracket->id,
                 'price_paid' => (float) $bracket->price * (float) $booking->departure->price_modifier,
+                'guest_first_name' => $entry['guest']['first_name'] ?? ($entry['child']['first_name'] ?? null),
+                'guest_last_name' => $entry['guest']['last_name'] ?? ($entry['child']['last_name'] ?? null),
                 'guest_date_of_birth' => $entry['child']['dob'],
                 'is_primary' => false,
             ]);

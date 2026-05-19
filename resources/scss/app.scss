@@ -22,13 +22,13 @@ $navy-700:  #334155;
 $gold-400:  #facc15;
 $gold-500:  #eab308;
 $gold-600:  #ca8a04;
-$sand-50:   #fefce8;
+$sand-50:   #ffffff;
 $sand-100:  #fef9c3;
 $sand-200:  #fde68a;
 $sand-300:  #fcd34d;
 
 // Body
-$body-bg:    #fefce8; // sand-50
+$body-bg:    #ffffff; // sand-50
 $body-color: $navy-900;
 
 // Typography
@@ -204,6 +204,24 @@ $navbar-padding-y: .75rem;
 .form-select:focus {
     border-color: rgba(2,132,199,.5);
     box-shadow: 0 0 0 .2rem rgba(2,132,199,.15);
+}
+
+// Disattiva il giallino di autofill (Chrome, Edge, Safari su iOS)
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+    box-shadow: 0 0 0 1000px #fff inset !important;
+    -webkit-text-fill-color: #0f172a !important;
+    caret-color: #0f172a;
+    transition: background-color 9999s ease-out 0s, color 9999s ease-out 0s;
 }
 
 // Bootstrap icons

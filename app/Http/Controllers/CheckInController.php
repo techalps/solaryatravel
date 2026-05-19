@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\CheckIn;
 use App\Enums\BookingStatus;
+use App\Services\QrCodeService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CheckInController extends Controller
 {
@@ -86,20 +86,6 @@ class CheckInController extends Controller
                 'success' => false,
                 'message' => 'Questa prenotazione non è per oggi',
                 'booking_date' => $booking->booking_date->format('d/m/Y'),
-            ], 400);
-        }
-
-        // Block if participant data incomplete
-        if (!$booking->hasAllParticipantsDetails()) {
-            $missing = $booking->seatRecords()
-                ->where(function ($q) {
-                    $q->whereNull('guest_first_name')->orWhere('guest_first_name', '');
-                })
-                ->count();
-            return response()->json([
-                'success' => false,
-                'message' => "Dati partecipanti incompleti ({$missing} mancanti). Il cliente deve compilarli prima dell'imbarco.",
-                'participants_url' => $booking->participantsUrl(),
             ], 400);
         }
 
@@ -205,11 +191,7 @@ class CheckInController extends Controller
             $booking->verification_code
         );
 
-        $qrCode = QrCode::format('png')
-            ->size(300)
-            ->margin(2)
-            ->errorCorrection('H')
-            ->generate($qrContent);
+        $qrCode = app(QrCodeService::class)->png($qrContent, 300, 10);
 
         return response($qrCode)
             ->header('Content-Type', 'image/png')

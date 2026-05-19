@@ -59,7 +59,15 @@ class HomeController extends Controller
             ->addHours(config('booking.advance_hours', 24))
             ->toDateString();
 
-        return view('home', compact('tours', 'minPrice', 'testimonials', 'stats', 'minBookingDate'));
+        $searchTours = Tour::active()->ordered()->get(['id', 'name']);
+        $tourSearch = [
+            'tour' => null,
+            'date' => null,
+            'adults' => 2,
+            'children' => 0,
+        ];
+
+        return view('home', compact('tours', 'minPrice', 'testimonials', 'stats', 'minBookingDate', 'searchTours', 'tourSearch'));
     }
 }
 

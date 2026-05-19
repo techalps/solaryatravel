@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\BookingStatus;
+use App\Observers\BookingObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy([BookingObserver::class])]
 class Booking extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
@@ -50,9 +53,6 @@ class Booking extends Model
         'metadata',
         'payment_link_sent_at',
         'tickets_sent_at',
-        'participants_token',
-        'participants_details_requested_at',
-        'participants_completed_at',
         'reminder_48h_sent_at',
         'reminder_24h_sent_at',
         'checkout_url',
@@ -77,8 +77,6 @@ class Booking extends Model
         'cancelled_at' => 'datetime',
         'payment_link_sent_at' => 'datetime',
         'tickets_sent_at' => 'datetime',
-        'participants_details_requested_at' => 'datetime',
-        'participants_completed_at' => 'datetime',
         'reminder_48h_sent_at' => 'datetime',
         'reminder_24h_sent_at' => 'datetime',
     ];
@@ -185,32 +183,7 @@ class Booking extends Model
     public function canBeCheckedIn(): bool
     {
         return $this->isConfirmed()
-            && $this->booking_date->isToday()
-            && $this->hasAllParticipantsDetails();
-    }
-
-    /**
-     * Tutti i BookingSeat hanno nome e cognome compilati?
-     * I bambini hanno la DOB salvata al booking ma il nome va compilato dopo.
-     */
-    public function hasAllParticipantsDetails(): bool
-    {
-        return !$this->seatRecords()
-            ->where(function ($q) {
-                $q->whereNull('guest_first_name')
-                  ->orWhere('guest_first_name', '')
-                  ->orWhereNull('guest_last_name')
-                  ->orWhere('guest_last_name', '');
-            })
-            ->exists();
-    }
-
-    public function participantsUrl(): string
-    {
-        return route('booking.participants', [
-            'booking' => $this->uuid,
-            'token' => $this->participants_token,
-        ]);
+            && $this->booking_date->isToday();
     }
 
     public function canBeCancelled(): bool

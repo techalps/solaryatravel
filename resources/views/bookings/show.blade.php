@@ -14,7 +14,6 @@
     ];
     $key = $booking->status?->value ?? (string) $booking->status;
     $s = $statusMap[$key] ?? $statusMap['pending'];
-    $missingDetails = !$booking->hasAllParticipantsDetails();
 @endphp
 
 @section('content')
@@ -49,28 +48,6 @@
 
             {{-- MAIN COLUMN --}}
             <div class="col-lg-8">
-
-                {{-- Avviso dati partecipanti mancanti --}}
-                @if($missingDetails && $booking->participants_token && $key !== 'cancelled')
-                    <div class="bk-show-card mb-4" style="background:#fef2f2;border-color:#fecaca">
-                        <div class="d-flex align-items-start gap-3">
-                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                                 style="width:44px;height:44px;background:#fee2e2;color:#dc2626">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h5 class="fw-bold mb-1" style="color:#991b1b">Mancano i dati dei partecipanti</h5>
-                                <p class="mb-3 small" style="color:#7f1d1d">
-                                    Per legge servono <strong>nome, cognome e codice fiscale</strong> di tutti i passeggeri prima dell'imbarco.
-                                </p>
-                                <a href="{{ route('booking.participants', ['booking' => $booking->uuid, 'token' => $booking->participants_token]) }}"
-                                   class="btn btn-danger rounded-pill px-3 fw-semibold">
-                                    <i class="fa-solid fa-user-pen me-2"></i>Compila ora i dati
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                @endif
 
                 {{-- Tour & Departure --}}
                 <div class="bk-show-card mb-4">

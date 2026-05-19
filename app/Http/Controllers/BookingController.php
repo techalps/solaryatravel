@@ -112,8 +112,7 @@ class BookingController extends Controller
     public function qrCode(Booking $booking)
     {
         $code = $booking->qr_code ?? $booking->uuid;
-        // Genera al volo - SimpleSoftwareIO QR Code è già in vendor/
-        $qr = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(300)->generate($code);
+        $qr = app(\App\Services\QrCodeService::class)->png($code, 300);
         return response($qr)->header('Content-Type', 'image/png');
     }
 
@@ -136,30 +135,11 @@ class BookingController extends Controller
     }
 
     /**
-     * Form pubblico per compilare i dati dei partecipanti.
-     * Accesso via token nel link mandato in mail dopo il pagamento.
-     */
-    public function participants(Request $request, Booking $booking): View|RedirectResponse
-    {
-        $token = $request->query('token');
-        if (!$booking->participants_token || $token !== $booking->participants_token) {
-            abort(403, 'Link non valido o scaduto.');
-        }
-
-        $booking->load(['tour', 'departure', 'seatRecords.ageBracket']);
-        return view('bookings.participants', compact('booking'));
-    }
-
-    /**
      * Restituisce il PNG del QR di un singolo posto.
      */
     public function seatQr(BookingSeat $seat)
     {
-        $png = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
-            ->size(300)
-            ->margin(1)
-            ->errorCorrection('H')
-            ->generate($seat->qr_code);
+        $png = app(\App\Services\QrCodeService::class)->png($seat->qr_code, 300);
         return response($png)->header('Content-Type', 'image/png');
     }
 

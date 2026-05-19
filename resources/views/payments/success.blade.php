@@ -70,9 +70,6 @@
                                     <h4 class="tg-tour-about-title mb-10 text-center"><i class="fa-solid fa-qrcode text-primary me-2"></i>Biglietti di tutti i partecipanti</h4>
                                     <p class="text-muted small text-center mb-4">
                                         Ogni partecipante ha il proprio biglietto.
-                                        @if(!$booking->hasAllParticipantsDetails())
-                                            I nomi compariranno qui dopo che avrai compilato i dati partecipanti.
-                                        @endif
                                     </p>
 
                                     <div class="row g-3 justify-content-center">
@@ -101,29 +98,6 @@
                                         <a href="{{ route('booking.tickets', $booking->uuid) }}" class="btn btn-outline-primary rounded-pill px-3">
                                             <i class="fa-solid fa-print me-2"></i>Apri la pagina biglietti (stampabile)
                                         </a>
-                                    </div>
-                                </div>
-                                <div class="tg-tour-about-border mb-30"></div>
-                            @endif
-
-                            {{-- Avviso dati partecipanti mancanti --}}
-                            @if(!$booking->hasAllParticipantsDetails() && $booking->participants_token)
-                                <div class="tg-tour-about-inner mb-30">
-                                    <div class="p-4 rounded-3" style="background:#fef2f2;border:1px solid #fecaca">
-                                        <div class="d-flex align-items-start gap-3">
-                                            <i class="fa-solid fa-triangle-exclamation text-danger fs-3 mt-1"></i>
-                                            <div class="flex-grow-1">
-                                                <h5 class="fw-bold mb-2" style="color:#991b1b">Mancano i dati dei partecipanti</h5>
-                                                <p class="mb-3 small" style="color:#7f1d1d">
-                                                    Per legge servono <strong>nome, cognome e codice fiscale</strong> di tutti i partecipanti
-                                                    prima dell'imbarco. Compilali ora — bastano due minuti.
-                                                </p>
-                                                <a href="{{ route('booking.participants', ['booking' => $booking->uuid, 'token' => $booking->participants_token]) }}"
-                                                   class="btn btn-danger rounded-pill px-3">
-                                                    <i class="fa-solid fa-user-pen me-2"></i>Compila i dati partecipanti
-                                                </a>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="tg-tour-about-border mb-30"></div>

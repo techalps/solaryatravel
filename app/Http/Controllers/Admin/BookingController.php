@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Mail\BookingCancelled;
 use App\Mail\BookingPaymentLink;
+use App\Mail\BookingRefunded;
 use App\Mail\BookingTickets;
 use App\Models\Booking;
 use App\Models\BookingSeat;
@@ -281,22 +284,95 @@ class BookingController extends Controller
                 ? $request->input('reason')
                 : 'Annullata da amministratore';
             $this->bookingService->cancel($booking, $reason);
-            return back()->with('success', 'Prenotazione annullata.');
+
+            try {
+                Mail::to($booking->customer_email)->send(new BookingCancelled($booking->fresh(), $reason));
+            } catch (\Throwable $e) {
+                Log::error('Invio mail annullamento fallito', [
+                    'booking' => $booking->booking_number,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return back()->with('success', 'Prenotazione annullata. Email inviata al cliente.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    public function refund(Booking $booking): RedirectResponse
+    public function refund(Request $request, Booking $booking): RedirectResponse
     {
-        $booking->update(['status' => 'refunded']);
-        return back()->with('success', 'Prenotazione marcata come rimborsata.');
+        $validated = $request->validate([
+            'amount' => 'nullable|numeric|min:0|max:' . ((float) $booking->total_amount),
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $amount = isset($validated['amount']) && $validated['amount'] !== null && $validated['amount'] !== ''
+            ? (float) $validated['amount']
+            : (float) $booking->total_amount;
+        $note = $validated['note'] ?? null;
+
+        // 1) Aggiorna la prenotazione
+        $booking->update(['status' => BookingStatus::REFUNDED]);
+
+        // 2) Rifletti il rimborso sui Payment del booking così la pagina Pagamenti
+        //    mostra lo stato corretto (refunded / partially_refunded).
+        $payments = $booking->payments()
+            ->whereIn('status', [PaymentStatus::SUCCEEDED, PaymentStatus::PARTIALLY_REFUNDED])
+            ->orderBy('paid_at')
+            ->get();
+
+        $remaining = $amount;
+        foreach ($payments as $payment) {
+            if ($remaining <= 0) {
+                break;
+            }
+            $alreadyRefunded = (float) $payment->refunded_amount;
+            $refundable = max(0, (float) $payment->amount - $alreadyRefunded);
+            if ($refundable <= 0) {
+                continue;
+            }
+            $apply = min($remaining, $refundable);
+            $totalRefunded = $alreadyRefunded + $apply;
+            $isFull = $totalRefunded >= (float) $payment->amount - 0.005;
+
+            $payment->update([
+                'status' => $isFull ? PaymentStatus::REFUNDED : PaymentStatus::PARTIALLY_REFUNDED,
+                'refunded_amount' => round($totalRefunded, 2),
+                'refund_reason' => $note ?: 'Rimborso da admin (booking)',
+                'refunded_at' => now(),
+            ]);
+
+            $remaining -= $apply;
+        }
+
+        // 3) Mail al cliente
+        try {
+            Mail::to($booking->customer_email)->send(new BookingRefunded($booking->fresh(), $amount, $note));
+        } catch (\Throwable $e) {
+            Log::error('Invio mail rimborso fallito', [
+                'booking' => $booking->booking_number,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Rimborso registrato sulla prenotazione, ma l\'invio email è fallito (controlla il log).');
+        }
+
+        return back()->with('success', 'Rimborso registrato (€' . number_format($amount, 2, ',', '.') . '). Email inviata al cliente.');
     }
 
     public function resendConfirmation(Booking $booking): RedirectResponse
     {
-        // TODO: integrazione email
-        return back()->with('success', 'Conferma reinviata.');
+        try {
+            Mail::to($booking->customer_email)->send(new BookingTickets($booking));
+            $booking->update(['tickets_sent_at' => now()]);
+            return back()->with('success', 'Biglietti reinviati a ' . $booking->customer_email . '.');
+        } catch (\Throwable $e) {
+            Log::error('Reinvio biglietti fallito', [
+                'booking' => $booking->booking_number,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Invio fallito: ' . $e->getMessage());
+        }
     }
 
     public function export(Request $request)

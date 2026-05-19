@@ -212,13 +212,23 @@
                                         </form>
                                     @endif
                                     @if(!in_array($sv, ['cancelled', 'completed']))
-                                        <form action="{{ route('admin.bookings.cancel', $booking) }}" method="POST" class="d-inline"
-                                              onsubmit="return confirm('Sei sicuro di voler annullare questa prenotazione?')">
-                                            @csrf
-                                            <button type="submit" class="dash-icon-btn is-danger" title="Annulla" data-bs-toggle="tooltip">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="dash-icon-btn is-danger"
+                                                title="Annulla" data-bs-toggle="modal"
+                                                data-bs-target="#cancelBookingModal"
+                                                data-action="{{ route('admin.bookings.cancel', $booking) }}"
+                                                data-booking="{{ $booking->booking_number }}">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    @endif
+                                    @if($sv === 'cancelled' && (float) $booking->total_amount > 0)
+                                        <button type="button" class="dash-icon-btn is-info"
+                                                title="Rimborsa" data-bs-toggle="modal"
+                                                data-bs-target="#refundBookingModal"
+                                                data-action="{{ route('admin.bookings.refund', $booking) }}"
+                                                data-booking="{{ $booking->booking_number }}"
+                                                data-total="{{ number_format((float) $booking->total_amount, 2, '.', '') }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
                                     @endif
                                 </div>
                             </td>
@@ -255,12 +265,106 @@
             </div>
         @endif
     </div>
+
+    {{-- Modal annulla (azione impostata dinamicamente dal bottone cliccato) --}}
+    <div class="modal fade" id="cancelBookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form id="cancelBookingForm" method="POST" class="modal-content rounded-4 border-0" action="">
+                @csrf
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Annulla prenotazione <span id="cancelBookingNumber" class="text-muted small ms-1"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Indica il motivo dell'annullamento. Verrà registrato nello storico e inviato per email al cliente.</p>
+                    <textarea name="reason" rows="3" class="form-control rounded-3" required maxlength="500"
+                              placeholder="Es. richiesta del cliente, maltempo…"></textarea>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-3 fw-semibold">
+                        <i class="bi bi-x-lg me-2"></i>Annulla prenotazione
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal rimborso (azione e totale impostati dinamicamente) --}}
+    <div class="modal fade" id="refundBookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form id="refundBookingForm" method="POST" class="modal-content rounded-4 border-0" action="">
+                @csrf
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Registra rimborso <span id="refundBookingNumber" class="text-muted small ms-1"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Marca la prenotazione come rimborsata e invia una mail al cliente con i dettagli.
+                        L'accredito sulla carta va effettuato a parte (gestionale Stripe / banca).
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Importo rimborsato</label>
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            <input type="number" step="0.01" min="0" name="amount" id="refundAmount" class="form-control" value="0.00">
+                        </div>
+                        <small class="text-muted">Totale prenotazione: € <span id="refundBookingTotal">0,00</span></small>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Nota (opzionale)</label>
+                        <textarea name="note" rows="2" class="form-control rounded-3" maxlength="500"
+                                  placeholder="Es. rimborso parziale per spese di gestione…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>
+                    <button type="submit" class="btn btn-info text-white rounded-pill px-3 fw-semibold">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Registra rimborso
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+        var cancelModal = document.getElementById('cancelBookingModal');
+        if (cancelModal) {
+            var form = document.getElementById('cancelBookingForm');
+            var label = document.getElementById('cancelBookingNumber');
+            cancelModal.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;
+                if (!btn) return;
+                form.action = btn.getAttribute('data-action') || '';
+                label.textContent = '#' + (btn.getAttribute('data-booking') || '');
+                form.querySelector('textarea[name="reason"]').value = '';
+            });
+        }
+
+        var refundModal = document.getElementById('refundBookingModal');
+        if (refundModal) {
+            var rForm = document.getElementById('refundBookingForm');
+            var rLabel = document.getElementById('refundBookingNumber');
+            var rTotal = document.getElementById('refundBookingTotal');
+            var rAmount = document.getElementById('refundAmount');
+            refundModal.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;
+                if (!btn) return;
+                var total = parseFloat(btn.getAttribute('data-total') || '0') || 0;
+                rForm.action = btn.getAttribute('data-action') || '';
+                rLabel.textContent = '#' + (btn.getAttribute('data-booking') || '');
+                rTotal.textContent = total.toFixed(2).replace('.', ',');
+                rAmount.value = total.toFixed(2);
+                rAmount.max = total.toFixed(2);
+                rForm.querySelector('textarea[name="note"]').value = '';
+            });
+        }
     });
 </script>
 @endpush

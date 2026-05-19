@@ -36,9 +36,14 @@
                 <span class="ms-2"><i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($departure->start_time)->format('H:i') }}@if($departure->end_time) – {{ \Carbon\Carbon::parse($departure->end_time)->format('H:i') }}@endif</span>
             </p>
         </div>
-        <a href="{{ route('admin.boarding.index') }}" class="btn btn-outline-secondary rounded-pill px-3">
-            <i class="bi bi-arrow-left me-1"></i>Tutte le partenze
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('admin.assignments.show', $departure) }}" class="btn btn-outline-primary rounded-pill px-3">
+                <i class="bi bi-water me-1"></i>Gestisci catamarani
+            </a>
+            <a href="{{ route('admin.boarding.index') }}" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i>Tutte le partenze
+            </a>
+        </div>
     </div>
 
     <div class="row g-3">

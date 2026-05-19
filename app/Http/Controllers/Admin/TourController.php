@@ -61,12 +61,9 @@ class TourController extends Controller
         });
     }
 
-    public function show(Tour $tour): View
+    public function show(Tour $tour): RedirectResponse
     {
-        $tour->load(['ageBrackets', 'images', 'catamarans', 'periods', 'catamaranBlocks']);
-        $upcomingDepartures = app(\App\Services\DepartureGeneratorService::class)
-            ->upcoming($tour, 60);
-        return view('admin.tours.show', compact('tour', 'upcomingDepartures'));
+        return redirect()->route('admin.tours.edit', $tour);
     }
 
     public function edit(Tour $tour): View

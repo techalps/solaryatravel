@@ -9,25 +9,31 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class BookingReminder48h extends Mailable
+class BookingCancelled extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Booking $booking) {}
+    public function __construct(
+        public Booking $booking,
+        public ?string $reason = null,
+    ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Tour fra 2 giorni — Prenotazione ' . $this->booking->booking_number,
+            subject: 'Prenotazione annullata · #' . $this->booking->booking_number,
         );
     }
 
     public function content(): Content
     {
+        $this->booking->loadMissing(['tour', 'departure']);
+
         return new Content(
-            view: 'emails.bookings.reminder-48h',
+            view: 'emails.bookings.cancelled',
             with: [
                 'booking' => $this->booking,
+                'reason' => $this->reason ?: $this->booking->cancellation_reason,
             ],
         );
     }

@@ -42,6 +42,11 @@
             <a href="{{ route('admin.bookings.edit', $booking) }}" class="btn btn-light rounded-pill border px-3 fw-semibold">
                 <i class="bi bi-pencil me-2"></i>Modifica
             </a>
+            @if ($booking->departure)
+                <a href="{{ route('admin.assignments.show', $booking->departure) }}" class="btn btn-light rounded-pill border px-3 fw-semibold">
+                    <i class="bi bi-water me-2"></i>Gestisci catamarani
+                </a>
+            @endif
             @if ($statusValue === 'pending')
                 <form action="{{ route('admin.bookings.confirm', $booking) }}" method="POST" class="d-inline">
                     @csrf
@@ -54,6 +59,12 @@
                 <button type="button" class="btn btn-outline-danger rounded-pill px-3 fw-semibold"
                         data-bs-toggle="modal" data-bs-target="#cancelBookingModal">
                     <i class="bi bi-x-lg me-2"></i>Annulla
+                </button>
+            @endif
+            @if ($statusValue === 'cancelled' && (float) $booking->total_amount > 0)
+                <button type="button" class="btn btn-outline-info rounded-pill px-3 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#refundBookingModal">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i>Rimborsa
                 </button>
             @endif
         </div>
@@ -381,7 +392,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted">Indica il motivo dell'annullamento. Verrà registrato nello storico.</p>
+                    <p class="text-muted">Indica il motivo dell'annullamento. Verrà registrato nello storico e inviato per email al cliente.</p>
                     <textarea name="reason" rows="3" class="form-control rounded-3" required maxlength="500"
                               placeholder="Es. richiesta del cliente, maltempo…"></textarea>
                 </div>
@@ -389,6 +400,45 @@
                     <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>
                     <button type="submit" class="btn btn-danger rounded-pill px-3 fw-semibold">
                         <i class="bi bi-x-lg me-2"></i>Annulla prenotazione
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal rimborso --}}
+    <div class="modal fade" id="refundBookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form action="{{ route('admin.bookings.refund', $booking) }}" method="POST" class="modal-content rounded-4 border-0">
+                @csrf
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Registra rimborso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Marca la prenotazione come rimborsata e invia una mail al cliente con i dettagli.
+                        L'accredito sulla carta va effettuato a parte (gestionale Stripe / banca).
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Importo rimborsato</label>
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            <input type="number" step="0.01" min="0" max="{{ number_format((float) $booking->total_amount, 2, '.', '') }}"
+                                   name="amount" class="form-control" value="{{ number_format((float) $booking->total_amount, 2, '.', '') }}">
+                        </div>
+                        <small class="text-muted">Totale prenotazione: € {{ number_format((float) $booking->total_amount, 2, ',', '.') }}</small>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Nota (opzionale)</label>
+                        <textarea name="note" rows="2" class="form-control rounded-3" maxlength="500"
+                                  placeholder="Es. rimborso parziale per spese di gestione…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>
+                    <button type="submit" class="btn btn-info text-white rounded-pill px-3 fw-semibold">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Registra rimborso
                     </button>
                 </div>
             </form>

@@ -35,11 +35,19 @@ class BookingForm extends Component
     public int $adultsCount = 1;
 
     /**
-     * Bambini con data di nascita.
-     * Ogni elemento: ['dob' => 'YYYY-MM-DD' | '']
-     * Nome/cognome vengono compilati nel form post-pagamento (mail dati partecipanti).
+     * Nome/cognome di ogni adulto. La lunghezza dell'array è sincronizzata
+     * con $adultsCount. Il primo adulto è il prenotante (intestatario).
      *
-     * @var array<int, array{dob: string}>
+     * @var array<int, array{first_name: string, last_name: string}>
+     */
+    public array $adults = [
+        ['first_name' => '', 'last_name' => ''],
+    ];
+
+    /**
+     * Bambini: data di nascita + nome/cognome.
+     *
+     * @var array<int, array{dob: string, first_name: string, last_name: string}>
      */
     public array $children = [];
 
@@ -50,11 +58,12 @@ class BookingForm extends Component
     public ?string $discountFeedback = null;
     public bool $discountValid = false;
 
-    // Dati cliente
+    // Dati cliente / prenotante
     public string $customer_first_name = '';
     public string $customer_last_name = '';
     public string $customer_email = '';
     public string $customer_phone = '';
+    public string $customer_tax_code = '';
     public string $special_requests = '';
     public bool $terms = false;
 
@@ -78,6 +87,11 @@ class BookingForm extends Component
             $this->customer_last_name = $u->last_name ?? '';
             $this->customer_email = $u->email ?? '';
         }
+
+        $this->adults = [[
+            'first_name' => $this->customer_first_name,
+            'last_name' => $this->customer_last_name,
+        ]];
     }
 
     // ===== Date/time pickers (modalità self-pick) =====
@@ -318,11 +332,48 @@ class BookingForm extends Component
     public function incrementAdults(): void
     {
         $this->adultsCount++;
+        $this->syncAdults();
     }
 
     public function decrementAdults(): void
     {
         $this->adultsCount = max(1, $this->adultsCount - 1);
+        $this->syncAdults();
+    }
+
+    /**
+     * Allinea la lunghezza di $adults a $adultsCount, conservando i dati già
+     * inseriti. Mantiene il primo adulto agganciato a customer_first/last_name
+     * (è sempre l'intestatario).
+     */
+    protected function syncAdults(): void
+    {
+        $current = is_array($this->adults) ? $this->adults : [];
+        $next = [];
+        for ($i = 0; $i < $this->adultsCount; $i++) {
+            $next[] = [
+                'first_name' => trim((string) ($current[$i]['first_name'] ?? '')),
+                'last_name' => trim((string) ($current[$i]['last_name'] ?? '')),
+            ];
+        }
+        $this->adults = $next;
+    }
+
+    // Quando il prenotante scrive il proprio nome, riportalo sul primo adulto.
+    public function updatedCustomerFirstName(string $value): void
+    {
+        if (!isset($this->adults[0])) {
+            $this->adults[0] = ['first_name' => '', 'last_name' => ''];
+        }
+        $this->adults[0]['first_name'] = $value;
+    }
+
+    public function updatedCustomerLastName(string $value): void
+    {
+        if (!isset($this->adults[0])) {
+            $this->adults[0] = ['first_name' => '', 'last_name' => ''];
+        }
+        $this->adults[0]['last_name'] = $value;
     }
 
     // ===== Children stepper =====
@@ -332,7 +383,7 @@ class BookingForm extends Component
         if ($this->childBrackets->isEmpty()) {
             return;
         }
-        $this->children[] = ['dob' => ''];
+        $this->children[] = ['dob' => '', 'first_name' => '', 'last_name' => ''];
     }
 
     public function removeChild(int $index = -1): void
@@ -390,15 +441,30 @@ class BookingForm extends Component
     {
         $this->errorMessage = null;
 
+        // Riallinea l'array adulti prima di validare (in caso il count sia cambiato senza che gli step abbiano sincronizzato).
+        $this->syncAdults();
+
         $this->validate([
             'customer_first_name' => 'required|string|max:100',
             'customer_last_name' => 'required|string|max:100',
             'customer_email' => 'required|email|max:255',
             'customer_phone' => 'nullable|string|max:30',
+            'customer_tax_code' => 'required|string|min:11|max:16',
             'special_requests' => 'nullable|string|max:1000',
+            'adults' => 'array|min:1',
+            'adults.*.first_name' => 'required|string|max:100',
+            'adults.*.last_name' => 'required|string|max:100',
+            'children.*.first_name' => 'required|string|max:100',
+            'children.*.last_name' => 'required|string|max:100',
             'terms' => 'accepted',
         ], [
             'terms.accepted' => 'Devi accettare i termini e condizioni.',
+            'customer_tax_code.required' => 'Inserisci il codice fiscale dell\'intestatario.',
+            'customer_tax_code.min' => 'Codice fiscale non valido.',
+            'adults.*.first_name.required' => 'Inserisci il nome di ogni adulto.',
+            'adults.*.last_name.required' => 'Inserisci il cognome di ogni adulto.',
+            'children.*.first_name.required' => 'Inserisci il nome di ogni bambino.',
+            'children.*.last_name.required' => 'Inserisci il cognome di ogni bambino.',
         ]);
 
         if (!$this->departure) {
@@ -416,11 +482,38 @@ class BookingForm extends Component
             return null;
         }
 
-        $resolvedChildren = collect($this->resolvedChildren)
-            ->where('ready', true)
-            ->map(fn ($c) => ['dob' => $c['dob'], 'bracket_id' => $c['bracket']->id])
-            ->values()
-            ->all();
+        // Bambini risolti: mantieni anche nome/cognome dalla nostra input.
+        $resolvedChildren = [];
+        foreach ($this->resolvedChildren as $i => $c) {
+            if (!$c['ready']) {
+                continue;
+            }
+            $resolvedChildren[] = [
+                'dob' => $c['dob'],
+                'bracket_id' => $c['bracket']->id,
+                'first_name' => trim((string) ($this->children[$i]['first_name'] ?? '')),
+                'last_name' => trim((string) ($this->children[$i]['last_name'] ?? '')),
+            ];
+        }
+
+        // Costruisci la lista guests nell'ordine in cui i seat verranno creati:
+        // 1) tutti gli adulti, 2) i bambini "counting" e "non counting" (lo
+        // service li riordina internamente, ma a noi serve solo identificare
+        // il primo adulto = intestatario).
+        $guests = [];
+        foreach ($this->adults as $i => $a) {
+            $guests[] = [
+                'first_name' => trim($a['first_name'] ?? ''),
+                'last_name' => trim($a['last_name'] ?? ''),
+                'tax_code' => $i === 0 ? strtoupper(trim($this->customer_tax_code)) : null,
+            ];
+        }
+        foreach ($resolvedChildren as $c) {
+            $guests[] = [
+                'first_name' => $c['first_name'],
+                'last_name' => $c['last_name'],
+            ];
+        }
 
         try {
             $booking = $bookingService->create([
@@ -434,7 +527,9 @@ class BookingForm extends Component
                 'customer_last_name' => $this->customer_last_name,
                 'customer_email' => $this->customer_email,
                 'customer_phone' => $this->customer_phone,
+                'customer_tax_code' => strtoupper(trim($this->customer_tax_code)),
                 'special_requests' => $this->special_requests,
+                'guests' => $guests,
             ], 'website');
 
             return redirect()->route('payment.show', $booking->uuid);

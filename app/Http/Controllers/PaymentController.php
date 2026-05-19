@@ -137,37 +137,6 @@ class PaymentController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-
-        $this->sendParticipantsRequestEmail($booking);
-    }
-
-    /**
-     * Se mancano nome/cognome su qualche posto, manda l'invito a compilare i dati partecipanti.
-     * Idempotente: una sola mail per booking.
-     */
-    protected function sendParticipantsRequestEmail(Booking $booking): void
-    {
-        $booking->refresh();
-        if ($booking->participants_details_requested_at) {
-            return;
-        }
-        if ($booking->hasAllParticipantsDetails()) {
-            return;
-        }
-        if (!$booking->participants_token) {
-            $booking->update(['participants_token' => \Illuminate\Support\Str::random(48)]);
-            $booking->refresh();
-        }
-        try {
-            Mail::to($booking->customer_email)
-                ->send(new \App\Mail\BookingParticipantsRequest($booking));
-            $booking->update(['participants_details_requested_at' => now()]);
-        } catch (\Throwable $e) {
-            Log::error('Invio richiesta dati partecipanti fallito', [
-                'booking' => $booking->booking_number,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 
     /**
