@@ -112,8 +112,8 @@
                             </p>
                         </div>
                         <div class="tp-about-btn-wrap wow fadeInUp">
-                            <a href="{{ route('about') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
-                                <span class="tg-btn-text">Scopri di più</span>
+                            <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
+                                <span class="tg-btn-text">Scopri i tour</span>
                             </a>
                         </div>
                     </div>
@@ -547,7 +547,7 @@
                                     <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:#7C37FF">
                                         <i class="fa-solid fa-calendar-check me-2"></i> Prenota ora
                                     </a>
-                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="{{ route('contact') }}">
+                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="tel:+391234567890">
                                         <i class="fa-solid fa-phone me-2"></i> Contattaci
                                     </a>
                                 </div>

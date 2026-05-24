@@ -60,10 +60,6 @@ Route::post('/webhooks/stripe', [PaymentController::class, 'webhook'])->name('we
 Route::get('/checkin/{qrCode}', [CheckInController::class, 'verify'])->name('checkin.verify');
 
 // Static
-Route::get('/esperienze', [PageController::class, 'experiences'])->name('experiences');
-Route::get('/chi-siamo', [PageController::class, 'about'])->name('about');
-Route::get('/contatti', [PageController::class, 'contact'])->name('contact');
-Route::post('/contatti', [PageController::class, 'sendContact'])->name('contact.send');
 Route::get('/privacy-policy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('/termini-condizioni', [PageController::class, 'terms'])->name('terms');
 Route::get('/cookie-policy', [PageController::class, 'cookies'])->name('cookies');

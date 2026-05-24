@@ -42,10 +42,7 @@
                             <h3 class="tg-footer-widget-title mb-25">Link Rapidi</h3>
                             <ul>
                                 <li><a href="{{ route('home') }}">Home</a></li>
-                                <li><a href="{{ route('tours.index') }}">I Nostri Catamarani</a></li>
-                                <li><a href="{{ route('experiences') }}">Esperienze</a></li>
-                                <li><a href="{{ route('about') }}">Chi Siamo</a></li>
-                                <li><a href="{{ route('contact') }}">Contatti</a></li>
+                                <li><a href="{{ route('tours.index') }}">I nostri Tour</a></li>
                             </ul>
                         </div>
                     </div>

@@ -1,10 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(git ls-remote *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(lsof -iTCP -sTCP:LISTEN -P)",
+      "Bash(nc -z -v 127.0.0.1 8889)",
+      "Bash(nc -z -v 127.0.0.1 3306)",
+      "Read(//Applications/MAMP/tmp/mysql/**)",
+      "Bash(/Applications/MAMP/Library/bin/mysql80/bin/mysql --socket=/Applications/MAMP/tmp/mysql/mysql.sock -u root -proot -e \"SHOW DATABASES;\")",
+      "Bash(/Applications/MAMP/Library/bin/mysql80/bin/mysqldump --socket=/Applications/MAMP/tmp/mysql/mysql.sock -u root -proot --add-drop-table --default-character-set=utf8mb4 --no-tablespaces --skip-set-charset --skip-add-locks solaryatravel)",
+      "Read(//Users/claudio/Desktop/**)",
+      "Bash(/Applications/MAMP/Library/bin/mysql80/bin/mysqldump \\\\ *)"
+    ],
+    "additionalDirectories": [
+      "/Users/claudio/Desktop"
     ]
   }
 }

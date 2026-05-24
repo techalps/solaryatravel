@@ -21,16 +21,7 @@
                                         <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
                                     </li>
                                     <li>
-                                        <a href="{{ route('tours.index') }}" class="{{ request()->routeIs('catamarans.*') ? 'active' : '' }}">Catamarani</a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('experiences') }}" class="{{ request()->routeIs('experiences') ? 'active' : '' }}">Esperienze</a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('about') }}" class="{{ request()->routeIs('about') ? 'active' : '' }}">Chi Siamo</a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('contact') }}" class="{{ request()->routeIs('contact') ? 'active' : '' }}">Contatti</a>
+                                        <a href="{{ route('tours.index') }}" class="{{ request()->routeIs('tours.*') ? 'active' : '' }}">I nostri Tour</a>
                                     </li>
                                 </ul>
                             </div>
@@ -98,10 +89,7 @@
     <div class="offcanvas-body">
         <ul class="list-unstyled fs-5 d-flex flex-column gap-3">
             <li><a href="{{ route('home') }}" class="text-white text-decoration-none">Home</a></li>
-            <li><a href="{{ route('tours.index') }}" class="text-white text-decoration-none">Catamarani</a></li>
-            <li><a href="{{ route('experiences') }}" class="text-white text-decoration-none">Esperienze</a></li>
-            <li><a href="{{ route('about') }}" class="text-white text-decoration-none">Chi Siamo</a></li>
-            <li><a href="{{ route('contact') }}" class="text-white text-decoration-none">Contatti</a></li>
+            <li><a href="{{ route('tours.index') }}" class="text-white text-decoration-none">I nostri Tour</a></li>
         </ul>
         <hr class="border-secondary border-opacity-25 my-4">
         <div class="d-flex flex-column gap-2">
