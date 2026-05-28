@@ -11,10 +11,8 @@
 
     <link rel="icon" type="image/png" href="{{ asset('images/logo_black.svg') }}">
 
-    {{-- Google Fonts --}}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&display=swap">
+    {{-- Font del sito: HelveticaNowDisplay (locale, sostituisce Poppins + Outfit) --}}
+    <link rel="preload" as="font" type="font/woff2" href="{{ asset('fonts/HelveticaNowDisplay-Medium.woff2') }}" crossorigin>
 
     {{-- Template CSS --}}
     <link rel="stylesheet" href="{{ asset('assets/template/css/bootstrap.min.css') }}">
@@ -27,8 +25,46 @@
     <link rel="stylesheet" href="{{ asset('assets/template/css/default.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/template/css/main.css') }}">
 
-    {{-- Override font segoepr/chillax → Frezbie --}}
+    {{-- Font locali: HelveticaNowDisplay (sostituisce Poppins+Outfit) + Frezbie (decorativo) --}}
     <style>
+        /* === HelveticaNowDisplay — Light / Medium / Bold / Black === */
+        @font-face {
+            font-family: 'HelveticaNowDisplay';
+            src: url('{{ asset('fonts/HelveticaNowDisplay-Light.woff2') }}') format('woff2'),
+                 url('{{ asset('fonts/HelveticaNowDisplay-Light.woff') }}') format('woff');
+            font-weight: 300;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'HelveticaNowDisplay';
+            src: url('{{ asset('fonts/HelveticaNowDisplay-Medium.woff2') }}') format('woff2'),
+                 url('{{ asset('fonts/HelveticaNowDisplay-Medium.woff') }}') format('woff');
+            /* Range 400-500: copre sia "normal"/400 sia "medium"/500 → body usa Medium come default */
+            font-weight: 400 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'HelveticaNowDisplay';
+            src: url('{{ asset('fonts/HelveticaNowDisplay-Bold.woff2') }}') format('woff2'),
+                 url('{{ asset('fonts/HelveticaNowDisplay-Bold.woff') }}') format('woff');
+            /* Range 600-700: copre semibold e bold */
+            font-weight: 600 700;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'HelveticaNowDisplay';
+            src: url('{{ asset('fonts/HelveticaNowDisplay-Black.woff2') }}') format('woff2'),
+                 url('{{ asset('fonts/HelveticaNowDisplay-Black.woff') }}') format('woff');
+            /* Range 800-900: copre extrabold e black */
+            font-weight: 800 900;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        /* === Frezbie (font decorativo, invariato) === */
         @font-face {
             font-family: 'Frezbie';
             src: url('{{ asset('fonts/Frezbie.woff2') }}') format('woff2'),
@@ -38,7 +74,12 @@
             font-style: normal;
             font-display: swap;
         }
+
         :root {
+            /* Sostituisce Poppins (body) e Outfit (heading/UI) */
+            --tg-ff-body: 'HelveticaNowDisplay', system-ui, -apple-system, Segoe UI, sans-serif !important;
+            --tg-ff-outfit: 'HelveticaNowDisplay', system-ui, -apple-system, Segoe UI, sans-serif !important;
+            /* Frezbie sui sottotitoli/heading decorativi (invariato) */
             --tg-ff-segoepr: 'Frezbie', cursive !important;
             --tg-ff-chillax: 'Frezbie', sans-serif !important;
         }

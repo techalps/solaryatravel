@@ -1,25 +1,41 @@
 @extends('layouts.public')
 
 @section('title', 'Solarya Travel — Escursioni in Catamarano')
-@section('meta_description', 'Solarya Travel: vivi esperienze esclusive in catamarano lungo la Costiera Amalfitana. Comfort, eleganza e mare cristallino in ogni viaggio.')
+@section('meta_description', 'Solarya Travel: escursioni esclusive in catamarano in Sardegna. Comfort, eleganza e mare cristallino in ogni viaggio.')
+
+@push('head')
+<style>
+    .tg-hero-area > .tg-hero-bg {
+        position: relative;
+        width: 100%;
+        height: 740px;
+        overflow: hidden;
+    }
+    @media (max-width: 575px) {
+        .tg-hero-area > .tg-hero-bg { height: 650px; }
+    }
+    .tg-hero-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+    }
+</style>
+@endpush
 
 @section('content')
 
-    {{-- ============= BANNER (slideshow + svg shapes laterali) ============= --}}
+    {{-- ============= BANNER (video di sfondo in loop + svg shapes laterali) ============= --}}
     <div class="tg-hero-area fix p-relative">
         <div class="tg-hero-top-shadow"></div>
-        <div class="shop-slider-wrapper">
-            <div class="swiper swiper-container tg-hero-slider-active" id="heroSlider">
-                <div class="swiper-wrapper">
-                    @foreach(['hero-1.jpg','hero-2.jpg','hero-3.jpg','hero-4.jpg','hero-5.jpg'] as $heroImg)
-                        <div class="swiper-slide">
-                            <div class="tg-hero-bg">
-                                <div class="tg-hero-thumb" style="background-image: url('{{ asset('assets/template/img/hero/'.$heroImg) }}')"></div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+        <div class="tg-hero-bg">
+            <video class="tg-hero-video" autoplay muted loop playsinline preload="auto"
+                   poster="{{ asset('assets/template/img/hero/hero-1.jpg') }}">
+                <source src="{{ asset('assets/template/video/hero.mp4') }}" type="video/mp4">
+            </video>
         </div>
 
         <div class="tg-hero-content-area">
@@ -29,20 +45,11 @@
                         <div class="col-xl-10">
                             <div class="tg-hero-content text-center">
                                 <div class="tg-hero-title-box mb-10">
-                                    <h5 class="tg-hero-subtitle mb-5 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".7s">* Vivi la magia della Costiera Amalfitana</h5>
-                                    <h2 class="tg-hero-title wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Solarya Travel</h2>
+                                    <h5 class="tg-hero-subtitle mb-5 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".7s">Vivi la magia della Sardegna</h5>
+                                    <h1 class="tg-hero-title wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">SOLARYA TRAVEL</h1>
                                     <p class="tg-hero-para mb-0 wow fadeInUp" data-wow-delay=".6s" data-wow-duration="1.1s">
-                                        Escursioni esclusive in catamarano fra Capri, Positano,<br>
-                                        Amalfi e le perle più belle del Mediterraneo.
+                                        Escursioni esclusive in catamarano in Sardegna.<br>Comfort, eleganza e mare cristallino in ogni viaggio!
                                     </p>
-                                </div>
-                                <div class="tg-hero-price-wrap mb-35 d-flex align-items-center justify-content-center wow fadeInUp" data-wow-delay=".7s" data-wow-duration="1.3s">
-                                    <p class="mr-15">A partire da</p>
-                                    <div class="tg-hero-price d-flex">
-                                        <span class="hero-dolar">€</span>
-                                        <span class="hero-price">{{ $minPrice ? number_format($minPrice, 0, ',', '.') : '40' }}</span>
-                                        <span class="night">/persona</span>
-                                    </div>
                                 </div>
                                 <div class="tg-hero-btn-box wow fadeInUp" data-wow-delay=".8s" data-wow-duration="1.5s">
                                     <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-switch-animation">
@@ -52,32 +59,20 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tg-hero-arrow-box d-none d-sm-block">
-                        <button class="tg-hero-next" aria-label="Successivo">
-                            <svg width="19" height="15" viewBox="0 0 19 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18.0274 7.5H0.972625M0.972625 7.5L7.25 1.22263M0.972625 7.5L7.25 13.7774" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                        <button class="tg-hero-prev" aria-label="Precedente">
-                            <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1.47263 7.5H18.5274M18.5274 7.5L12.25 1.22263M18.5274 7.5L12.25 13.7774" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
         <div class="tg-hero-bottom-shape d-none d-md-block">
             <span>
                 <svg width="432" height="298" viewBox="0 0 432 298" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path class="line-1" opacity="0.4" d="M39.6062 428.345C4.4143 355.065 -24.2999 203.867 142.379 185.309C350.726 162.111 488.895 393.541 289.171 313.515C129.391 249.494 458.204 85.4772 642.582 11.4713" stroke="white" stroke-width="24"/>
+                    <path class="line-1" opacity="1" d="M39.6062 428.345C4.4143 355.065 -24.2999 203.867 142.379 185.309C350.726 162.111 488.895 393.541 289.171 313.515C129.391 249.494 458.204 85.4772 642.582 11.4713" stroke="#ff7d2c" stroke-width="24"/>
                 </svg>
             </span>
         </div>
         <div class="tg-hero-bottom-shape-2 d-none d-md-block">
             <span>
                 <svg width="154" height="321" viewBox="0 0 154 321" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path class="line-1" opacity="0.4" d="M144.616 328.905C116.117 300.508 62.5986 230.961 76.5162 179.949C93.9132 116.184 275.231 7.44493 -65.0181 12.8762" stroke="white" stroke-width="24"/>
+                    <path class="line-1" opacity="1" d="M144.616 328.905C116.117 300.508 62.5986 230.961 76.5162 179.949C93.9132 116.184 275.231 7.44493 -65.0181 12.8762" stroke="#ff7d2c" stroke-width="24"/>
                 </svg>
             </span>
         </div>
@@ -93,8 +88,8 @@
             <div class="row">
                 <div class="col-lg-3">
                     <div class="tg-about-thumb-wrap mb-30">
-                        <img class="w-100 tg-round-15 mb-85 wow fadeInLeft" src="{{ asset('assets/template/img/about/about.jpg') }}" alt="about">
-                        <img class="tg-about-thumb-2 tg-round-15 wow fadeInLeft" src="{{ asset('assets/template/img/about/about-2.jpg') }}" alt="about">
+                        <div class="w-100 tg-round-15 mb-85 wow fadeInLeft" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 300px; height: 300px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
+                        <div class="tg-about-thumb-2 tg-round-15 wow fadeInLeft" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 200px; height: 200px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
                     </div>
                 </div>
                 <div class="col-lg-6 mb-30">
@@ -105,8 +100,8 @@
                         <div class="tg-about-section-title mb-25">
                             <h5 class="tg-section-subtitle wow fadeInUp">Chi Siamo</h5>
                             <h2 class="mb-15 wow fadeInUp">Scopri il mare con noi, vivi un'esperienza unica</h2>
-                            <p class="text-capitalize wow fadeInUp">
-                                Solarya Travel è il tuo partner per escursioni in catamarano lungo la Costiera Amalfitana.
+                            <p class="wow fadeInUp">
+                                Solarya Travel è il tuo partner per escursioni in catamarano in Sardegna.
                                 Equipaggi qualificati, comfort di bordo e itinerari curati nel dettaglio per
                                 regalarti emozioni autentiche e memorie indelebili.
                             </p>
@@ -120,8 +115,8 @@
                 </div>
                 <div class="col-lg-3">
                     <div class="tg-about-thumb-wrap mb-30">
-                        <img class="w-100 tg-round-15 mb-85 wow fadeInRight" src="{{ asset('assets/template/img/about/about-3.jpg') }}" alt="about">
-                        <img class="tg-about-thumb-4 tg-round-15 wow fadeInRight" src="{{ asset('assets/template/img/about/about-4.jpg') }}" alt="about">
+                        <div class="w-100 mb-85 wow fadeInRight" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 300px; height: 300px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
+                        <div class="tg-about-thumb-4 tg-round-15 wow fadeInRight" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 200px; height: 200px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
                     </div>
                 </div>
             </div>
@@ -323,7 +318,7 @@
         ];
     @endphp
     <div class="tg-location-area p-relative pb-40 tg-grey-bg pt-140">
-        <img class="tg-location-shape d-none d-lg-block" src="{{ asset('assets/template/img/location/shape-2.png') }}" alt="shape">
+        
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
@@ -358,7 +353,7 @@
     </div>
 
     {{-- ============= CTA TWO (banner full-width) ============= --}}
-    <div class="tg-banner-area include-bg" style="background-image: url('{{ asset('assets/template/img/banner/banner.png') }}')">
+    <div class="tg-banner-area include-bg" style="background-image: url('{{ asset('assets/template/img/banner/banner.jpg') }}')">
         <div class="container">
             <div class="col-lg-12">
                 <div class="tg-banner-2-content text-center">
@@ -566,23 +561,6 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     if (typeof Swiper === 'undefined') return;
-
-    // Hero slideshow (fade)
-    if (document.getElementById('heroSlider')) {
-        new Swiper('#heroSlider', {
-            slidesPerView: 1,
-            loop: true,
-            spaceBetween: 0,
-            speed: 2000,
-            effect: 'fade',
-            fadeEffect: { crossFade: true },
-            autoplay: { delay: 3500, disableOnInteraction: false },
-            navigation: {
-                prevEl: '.tg-hero-prev',
-                nextEl: '.tg-hero-next',
-            },
-        });
-    }
 
     // Testimonial slider
     if (document.getElementById('testiSwiper')) {

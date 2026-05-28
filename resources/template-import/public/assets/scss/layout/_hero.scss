@@ -135,7 +135,7 @@
         font-weight: 700;
         font-size: 64px;
         color: var(--tg-common-white);
-        border-bottom: 4px solid var(--tg-common-white);
+        border: none;
         display: inline-block;
         @media #{$xs} {
             font-size: 40px;

@@ -3261,7 +3261,6 @@ textarea {
   font-weight: 700;
   font-size: 64px;
   color: var(--tg-common-white);
-  border-bottom: 4px solid var(--tg-common-white);
   display: inline-block;
 }
 @media (max-width: 575px) {

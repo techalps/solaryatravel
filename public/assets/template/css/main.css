@@ -107,8 +107,8 @@
   --tg-grey-6: #666;
   --tg-grey-7: #f6f6f7;
   --tg-grey-8: #f6f4fa;
-  --tg-theme-primary: #560ce3;
-  --tg-theme-secondary: #f74a1f;
+  --tg-theme-primary: #004560;
+  --tg-theme-secondary: #ff7d2c;
   --tg-border-1: #e1e1e1;
   --tg-border-2: #c5c5c5;
   --tg-border-3: #e6e6e6;
@@ -123,6 +123,7 @@ body {
   font-weight: 400;
   color: var(--tg-grey-1);
   line-height: 26px;
+  font-feature-settings: "ss02" on!important; /* poi prova ss02, ss03, ecc. */
 }
 
 img,
@@ -3261,7 +3262,7 @@ textarea {
   font-weight: 700;
   font-size: 64px;
   color: var(--tg-common-white);
-  border-bottom: 4px solid var(--tg-common-white);
+  border: none!important;
   display: inline-block;
 }
 @media (max-width: 575px) {
@@ -6071,6 +6072,12 @@ textarea {
   padding: 6px 10px;
   line-height: 1;
   transform: translateY(-13px);
+}
+.tg-location-area{
+  background: #d6f5f2!important;
+}
+.tg-banner-transparent-bg{
+  background: #d6f5f2!important;
 }
 @media (max-width: 575px) {
   .tg-location-section-title p br {
