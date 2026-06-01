@@ -32,7 +32,7 @@
         &-title{
             font-weight: 500;
             font-size: 14px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-2);
             display: block;
         }
@@ -139,7 +139,7 @@
                 & button{
                     font-weight: 500;
                     font-size: 15px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-grey-4);
                     display: flex;
                     align-items: center;

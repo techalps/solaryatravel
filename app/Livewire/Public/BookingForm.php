@@ -83,8 +83,9 @@ class BookingForm extends Component
 
         if (auth()->check()) {
             $u = auth()->user();
-            $this->customer_first_name = $u->first_name ?? $u->name ?? '';
-            $this->customer_last_name = $u->last_name ?? '';
+            $parts = explode(' ', $u->name ?? '', 2);
+            $this->customer_first_name = $parts[0] ?? '';
+            $this->customer_last_name = $parts[1] ?? '';
             $this->customer_email = $u->email ?? '';
         }
 
@@ -162,13 +163,19 @@ class BookingForm extends Component
             return;
         }
 
+        $startTime = strlen($this->selectedTime) === 5 ? $this->selectedTime . ':00' : $this->selectedTime;
+        $endTime = \Carbon\Carbon::parse($startTime)
+            ->addMinutes((int) round(($this->tour->duration_hours ?? 1) * 60))
+            ->format('H:i:s');
+
         $this->departure = TourDeparture::firstOrCreate(
             [
                 'tour_id' => $this->tour->id,
                 'departure_date' => $this->selectedDate,
-                'start_time' => strlen($this->selectedTime) === 5 ? $this->selectedTime . ':00' : $this->selectedTime,
+                'start_time' => $startTime,
             ],
             [
+                'end_time' => $endTime,
                 'status' => 'scheduled',
                 'price_modifier' => 1.0,
             ]

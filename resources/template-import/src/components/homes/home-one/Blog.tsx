@@ -14,7 +14,7 @@ const Blog = ({ style }: PropTypes) => {
                <div className="col-lg-6 col-md-8">
                   <div className="tg-location-section-title text-center mb-30">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-20 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Tips and Inspiration</h5>
-                     <h2 className="tg-section-su-title text-capitalize wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Latest News & Articles</h2>
+                     <h2 className="tg-section-su-title text-none wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Latest News & Articles</h2>
                      <p className="tg-section-su-para tg-section-su-para-2 mb-10">Are you tired of the typical tourist destinations and looking <br />
                         to step out of your comfort zonetravel</p>
                   </div>

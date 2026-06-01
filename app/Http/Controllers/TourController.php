@@ -56,8 +56,8 @@ class TourController extends Controller
             })->values();
         }
 
-        // Pre-carica fasce per il "from" price
-        $tours->load('ageBrackets');
+        // Pre-carica periodi per il "from" price (prezzo adulto = base_price del periodo)
+        $tours->load('periods');
 
         $search = [
             'isSearch' => $isSearch,
@@ -84,7 +84,7 @@ class TourController extends Controller
     public function show(string $slug, Request $request): View
     {
         $tour = Tour::active()->where('slug', $slug)
-            ->with(['images', 'ageBrackets', 'periods', 'catamarans'])
+            ->with(['images', 'ageBrackets', 'periods.ageBrackets', 'catamarans'])
             ->firstOrFail();
 
         // Prossime partenze (180 giorni) generate dai periodi.
@@ -101,7 +101,7 @@ class TourController extends Controller
         $similar = Tour::active()
             ->where('id', '!=', $tour->id)
             ->ordered()
-            ->with(['images' => fn ($q) => $q->where('is_primary', true)])
+            ->with(['images' => fn ($q) => $q->where('is_primary', true), 'periods'])
             ->take(3)
             ->get();
 

@@ -43,8 +43,8 @@ const Choose = () => {
                <div className="col-xl-6 col-lg-7 col-md-9">
                   <div className="tg-chose-section-title text-center mb-35">
                      <h5 className="tg-section-subtitle mb-15 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".1s">What we do</h5>
-                     <h2 className="mb-15 text-capitalize wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">We Arrange the Best Tour<br /> Ever Possible</h2>
-                     <p className="text-capitalize wow fadeInUp mb-35" data-wow-delay=".5s" data-wow-duration=".9s"> when an unknown printer took a galley of type and scrambled make type
+                     <h2 className="mb-15 text-none wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">We Arrange the Best Tour<br /> Ever Possible</h2>
+                     <p className="text-none wow fadeInUp mb-35" data-wow-delay=".5s" data-wow-duration=".9s"> when an unknown printer took a galley of type and scrambled make type
                         specimen bookhas survived not only five.</p>
                   </div>
                </div>

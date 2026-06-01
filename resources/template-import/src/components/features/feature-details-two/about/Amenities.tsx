@@ -3,7 +3,7 @@ const Amenities = () => {
    return (
       <div className="tg-tour-about-inner  tg-tour-about-2-inner mb-30">
          <h4 className="tg-tour-about-title mb-10">Amenities</h4>
-         <p className="text-capitalize lh-28 mb-15">Castle in one day is next to impossible. Designed specifically for trave arelimited time in London
+         <p className="text-none lh-28 mb-15">Castle in one day is next to impossible. Designed specifically for trave arelimited time in London
             ws you to check off a range of southern England‘s are historical</p>
          <div className="row">
             <div className="col-lg-4 col-md-4 col-sm-6">

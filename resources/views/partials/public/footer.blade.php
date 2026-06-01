@@ -15,17 +15,6 @@
                             <p class="mb-20">Esperienze esclusive in catamarano lungo
                                 la Costiera. Comfort, eleganza e servizio
                                 impeccabile per momenti indimenticabili in mare.</p>
-                            <div class="tg-footer-form mb-30">
-                                <form action="#" method="POST" onsubmit="event.preventDefault();">
-                                    @csrf
-                                    <input type="email" name="email" placeholder="Inserisci la tua email" required>
-                                    <button class="tg-footer-form-btn" type="submit" aria-label="Iscriviti alla newsletter">
-                                        <svg width="22" height="17" viewBox="0 0 22 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M1.52514 8.47486H20.4749M20.4749 8.47486L13.5 1.5M20.4749 8.47486L13.5 15.4497" stroke="white" stroke-width="1.77778" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                    </button>
-                                </form>
-                            </div>
                             <div class="tg-footer-social">
                                 <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
                                 <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
@@ -42,7 +31,7 @@
                             <h3 class="tg-footer-widget-title mb-25">Link Rapidi</h3>
                             <ul>
                                 <li><a href="{{ route('home') }}">Home</a></li>
-                                <li><a href="{{ route('tours.index') }}">I nostri Tour</a></li>
+                                <li><a href="{{ route('tours.index') }}">Tour</a></li>
                             </ul>
                         </div>
                     </div>

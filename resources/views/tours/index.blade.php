@@ -6,7 +6,7 @@
 @section('content')
 
     {{-- ============= BREADCRUMB ============= --}}
-    <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(135deg, #0b3d5c 0%, #1a6da8 100%);">
+    <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-tours.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
         <div class="container">
             <div class="row">
                 <div class="col-12 text-center text-white">
@@ -40,30 +40,23 @@
 
             <div class="row">
                 @forelse($tours as $i => $tour)
-                    <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="tg-listing-card-item h-100">
+                    <div class="col-xxl-4 col-xl-4 col-lg-4 col-md-6">
+                        <div class="tg-listing-card-item mb-30">
                             <div class="tg-listing-card-thumb fix mb-15 p-relative">
                                 <a href="{{ route('tours.show', $tour->slug) }}">
                                     @if($tour->primaryImage)
-                                        <img class="tg-card-border w-100" src="{{ \Illuminate\Support\Facades\Storage::url($tour->primaryImage->path) }}" alt="{{ $tour->name }}" style="height:240px;object-fit:cover">
+                                        <img class="tg-card-border w-100" src="{{ $tour->primaryImage->url }}" alt="{{ $tour->name }}">
                                     @else
-                                        <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}" style="height:240px;object-fit:cover">
+                                        <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}">
                                     @endif
                                 </a>
                             </div>
                             <div class="tg-listing-card-content">
-                                <h4 class="tg-listing-card-title">
-                                    <a href="{{ route('tours.show', $tour->slug) }}">{{ $tour->name }}</a>
-                                </h4>
-                                @if($tour->description_short)
-                                    <p class="text-muted small mb-2">{{ Str::limit($tour->description_short, 100) }}</p>
-                                @endif
-                                <div class="tg-listing-card-duration-tour mb-2">
-                                    @if($tour->departure_point)
-                                        <span class="tg-listing-card-duration-map mb-5 me-2">
-                                            <i class="fa-solid fa-location-dot me-1"></i> {{ $tour->departure_point }}
-                                        </span>
-                                    @endif
+                                <h4 class="tg-listing-card-title"><a href="{{ route('tours.show', $tour->slug) }}">{{ $tour->name }}</a></h4>
+                                <div class="tg-listing-card-duration-tour">
+                                    <span class="tg-listing-card-duration-map mb-5">
+                                        <i class="fa-solid fa-location-dot me-1"></i> {{ $tour->departure_point ?? '' }}
+                                    </span>
                                     @if($tour->duration_hours)
                                         <span class="tg-listing-card-duration-time">
                                             <i class="fa-regular fa-clock me-1"></i> {{ $tour->duration_hours }}h
@@ -71,16 +64,15 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="tg-listing-card-price d-flex align-items-end justify-content-between">
+                            <div class="tg-listing-card-price d-flex align-items-center justify-content-between">
                                 <div class="tg-listing-card-price-wrap price-bg d-flex align-items-center">
                                     <span class="tg-listing-card-currency-amount mr-5">
-                                        <small class="me-1">da</small>
                                         <span class="currency-symbol">€</span>{{ number_format($tour->price_from ?? 0, 0, ',', '.') }}
                                     </span>
-                                    <span class="tg-listing-card-activity-person">/persona</span>
+                                    <span class="tg-listing-card-activity-person">/Persona</span>
                                 </div>
-                                <a href="{{ route('tours.show', $tour->slug) }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
-                                    Dettagli
+                                <a href="{{ route('tours.show', $tour->slug) }}" class="tg-card-tour-link" style="margin-right:24px">
+                                    Scopri <i class="fa-solid fa-arrow-right ms-1"></i>
                                 </a>
                             </div>
                         </div>

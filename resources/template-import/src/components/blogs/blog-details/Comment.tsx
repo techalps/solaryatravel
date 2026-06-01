@@ -15,7 +15,7 @@ const Comment = () => {
                         <span>Author</span>
                         <h6>Parker Willy</h6>
                      </div>
-                     <p className="text-capitalize lh-28 mb-10">Finanappreciate your trust greatly Our clients choose dentace ducts because know we are the best area Awaitingare really.Seorem.</p>
+                     <p className="text-none lh-28 mb-10">Finanappreciate your trust greatly Our clients choose dentace ducts because know we are the best area Awaitingare really.Seorem.</p>
                   </div>
                </div>
             </li>

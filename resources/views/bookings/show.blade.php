@@ -19,7 +19,7 @@
 @section('content')
 
 {{-- HERO --}}
-<div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(135deg, #0066cc 0%, #06b6d4 100%);">
+<div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-bookings.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-9 text-white">
@@ -27,7 +27,7 @@
                     <i class="fa-solid fa-arrow-left me-1"></i>Le mie prenotazioni
                 </a>
                 <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    <span class="badge bg-white px-3 py-2 fw-semibold" style="color:{{ $s['color'] }};border-radius:999px">
+                    <span class="bk-status-badge d-inline-block fw-semibold" style="--sc:{{ $s['color'] }};--sb:{{ $s['bg'] }};border-radius:999px;padding:.35em .75em;font-size:.85em;line-height:1">
                         <i class="fa-solid {{ $s['icon'] }} me-1"></i>{{ $s['label'] }}
                     </span>
                     <span class="small opacity-75 font-monospace">#{{ $booking->booking_number }}</span>
@@ -54,7 +54,7 @@
                     <h3 class="bk-show-section-title"><i class="fa-solid fa-water text-primary"></i>Il tuo tour</h3>
                     <div class="d-flex gap-3 align-items-start">
                         @if($booking->tour?->primaryImage)
-                            <img src="{{ \Illuminate\Support\Facades\Storage::url($booking->tour->primaryImage->path) }}"
+                            <img src="{{ $booking->tour->primaryImage->url }}"
                                  alt="" style="width:120px;height:120px;border-radius:14px;object-fit:cover;flex:0 0 auto">
                         @endif
                         <div class="flex-grow-1">
@@ -201,7 +201,7 @@
                         </div>
                         <div class="d-flex justify-content-between small mb-2">
                             <span class="text-muted">Metodo</span>
-                            <span class="fw-semibold text-capitalize">{{ $payment->gateway ?? '—' }}</span>
+                            <span class="fw-semibold text-none">{{ $payment->gateway ?? '—' }}</span>
                         </div>
                         <div class="d-flex justify-content-between small">
                             <span class="text-muted">Data</span>
@@ -245,6 +245,12 @@
 
 @push('head')
 <style>
+    /* Specificity (0,2,0) batte .tg-breadcrumb-area span (0,1,1) anche con !important */
+    .tg-breadcrumb-area .bk-status-badge {
+        color: var(--sc) !important;
+        background: var(--sb) !important;
+    }
+
     .bk-show-card {
         background: #fff;
         border: 1px solid #e2e8f0;

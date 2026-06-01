@@ -47,7 +47,7 @@ const Location = () => {
                <div className="col-lg-9">
                   <div className="tg-location-section-title mb-30">
                      <h5 className="tg-section-su-subtitle mb-15 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Best Places near at you</h5>
-                     <h2 className="tg-section-su-title text-capitalize wow fadeInUp" data-wow-delay=".5s" data-wow-duration=".9s">Explore Top Destinations</h2>
+                     <h2 className="tg-section-su-title text-none wow fadeInUp" data-wow-delay=".5s" data-wow-duration=".9s">Explore Top Destinations</h2>
                   </div>
                </div>
                <div className="col-lg-3">

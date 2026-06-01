@@ -15,7 +15,7 @@ const Pricing = () => {
                <div className="col-lg-12">
                   <div className="tg-pricing-section-title-wrap text-center mb-40">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-15 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Popular packages</h5>
-                     <h2 className="tg-section-su-title text-capitalize wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Popular Travel Destinations<br />
+                     <h2 className="tg-section-su-title text-none wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Popular Travel Destinations<br />
                         Available Worldwide</h2>
                   </div>
                </div>

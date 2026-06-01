@@ -39,7 +39,7 @@ const Process = () => {
                <div className="col-lg-6">
                   <div className="tg-process-content mb-30 wow fadeInLeft" data-wow-delay=".4s" data-wow-duration=".9s">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-15">our Working Process</h5>
-                     <h2 className="tg-section-su-title text-capitalize mb-15">Book tickets easily with <br />
+                     <h2 className="tg-section-su-title text-none mb-15">Book tickets easily with <br />
                         just a few steps</h2>
                      <p className="tg-section-su-para tg-section-su-para-2 mb-25">Are you tired of the typical tourist destinations and<br />
                         looking to step out of your</p>

@@ -41,7 +41,7 @@
       &-title{
             font-weight: 700;
             font-size: 60px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             @media #{$sm,$xs} {
                   font-size: 40px;
@@ -64,7 +64,7 @@
             & span{
                   font-weight: 500;
                   font-size: 16px;
-                  text-transform: capitalize;
+                  text-transform: none;
                   color: var(--tg-common-white);
                   display: inline-block;
                   &.dvdr{
@@ -85,7 +85,7 @@
                         display: flex;
                         flex-wrap: wrap;
                         & li{
-                              text-transform: capitalize;
+                              text-transform: none;
                               color: var(--tg-grey-1);
                               margin-right: 8px;
                               padding: 5px 0px;
@@ -103,7 +103,7 @@
             &-3{
                   & ul{
                         & li{
-                              text-transform: capitalize;
+                              text-transform: none;
                               color: #898989;
                               margin-right: 8px;
                               padding: 5px 0px;
@@ -124,7 +124,7 @@
                         justify-content: center;
                         flex-wrap: wrap;
                         & li{
-                              text-transform: capitalize;
+                              text-transform: none;
                               color: var(--tg-common-white);
                               margin-right: 8px;
                               font-weight: 500;

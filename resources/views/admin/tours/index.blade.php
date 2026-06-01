@@ -94,7 +94,7 @@
                     {{-- Media --}}
                     <a href="{{ route('admin.tours.show', $tour) }}" class="cat-card-media text-decoration-none">
                         @if($primary)
-                            <img src="{{ Storage::url($primary->path) }}" alt="{{ $tour->name }}">
+                            <img src="{{ $primary->url }}" alt="{{ $tour->name }}">
                         @else
                             <div class="cat-media-placeholder"><i class="bi bi-image"></i></div>
                         @endif

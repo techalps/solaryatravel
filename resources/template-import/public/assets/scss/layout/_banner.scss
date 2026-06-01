@@ -134,7 +134,7 @@
                     font-family: var(--tg-ff-quentin);
                     font-size: 60px;
                     line-height: 100%;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-common-white);
                     margin: 0;
                     @media #{$xs} {
@@ -227,7 +227,7 @@
             font-weight: 400;
             font-size: 90px;
             line-height: 100%;
-            text-transform: capitalize;
+            text-transform: none;
             text-align: center;
             color: var(--tg-common-white);
             @media #{$lg,$md,$sm} {

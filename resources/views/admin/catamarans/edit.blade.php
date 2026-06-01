@@ -33,7 +33,7 @@
                     @foreach($catamaran->images as $image)
                         <div class="col-6 col-md-4 col-lg-3">
                             <div class="cat-image-tile position-relative ratio ratio-1x1 rounded-3 overflow-hidden bg-light">
-                                <img src="{{ Storage::url($image->path) }}" alt="{{ $image->filename ?? '' }}"
+                                <img src="{{ $image->url }}" alt="{{ $image->filename ?? '' }}"
                                      class="w-100 h-100" style="object-fit:cover">
                                 <div class="cat-image-overlay">
                                     <form action="{{ route('admin.catamarans.images.delete', [$catamaran, $image]) }}"

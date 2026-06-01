@@ -50,7 +50,7 @@ const Destination = () => {
                   <div className="tg-destination-section-title text-center mb-40">
                      <h5 className="tg-section-subtitle wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".6s">Most Popular Tour Packages </h5>
                      <h2 className="mb-15 wow fadeInUp" data-wow-delay=".5s" data-wow-duration=".7s">Our Best Destination</h2>
-                     <p className="text-capitalize wow fadeInUp" data-wow-delay=".6s" data-wow-duration=".8s">Are you tired of the typical tourist destinations and looking<br />
+                     <p className="text-none wow fadeInUp" data-wow-delay=".6s" data-wow-duration=".8s">Are you tired of the typical tourist destinations and looking<br />
                         to step out of your comfort zonetravel</p>
                   </div>
                </div>

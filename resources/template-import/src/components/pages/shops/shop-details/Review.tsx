@@ -12,7 +12,7 @@ const Review = () => {
                <div className="tg-product-details-inner">
                   <div className="tg-tour-about-review-wrap mb-45">
                      <h4 className="tg-tour-about-title mb-15">Customer Reviews</h4>
-                     <p className="text-capitalize lh-28 mb-20">Castle in one day is next to impossible. Designed specifically for trave arelimited time in London, this tour
+                     <p className="text-none lh-28 mb-20">Castle in one day is next to impossible. Designed specifically for trave arelimited time in London, this tour
                         ws you to check off a range of southern England‘s are historical</p>
                   </div>
                   <div className="tg-tour-about-border mb-35"></div>
@@ -35,7 +35,7 @@ const Review = () => {
                                        <i className="fa-sharp fa-solid fa-star"></i>
                                     </span>
                                  </div>
-                                 <p className="text-capitalize lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
+                                 <p className="text-none lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
                                     time in London, this tour allou to check off a range of southern  day is next together
                                     impossible. Designed speciEngland.</p>
                                  <a className="tg-tour-about-cus-reply" href="#">Reply</a>
@@ -59,7 +59,7 @@ const Review = () => {
                                        <i className="fa-sharp fa-solid fa-star"></i>
                                     </span>
                                  </div>
-                                 <p className="text-capitalize lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
+                                 <p className="text-none lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
                                     time in London, this tour allou to check off a range of southern  day is next together
                                     impossible. Designed speciEngland.</p>
                                  <a className="tg-tour-about-cus-reply" href="#">Reply</a>

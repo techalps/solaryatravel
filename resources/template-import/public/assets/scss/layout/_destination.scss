@@ -27,7 +27,7 @@
         margin-bottom: 27px;
         & a{
             font-weight: 500;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             border: 1px solid var(--tg-common-white);
             border-radius: 100px;
@@ -41,7 +41,7 @@
         & span{
             font-weight: 500;
             font-size: 14px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-1);
             border: 1px solid var(--tg-border-3);
             border-radius: 6px;

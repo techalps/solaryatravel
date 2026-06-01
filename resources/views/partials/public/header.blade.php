@@ -21,7 +21,7 @@
                                         <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
                                     </li>
                                     <li>
-                                        <a href="{{ route('tours.index') }}" class="{{ request()->routeIs('tours.*') ? 'active' : '' }}">I nostri Tour</a>
+                                        <a href="{{ route('tours.index') }}" class="{{ request()->routeIs('tours.*') ? 'active' : '' }}">Tour</a>
                                     </li>
                                 </ul>
                             </div>
@@ -33,8 +33,8 @@
                         <div class="tg-header-contact-info d-flex align-items-center">
                             <span class="tg-header-contact-icon mr-10 d-none d-xl-block">
                                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect width="40" height="40" rx="20" fill="{{ $isHome ? 'white' : '#7C37FF' }}" fill-opacity="{{ $isHome ? '0.15' : '0.12' }}" />
-                                    <path d="M27.5 23.5l-3.06-1.31a1 1 0 00-1.16.29l-1.36 1.66a15.07 15.07 0 01-6.1-6.1l1.66-1.36a1 1 0 00.29-1.16L16.5 12.5a1 1 0 00-1.16-.58l-2.84.65A1 1 0 0011.75 13.6 16 16 0 0026.4 28.25a1 1 0 001.04-.75l.65-2.84a1 1 0 00-.59-1.16z" stroke="{{ $isHome ? '#fff' : '#7C37FF' }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                                    <rect width="40" height="40" rx="20" fill="{{ $isHome ? 'white' : 'currentColor' }}" fill-opacity="0.12" />
+                                    <path d="M27.5 23.5l-3.06-1.31a1 1 0 00-1.16.29l-1.36 1.66a15.07 15.07 0 01-6.1-6.1l1.66-1.36a1 1 0 00.29-1.16L16.5 12.5a1 1 0 00-1.16-.58l-2.84.65A1 1 0 0011.75 13.6 16 16 0 0026.4 28.25a1 1 0 001.04-.75l.65-2.84a1 1 0 00-.59-1.16z" stroke="{{ $isHome ? '#fff' : 'currentColor' }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
                                 </svg>
                             </span>
                             <div class="tg-header-contact-number d-none d-xl-block">
@@ -44,14 +44,44 @@
                         </div>
                         <div class="tg-header-btn ml-20 d-none d-sm-block">
                             @auth
-                                <a class="tg-btn-header" href="{{ route('bookings.my') }}">
-                                    <span>
-                                        <svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M6.5 7C8.16 7 9.5 5.66 9.5 4S8.16 1 6.5 1 3.5 2.34 3.5 4s1.34 3 3 3zm0 1.5c-2 0-6 1-6 3v1h12v-1c0-2-4-3-6-3z" fill="currentColor"/>
-                                        </svg>
-                                    </span>
-                                    Area Personale
-                                </a>
+                                <div class="dropdown">
+                                    <button class="tg-btn-header dropdown-toggle d-flex align-items-center gap-2"
+                                            type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                            style="border:0;cursor:pointer">
+                                        <span class="tg-user-avatar">
+                                            {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                                        </span>
+                                        <span class="d-none d-lg-inline">{{ explode(' ', auth()->user()->name ?? '')[0] }}</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width:200px;border-radius:12px;padding:6px">
+                                        <li>
+                                            <div style="padding:10px 14px 6px">
+                                                <div style="font-weight:700;font-size:.88rem;color:#0E1B33">{{ auth()->user()->name }}</div>
+                                                <div style="font-size:.76rem;color:#64748b">{{ auth()->user()->email }}</div>
+                                            </div>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <a class="dropdown-item rounded-3 d-flex align-items-center gap-2 py-2" href="{{ route('profile') }}">
+                                                <i class="fa-regular fa-user" style="width:16px"></i>Il mio profilo
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item rounded-3 d-flex align-items-center gap-2 py-2" href="{{ route('bookings.my') }}">
+                                                <i class="fa-regular fa-calendar-check" style="width:16px"></i>Le mie prenotazioni
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <form method="POST" action="{{ route('logout') }}">
+                                                @csrf
+                                                <button type="submit" class="dropdown-item rounded-3 d-flex align-items-center gap-2 py-2 text-danger">
+                                                    <i class="fa-solid fa-arrow-right-from-bracket" style="width:16px"></i>Esci
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
                             @else
                                 <a class="tg-btn-header" href="{{ route('login') }}">
                                     <span>
@@ -89,20 +119,29 @@
     <div class="offcanvas-body">
         <ul class="list-unstyled fs-5 d-flex flex-column gap-3">
             <li><a href="{{ route('home') }}" class="text-white text-decoration-none">Home</a></li>
-            <li><a href="{{ route('tours.index') }}" class="text-white text-decoration-none">I nostri Tour</a></li>
+            <li><a href="{{ route('tours.index') }}" class="text-white text-decoration-none">Tour</a></li>
         </ul>
         <hr class="border-secondary border-opacity-25 my-4">
         <div class="d-flex flex-column gap-2">
             @auth
-                <a href="{{ route('bookings.my') }}" class="btn btn-outline-light rounded-pill">
-                    <i class="fa-solid fa-user me-2"></i>Le mie prenotazioni
+                <a href="{{ route('profile') }}" class="btn btn-outline-light rounded-pill">
+                    <i class="fa-regular fa-user me-2"></i>Il mio profilo
                 </a>
+                <a href="{{ route('bookings.my') }}" class="btn btn-outline-light rounded-pill">
+                    <i class="fa-regular fa-calendar-check me-2"></i>Le mie prenotazioni
+                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-danger rounded-pill w-100">
+                        <i class="fa-solid fa-arrow-right-from-bracket me-2"></i>Esci
+                    </button>
+                </form>
             @else
                 <a href="{{ route('login') }}" class="btn btn-outline-light rounded-pill">
                     <i class="fa-solid fa-user me-2"></i>Accedi
                 </a>
             @endauth
-            <a href="{{ route('booking.start') }}" class="btn rounded-pill" style="background:#7C37FF;color:#fff">
+            <a href="{{ route('booking.start') }}" class="btn rounded-pill" style="background:var(--tg-theme-primary);color:#fff">
                 <i class="fa-solid fa-calendar-check me-2"></i>Prenota Ora
             </a>
         </div>

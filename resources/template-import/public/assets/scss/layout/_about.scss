@@ -76,12 +76,12 @@
                     font-family: var(--tg-ff-outfit);
                     font-weight: 700;
                     font-size: 30px;
-                    text-transform: capitalize;
+                    text-transform: none;
                 }
                 & span{
                     font-family: var(--tg-ff-outfit);
                     font-size: 17px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: #353844;
                 }
             }
@@ -97,14 +97,14 @@
                     font-family: var(--tg-ff-outfit);
                     font-weight: 600;
                     font-size: 20px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     margin-bottom: 0;
                 }
                 & span{
                     font-family: var(--tg-ff-outfit);
                     font-weight: 400;
                     font-size: 15px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-grey-1);
                 }
             }

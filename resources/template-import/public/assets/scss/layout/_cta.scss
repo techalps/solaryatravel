@@ -36,7 +36,7 @@
         font-weight: 600;
         font-size: 32px;
         line-height: 1.25;
-        text-transform: capitalize;
+        text-transform: none;
         @media #{$xl} {
             font-size: 26px;
         }
@@ -112,7 +112,7 @@
                 margin-right: 0;
             }
             & p{
-                text-transform: capitalize;
+                text-transform: none;
             }
         }
     }

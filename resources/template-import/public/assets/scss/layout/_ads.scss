@@ -47,14 +47,14 @@
         & h2{
             font-size: 45px;
             line-height: 1;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
         }
         & .saving{
             font-weight: 600;
             font-size: 16px;
             letter-spacing: 0.06em;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             display: inline-block;
             transform: translateY(-8px);
@@ -62,7 +62,7 @@
         & .upto{
             font-weight: 700;
             font-size: 9px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             transform: rotate(-90deg);
             position: absolute;

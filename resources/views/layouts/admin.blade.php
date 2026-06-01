@@ -124,6 +124,11 @@
                             <i class="bi bi-gear-fill me-2"></i>Impostazioni
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.deploy.index') }}" class="nav-link {{ request()->routeIs('admin.deploy*') ? 'active' : '' }}">
+                            <i class="bi bi-rocket-takeoff-fill me-2"></i>Deploy & Migrazioni
+                        </a>
+                    </li>
                 </ul>
             </nav>
 
@@ -233,5 +238,6 @@
             backdrop?.addEventListener('click', hide);
         })();
     </script>
+    @stack('end-of-body')
 </body>
 </html>

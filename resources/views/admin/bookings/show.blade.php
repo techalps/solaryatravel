@@ -115,7 +115,7 @@
                         </div>
                         <div class="col-md-3">
                             <div class="text-muted small">Sorgente</div>
-                            <div class="fw-semibold text-capitalize">{{ $booking->source ?? '—' }}</div>
+                            <div class="fw-semibold text-none">{{ $booking->source ?? '—' }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-muted small">Lingua</div>
@@ -269,7 +269,7 @@
                                         @endphp
                                         <tr>
                                             <td>{{ $p->paid_at?->format('d/m/Y H:i') ?? $p->created_at?->format('d/m/Y H:i') }}</td>
-                                            <td class="text-capitalize">{{ $p->gateway }}</td>
+                                            <td class="text-none">{{ $p->gateway }}</td>
                                             <td><code class="small">{{ $p->gateway_payment_id ?? '—' }}</code></td>
                                             <td><span class="badge bg-{{ $pColor }}-subtle text-{{ $pColor }}">{{ $pStatus }}</span></td>
                                             <td class="text-end fw-semibold">{{ $fmtMoney($p->amount) }}</td>

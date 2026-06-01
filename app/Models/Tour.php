@@ -29,6 +29,7 @@ class Tour extends Model
         'min_capacity',
         'max_capacity',
         'is_active',
+        'booking_on_request',
         'sort_order',
         'meta_title',
         'meta_description',
@@ -40,6 +41,7 @@ class Tour extends Model
         'season_start' => 'date',
         'season_end' => 'date',
         'is_active' => 'boolean',
+        'booking_on_request' => 'boolean',
         'duration_hours' => 'decimal:1',
     ];
 
@@ -142,7 +144,7 @@ class Tour extends Model
      */
     public function getPriceFromAttribute(): ?float
     {
-        $prices = $this->ageBrackets->where('price', '>', 0)->pluck('price');
+        $prices = $this->periods->where('base_price', '>', 0)->pluck('base_price');
         return $prices->isEmpty() ? null : (float) $prices->min();
     }
 }

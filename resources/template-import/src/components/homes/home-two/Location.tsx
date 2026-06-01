@@ -10,7 +10,7 @@ const Location = () => {
                <div className="col-lg-6">
                   <div className="tg-location-section-title-wrap text-center mb-40">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-15 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Best Places near at you</h5>
-                     <h2 className="tg-section-su-title text-capitalize wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Explore Top Destinations</h2>
+                     <h2 className="tg-section-su-title text-none wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Explore Top Destinations</h2>
                   </div>
                </div>
             </div>

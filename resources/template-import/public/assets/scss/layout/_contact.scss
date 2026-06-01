@@ -34,7 +34,7 @@
     &-title{
         font-weight: 600;
         font-size: 36px;
-        text-transform: capitalize;
+        text-transform: none;
         color: var(--tg-common-black);
         @media #{$lg,$md,$sm,$xs} {
             & br{
@@ -50,7 +50,7 @@
             }
             & p{
                 line-height: 26px;
-                text-transform: capitalize;
+                text-transform: none;
             }
         }
     }

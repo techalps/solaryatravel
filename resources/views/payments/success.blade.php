@@ -41,7 +41,7 @@
                                 <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-water text-primary me-2"></i>Il tuo tour</h4>
                                 <div class="d-flex align-items-start gap-3 p-3 rounded-3" style="background:#fafafa;border:1px solid #eef0f3">
                                     @if($booking->tour->primaryImage)
-                                        <img src="{{ \Illuminate\Support\Facades\Storage::url($booking->tour->primaryImage->path) }}" alt="" style="width:110px;height:110px;border-radius:12px;object-fit:cover;flex:0 0 auto">
+                                        <img src="{{ $booking->tour->primaryImage->url }}" alt="" style="width:110px;height:110px;border-radius:12px;object-fit:cover;flex:0 0 auto">
                                     @endif
                                     <div class="flex-grow-1">
                                         <h5 class="mb-1 fw-bold" style="color:#0E1B33">{{ $booking->tour->name }}</h5>
@@ -156,9 +156,9 @@
     .bk-summary-line { display: flex; justify-content: space-between; padding: .25rem 0; font-size: .92rem; color: #0E1B33; }
     .bk-summary-line.discount { color: #198754; }
 
-    .tg-btn-switch-animation { background: #7C37FF; color: #fff; padding: 14px 26px; font-weight: 600; }
-    .tg-btn-switch-animation:hover { background: #5b1fd8; color: #fff; }
-    .tg-btn-transparent { padding: 14px 26px; font-weight: 600; border: 1.5px solid #7C37FF; color: #7C37FF; }
-    .tg-btn-transparent:hover { background: #7C37FF; color: #fff; }
+    .tg-btn-switch-animation { background: var(--tg-theme-primary); color: #fff; padding: 14px 26px; font-weight: 600; }
+    .tg-btn-switch-animation:hover { filter: brightness(.88); color: #fff; }
+    .tg-btn-transparent { padding: 14px 26px; font-weight: 600; border: 1.5px solid var(--tg-theme-primary); color: var(--tg-theme-primary); }
+    .tg-btn-transparent:hover { background: var(--tg-theme-primary); color: #fff; }
 </style>
 @endpush

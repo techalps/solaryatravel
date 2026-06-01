@@ -50,12 +50,12 @@ const ChooseArea = () => {
                <div className="col-lg-7">
                   <div className="tg-chose-section-title mb-30">
                      <h5 className="tg-section-subtitle mb-15 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".1s">Dream Your Next Trip</h5>
-                     <h2 className="mb-15 text-capitalize wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">discover when even<br /> you want to go</h2>
+                     <h2 className="mb-15 text-none wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">discover when even<br /> you want to go</h2>
                   </div>
                </div>
                <div className="col-lg-5">
                   <div className="tg-chose-5-para">
-                     <p className="text-capitalize wow fadeInUp mb-0" data-wow-delay=".5s" data-wow-duration=".9s">Are you tired of the typical tourist destinations and looking
+                     <p className="text-none wow fadeInUp mb-0" data-wow-delay=".5s" data-wow-duration=".9s">Are you tired of the typical tourist destinations and looking
                         r comfort zon. Adventure.Are you tirehe typical touriststin
                         ations and looking Are you tired of the typical tourist de
                         stinations and looking re you tired of the.</p>

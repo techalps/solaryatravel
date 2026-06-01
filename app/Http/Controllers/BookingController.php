@@ -61,13 +61,19 @@ class BookingController extends Controller
                     ->with('error', 'La data o l\'orario selezionato non è disponibile.');
             }
 
+            $startTime = strlen($time) === 5 ? $time . ':00' : $time;
+            $endTime = \Carbon\Carbon::parse($startTime)
+                ->addMinutes((int) round(($tour->duration_hours ?? 1) * 60))
+                ->format('H:i:s');
+
             $departure = \App\Models\TourDeparture::firstOrCreate(
                 [
                     'tour_id' => $tour->id,
                     'departure_date' => $date,
-                    'start_time' => strlen($time) === 5 ? $time . ':00' : $time,
+                    'start_time' => $startTime,
                 ],
                 [
+                    'end_time' => $endTime,
                     'status' => 'scheduled',
                     'price_modifier' => 1.0,
                 ]

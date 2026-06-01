@@ -119,7 +119,7 @@
                 padding: 51px 20px 30px 20px;
             }
             & p{
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-white);
                 line-height: 26px;
             }
@@ -142,7 +142,7 @@
         &-title{
             font-weight: 600;
             font-size: 20px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             & a{
                 &:hover{
@@ -296,7 +296,7 @@
         &-totle{
             font-weight: 600;
             font-size: 20px;
-            text-transform: capitalize;
+            text-transform: none;
         }
         &-shape{
             position: absolute;
@@ -355,7 +355,7 @@
                 }
                 & .tg-chose-list-content p{
                     font-family: var(--tg-ff-outfit);
-                    text-transform: capitalize;
+                    text-transform: none;
                 }
                 & .tg-chose-list-icon.mr-20 {
                     width: 60px;
@@ -457,7 +457,7 @@
                 color: #353844;
                 font-size: 16px;
                 line-height: 25px;
-                text-transform: capitalize;
+                text-transform: none;
             }
         }
         & .tg-chose-list-icon {

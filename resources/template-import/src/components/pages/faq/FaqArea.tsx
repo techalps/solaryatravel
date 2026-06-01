@@ -39,7 +39,7 @@ const FaqArea = () => {
                   <div className="tg-faq-content-wrap">
                      <div className="tg-faq-section-title text-center mb-40">
                         <h5 className="tg-section-subtitle mb-15 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".9s">Have questions you want answers to?</h5>
-                        <h2 className="mb-15 text-capitalize wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">frequently Ask Questions</h2>
+                        <h2 className="mb-15 text-none wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">frequently Ask Questions</h2>
                      </div>
                      <div className="tg-faq-content">
                         <div className="accordion tg-custom-accordion" id="accordionExample">

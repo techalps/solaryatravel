@@ -54,7 +54,7 @@
             & li{
                 font-weight: 400;
                 font-size: 16px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-black);
                 display: flex;
                 &:not(:last-child){

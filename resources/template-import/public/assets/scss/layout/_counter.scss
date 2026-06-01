@@ -7,7 +7,7 @@
 .tg-counter{
     &-title{
         font-size: 90px;
-        text-transform: capitalize;
+        text-transform: none;
         color: #f5f5f5;
         margin-bottom: 0;
         @media #{$xl} {
@@ -20,7 +20,7 @@
     &-subtitle{
         font-weight: 600;
         font-size: 18px;
-        text-transform: capitalize;
+        text-transform: none;
         color: var(--tg-common-black);
         position: absolute;
         top: 50%;

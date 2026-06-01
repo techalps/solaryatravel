@@ -102,7 +102,7 @@
                             <span class="rpt-rank-pos"><i class="bi {{ $icon }}"></i></span>
                             <div class="rpt-rank-body">
                                 <div class="rpt-rank-line">
-                                    <span class="rpt-rank-name text-capitalize">{{ str_replace('_', ' ', $gw) }}</span>
+                                    <span class="rpt-rank-name text-none">{{ str_replace('_', ' ', $gw) }}</span>
                                     <span class="rpt-rank-meta">€{{ number_format($g->total, 0, ',', '.') }} · {{ $g->count }}×</span>
                                 </div>
                                 <div class="rpt-bar"><span style="width:{{ $pct }}%"></span></div>

@@ -5,7 +5,7 @@
 @section('content')
 
     {{-- ============= HERO / BREADCRUMB ============= --}}
-    <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(135deg, #560CE3 0%, #7C37FF 100%);">
+    <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-tours.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
         <div class="container">
             <div class="row">
                 <div class="col-12 text-center text-white">
@@ -37,7 +37,7 @@
                                 <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-water text-primary me-2"></i>Il tuo tour</h4>
                                 <div class="d-flex align-items-start gap-3 p-3 rounded-3" style="background:#fafafa;border:1px solid #eef0f3">
                                     @if($booking->tour->primaryImage)
-                                        <img src="{{ \Illuminate\Support\Facades\Storage::url($booking->tour->primaryImage->path) }}" alt="" style="width:96px;height:96px;border-radius:12px;object-fit:cover;flex:0 0 auto">
+                                        <img src="{{ $booking->tour->primaryImage->url }}" alt="" style="width:96px;height:96px;border-radius:12px;object-fit:cover;flex:0 0 auto">
                                     @endif
                                     <div class="flex-grow-1">
                                         <h5 class="mb-1 fw-bold" style="color:#0E1B33">{{ $booking->tour->name }}</h5>
@@ -95,7 +95,7 @@
                             {{-- Payment info / How it works --}}
                             <div class="tg-tour-about-border mb-30"></div>
                             <div class="tg-tour-about-inner mb-30">
-                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-shield-halved text-primary me-2"></i>Pagamento sicuro</h4>
+                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-shield-alt text-primary me-2"></i>Pagamento sicuro</h4>
                                 <div class="tg-tour-about-list tg-tour-about-list-2">
                                     <ul class="list-unstyled mb-0">
                                         <li>
@@ -211,7 +211,7 @@
     .bk-summary-line { display: flex; justify-content: space-between; padding: .25rem 0; font-size: .9rem; color: #0E1B33; }
     .bk-summary-line.discount { color: #198754; }
 
-    .tg-tour-about-sidebar .tg-btn { background: #7C37FF; color: #fff; padding: 14px 22px; font-weight: 600; }
+    .tg-tour-about-sidebar .tg-btn { background: var(--tg-theme-primary); color: #fff; padding: 14px 22px; font-weight: 600; }
     .tg-tour-about-sidebar .tg-btn:hover { background: #5b1fd8; color: #fff; }
     .tg-tour-about-sidebar .tg-btn:disabled { background: #c7b8e8; cursor: not-allowed; }
 

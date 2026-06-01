@@ -99,8 +99,8 @@ class PricingService
         foreach ($addonIds as $addonId) {
             $addon = Addon::find($addonId);
             if ($addon && $addon->is_active) {
-                // Lasciamo che il modello Addon decida la formula; passiamo seats e hours/8 come "duration units"
-                $total += (float) $addon->calculatePrice($seats, max(0.5, $hours / 8));
+                // quantity=1 (1 selezione per extra), persons=$seats per il calcolo per_person
+                $total += (float) $addon->calculatePrice(1, $seats);
             }
         }
         return $total;
@@ -116,9 +116,7 @@ class PricingService
             return null;
         }
 
-        $discountAmount = $discount->type === 'percentage'
-            ? $amount * ((float) $discount->value / 100)
-            : (float) $discount->value;
+        $discountAmount = $discount->calculateDiscount($amount);
 
         return [
             'id' => $discount->id,

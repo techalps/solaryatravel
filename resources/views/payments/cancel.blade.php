@@ -73,9 +73,9 @@
 
 @push('head')
 <style>
-    .tg-btn-switch-animation { background: #7C37FF; color: #fff; padding: 14px 26px; font-weight: 600; }
-    .tg-btn-switch-animation:hover { background: #5b1fd8; color: #fff; }
-    .tg-btn-transparent { padding: 14px 26px; font-weight: 600; border: 1.5px solid #7C37FF; color: #7C37FF; }
-    .tg-btn-transparent:hover { background: #7C37FF; color: #fff; }
+    .tg-btn-switch-animation { background: var(--tg-theme-primary); color: #fff; padding: 14px 26px; font-weight: 600; }
+    .tg-btn-switch-animation:hover { filter: brightness(.88); color: #fff; }
+    .tg-btn-transparent { padding: 14px 26px; font-weight: 600; border: 1.5px solid var(--tg-theme-primary); color: var(--tg-theme-primary); }
+    .tg-btn-transparent:hover { background: var(--tg-theme-primary); color: #fff; }
 </style>
 @endpush

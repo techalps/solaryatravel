@@ -7,9 +7,9 @@
     {{-- HERO --}}
     <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="
         @if($tour->primaryImage)
-            background: linear-gradient(rgba(11,61,92,.55),rgba(11,61,92,.55)), url('{{ \Illuminate\Support\Facades\Storage::url($tour->primaryImage->path) }}') center/cover;
+            background: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)), url('{{ $tour->primaryImage->url }}') center/cover;
         @else
-            background: linear-gradient(135deg, #560CE3 0%, #7C37FF 100%);
+            background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-bookings.jpg') }}') center/cover; background-color: var(--tg-theme-primary);
         @endif
     ">
         <div class="container">

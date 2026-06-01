@@ -7,7 +7,7 @@
 	&-subtitle{
 		font-family: var(--tg-ff-segoepr);
 		font-weight: 700;
-		text-transform: capitalize;
+		text-transform: none;
 		color: var(--tg-theme-primary);
 	}
 	&-su{
@@ -15,7 +15,7 @@
 			font-family: var(--tg-ff-outfit);
 			font-weight: 500;
 			font-size: 16px;
-			text-transform: capitalize;
+			text-transform: none;
 			color: var(--tg-theme-primary);
 			background: #f5efff;
 			display: inline-block;
@@ -36,7 +36,7 @@
 			font-weight: 400;
 			color: var(--tg-common-black);
 			line-height: 28px;
-			text-transform: capitalize;
+			text-transform: none;
 			@media #{$xl,$lg,$md,$sm,$xs} {
 				& br{
 					display: none;

@@ -25,14 +25,14 @@
             & h5{
                 font-weight: 600;
                 font-size: 18px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-black-2);
                 margin-bottom: 0;
             }
             & span{
                 font-weight: 400;
                 font-size: 14px;
-                text-transform: capitalize;
+                text-transform: none;
             }
         }
         &-para{
@@ -40,7 +40,7 @@
             font-weight: 400;
             font-size: 16px;
             line-height: 150%;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-6);
         }
     }
@@ -92,14 +92,14 @@
                     margin: 0;
                 }
                 & span{
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: #4c4c5b;
                 }
                 & p{
                     font-style: italic;
                     font-size: 18px;
                     line-height: 36px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-grey-1);
                     @media #{$md,$sm,$xs} {
                         & br{
@@ -112,7 +112,7 @@
         &-name{
             font-size: 22px;
             line-height: 136%;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-black-2);
         }
         &-ratings{
