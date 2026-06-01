@@ -13,14 +13,12 @@ class HomeController extends Controller
     public function __invoke(): View
     {
         $tours = Tour::active()->ordered()
-            ->with(['images' => fn($q) => $q->where('is_primary', true), 'ageBrackets'])
+            ->with(['images' => fn($q) => $q->where('is_primary', true), 'periods'])
             ->take(6)
             ->get();
 
-        $minPrice = Tour::active()
-            ->with('ageBrackets')
-            ->get()
-            ->map(fn ($t) => $t->ageBrackets->where('counts_as_seat', true)->min('price'))
+        $minPrice = $tours
+            ->map(fn ($t) => $t->price_from)
             ->filter()
             ->min();
 

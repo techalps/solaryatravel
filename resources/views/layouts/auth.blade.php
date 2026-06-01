@@ -212,45 +212,15 @@
     @stack('head')
 </head>
 <body>
-    @include('partials.public.header')
-
     <main>
         @yield('content')
     </main>
 
-    @include('partials.public.footer')
-
     {{-- Scripts --}}
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/wow.js@1.2.2/dist/wow.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.js"></script>
 
     <script>
-        // WOW
-        if (typeof WOW !== 'undefined') {
-            new WOW({ live: false }).init();
-        }
-        // Scroll-up button
-        const scrollUp = document.getElementById('scrollUp');
-        if (scrollUp) {
-            window.addEventListener('scroll', () => {
-                scrollUp.classList.toggle('show', window.scrollY > 400);
-            });
-            scrollUp.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-        }
-        // Sticky header
-        const header = document.getElementById('header-sticky');
-        if (header) {
-            window.addEventListener('scroll', () => {
-                header.classList.toggle('header-sticky', window.scrollY > 80);
-            });
-        }
-    </script>
 
     <style>
         #scrollUp {

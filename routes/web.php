@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\DeployController;
 
 /*
 |--------------------------------------------------------------------------
@@ -79,6 +80,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/profilo', [PageController::class, 'profile'])->name('profile');
     Route::put('/profilo', [PageController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profilo/password', [PageController::class, 'updatePassword'])->name('profile.password');
 });
 
 /*
@@ -152,6 +154,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/impostazioni', [SettingsController::class, 'index'])->name('settings');
     Route::post('/impostazioni', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('/impostazioni/test-mail', [SettingsController::class, 'sendTestMail'])->name('settings.mail-test');
+
+    // Deploy & Migrations
+    Route::get('/deploy', [DeployController::class, 'index'])->name('deploy.index');
+    Route::post('/deploy/migrate', [DeployController::class, 'migrate'])->name('deploy.migrate');
+    Route::post('/deploy/artisan', [DeployController::class, 'artisan'])->name('deploy.artisan');
 
     // Users
     Route::resource('users', AdminUserController::class)->except(['show']);

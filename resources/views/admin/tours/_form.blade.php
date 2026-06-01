@@ -373,6 +373,18 @@
                                @checked(old('is_active', $tour->is_active ?? true))>
                     </div>
                 </div>
+                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-3">
+                    <div>
+                        <div class="fw-semibold mb-1">Su richiesta</div>
+                        <p class="small text-muted mb-0">Mostra contatti al posto del modulo di prenotazione.</p>
+                    </div>
+                    <div class="form-check form-switch m-0" style="font-size:1.4rem">
+                        <input type="hidden" name="booking_on_request" value="0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="booking_on_request"
+                               name="booking_on_request" value="1"
+                               @checked(old('booking_on_request', $tour->booking_on_request ?? false))>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-primary w-100 rounded-pill fw-semibold">
                     <i class="bi bi-save me-2"></i>{{ $isEdit ? 'Aggiorna tour' : 'Crea tour' }}
                 </button>

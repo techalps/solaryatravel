@@ -27,7 +27,7 @@
                     <i class="fa-solid fa-arrow-left me-1"></i>Le mie prenotazioni
                 </a>
                 <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    <span class="badge bg-white px-3 py-2 fw-semibold" style="color:{{ $s['color'] }};border-radius:999px">
+                    <span class="bk-status-badge d-inline-block fw-semibold" style="--sc:{{ $s['color'] }};--sb:{{ $s['bg'] }};border-radius:999px;padding:.35em .75em;font-size:.85em;line-height:1">
                         <i class="fa-solid {{ $s['icon'] }} me-1"></i>{{ $s['label'] }}
                     </span>
                     <span class="small opacity-75 font-monospace">#{{ $booking->booking_number }}</span>
@@ -245,6 +245,12 @@
 
 @push('head')
 <style>
+    /* Specificity (0,2,0) batte .tg-breadcrumb-area span (0,1,1) anche con !important */
+    .tg-breadcrumb-area .bk-status-badge {
+        color: var(--sc) !important;
+        background: var(--sb) !important;
+    }
+
     .bk-show-card {
         background: #fff;
         border: 1px solid #e2e8f0;

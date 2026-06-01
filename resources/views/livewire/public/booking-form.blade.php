@@ -299,7 +299,7 @@
             </button>
 
             <small class="d-block text-muted text-center mt-2" style="font-size:.78rem">
-                <i class="fa-solid fa-shield-halved me-1"></i>Pagamento sicuro via Stripe
+                <i class="fa-solid fa-shield-alt me-1"></i>Pagamento sicuro via Stripe
             </small>
         @endif
     </div>

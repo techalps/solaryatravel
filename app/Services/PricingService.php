@@ -116,9 +116,7 @@ class PricingService
             return null;
         }
 
-        $discountAmount = $discount->type === 'percentage'
-            ? $amount * ((float) $discount->value / 100)
-            : (float) $discount->value;
+        $discountAmount = $discount->calculateDiscount($amount);
 
         return [
             'id' => $discount->id,

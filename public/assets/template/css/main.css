@@ -635,7 +635,7 @@ textarea {
   background: var(--tg-common-black);
 }
 .tg-btn-transparent {
-  background: #f0e9ff;
+  background: #fff1e9;
   color: var(--tg-theme-secondary);
 }
 .tg-btn-transparent:hover {
@@ -4211,7 +4211,7 @@ textarea {
 }
 .tg-about-thumb-2 {
   float: right;
-  margin-right: -15px;
+  margin-right: -30px;
 }
 @media only screen and (min-width: 992px) and (max-width: 1199px), only screen and (min-width: 768px) and (max-width: 991px), only screen and (min-width: 576px) and (max-width: 767px), (max-width: 575px) {
   .tg-about-thumb-2 {
@@ -4219,7 +4219,7 @@ textarea {
   }
 }
 .tg-about-thumb-4 {
-  margin-left: -15px;
+  margin-left: -80px;
 }
 @media only screen and (min-width: 992px) and (max-width: 1199px), only screen and (min-width: 768px) and (max-width: 991px), only screen and (min-width: 576px) and (max-width: 767px), (max-width: 575px) {
   .tg-about-thumb-4 {

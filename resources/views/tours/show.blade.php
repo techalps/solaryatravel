@@ -27,9 +27,15 @@
                     @if($tour->description_short)
                         <p class="lead mb-4 wow fadeInUp" style="max-width:700px;margin:0 auto;">{{ $tour->description_short }}</p>
                     @endif
-                    <button onclick="openBookingDrawer()" class="tg-btn tg-btn-hero-cta wow fadeInUp">
-                        <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
-                    </button>
+                    @if($tour->booking_on_request)
+                        <a href="mailto:info@solaryatravel.com" class="tg-btn tg-btn-hero-cta wow fadeInUp">
+                            <i class="fa-regular fa-envelope me-2"></i>Contattaci per prenotare
+                        </a>
+                    @else
+                        <button onclick="openBookingDrawer()" class="tg-btn tg-btn-hero-cta wow fadeInUp">
+                            <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -232,6 +238,32 @@
         </div>
     </div>
 
+    @if($tour->booking_on_request)
+
+    {{-- ============= STICKY BAR — SU RICHIESTA ============= --}}
+    <div style="position:fixed;bottom:0;left:0;right:0;z-index:1039;background:#fff;border-top:1px solid #e8e8e8;box-shadow:0 -4px 20px rgba(0,0,0,.08)">
+        <div class="container py-2">
+            <div class="row align-items-center g-2">
+                <div class="col">
+                    <span style="font-size:.76rem;color:#888;display:block;line-height:1.3">Prenotazione su richiesta</span>
+                    <strong style="font-size:.95rem;color:#0E1B33">Contattaci per disponibilità e tariffe</strong>
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <a href="tel:+391234567890"
+                       style="background:var(--tg-theme-primary);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+                        <i class="fa-solid fa-phone"></i><span class="d-none d-sm-inline">Chiama</span>
+                    </a>
+                    <a href="mailto:info@solaryatravel.com"
+                       style="background:var(--tg-theme-secondary);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+                        <i class="fa-regular fa-envelope"></i><span class="d-none d-sm-inline">Email</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @else
+
     {{-- ============= BOOKING DRAWER ============= --}}
     {{-- Overlay --}}
     <div id="bk-overlay" onclick="closeBookingDrawer()"
@@ -295,6 +327,8 @@
             </div>
         </div>
     </div>
+
+    @endif
 
     {{-- ============= SIMILAR TOURS ============= --}}
     @if($similar->count())

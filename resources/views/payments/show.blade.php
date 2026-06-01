@@ -95,7 +95,7 @@
                             {{-- Payment info / How it works --}}
                             <div class="tg-tour-about-border mb-30"></div>
                             <div class="tg-tour-about-inner mb-30">
-                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-shield-halved text-primary me-2"></i>Pagamento sicuro</h4>
+                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-shield-alt text-primary me-2"></i>Pagamento sicuro</h4>
                                 <div class="tg-tour-about-list tg-tour-about-list-2">
                                     <ul class="list-unstyled mb-0">
                                         <li>

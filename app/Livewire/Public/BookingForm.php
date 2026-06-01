@@ -83,8 +83,9 @@ class BookingForm extends Component
 
         if (auth()->check()) {
             $u = auth()->user();
-            $this->customer_first_name = $u->first_name ?? $u->name ?? '';
-            $this->customer_last_name = $u->last_name ?? '';
+            $parts = explode(' ', $u->name ?? '', 2);
+            $this->customer_first_name = $parts[0] ?? '';
+            $this->customer_last_name = $parts[1] ?? '';
             $this->customer_email = $u->email ?? '';
         }
 

@@ -49,17 +49,7 @@
                                     @else
                                         <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}">
                                     @endif
-                                    @if($i === 0)
-                                        <span class="tg-listing-item-price-discount shape">Top</span>
-                                    @endif
                                 </a>
-                                <div class="tg-listing-item-wishlist">
-                                    <a href="#" aria-label="Preferiti" style="cursor:pointer">
-                                        <svg width="20" height="18" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M10.5167 16.3416C10.2334 16.4416 9.76675 16.4416 9.48341 16.3416C7.06675 15.5166 1.66675 12.075 1.66675 6.24165C1.66675 3.66665 3.74175 1.58331 6.30008 1.58331C7.81675 1.58331 9.15841 2.31665 10.0001 3.44998C10.8417 2.31665 12.1917 1.58331 13.7001 1.58331C16.2584 1.58331 18.3334 3.66665 18.3334 6.24165C18.3334 12.075 12.9334 15.5166 10.5167 16.3416Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                    </a>
-                                </div>
                             </div>
                             <div class="tg-listing-card-content">
                                 <h4 class="tg-listing-card-title"><a href="{{ route('tours.show', $tour->slug) }}">{{ $tour->name }}</a></h4>
@@ -74,17 +64,16 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="tg-listing-card-price d-flex align-items-end justify-content-between">
+                            <div class="tg-listing-card-price d-flex align-items-center justify-content-between">
                                 <div class="tg-listing-card-price-wrap price-bg d-flex align-items-center">
                                     <span class="tg-listing-card-currency-amount mr-5">
                                         <span class="currency-symbol">€</span>{{ number_format($tour->price_from ?? 0, 0, ',', '.') }}
                                     </span>
                                     <span class="tg-listing-card-activity-person">/Persona</span>
                                 </div>
-                                <div class="tg-listing-card-review space">
-                                    <span class="tg-listing-rating-icon"><i class="fa-sharp fa-solid fa-star"></i></span>
-                                    <span class="tg-listing-rating-percent">(120 Recensioni)</span>
-                                </div>
+                                <a href="{{ route('tours.show', $tour->slug) }}" class="tg-card-tour-link" style="margin-right:24px">
+                                    Scopri <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                         </div>
                     </div>

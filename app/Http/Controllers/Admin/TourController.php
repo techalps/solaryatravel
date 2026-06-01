@@ -153,6 +153,7 @@ class TourController extends Controller
             'min_capacity' => 'nullable|integer|min:1|max:200',
             'max_capacity' => 'nullable|integer|min:1|max:1000',
             'is_active' => 'sometimes|boolean',
+            'booking_on_request' => 'sometimes|boolean',
             'sort_order' => 'nullable|integer|min:0',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
@@ -216,6 +217,7 @@ class TourController extends Controller
         }
         $out['slug'] = !empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
         $out['is_active'] = !empty($data['is_active']);
+        $out['booking_on_request'] = !empty($data['booking_on_request']);
         return $out;
     }
 

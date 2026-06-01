@@ -35,7 +35,32 @@
 
 <section class="py-5" style="background:#f8fafc;min-height:50vh">
     <div class="container">
-        <div class="mx-auto">
+        <div class="row g-4" margin:0 auto">
+
+            {{-- SIDEBAR --}}
+            <div class="col-lg-3">
+                <div class="pf-sidebar">
+                    <div class="pf-avatar">
+                        {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                    </div>
+                    <div class="pf-sidebar-name">{{ auth()->user()->name ?? 'Utente' }}</div>
+                    <div class="pf-sidebar-email">{{ auth()->user()->email }}</div>
+                    <nav class="pf-sidebar-nav">
+                        <a href="{{ route('profile') }}" class="pf-nav-link">
+                            <i class="fa-regular fa-user"></i>Dati personali
+                        </a>
+                        <a href="{{ route('bookings.my') }}" class="pf-nav-link pf-nav-active">
+                            <i class="fa-regular fa-calendar-check"></i>Prenotazioni
+                        </a>
+                        <a href="{{ route('profile') }}#sicurezza" class="pf-nav-link">
+                            <i class="fa-solid fa-lock"></i>Sicurezza
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            {{-- MAIN --}}
+            <div class="col-lg-9">
 
             @if($bookings->isEmpty())
                 {{-- EMPTY STATE --}}
@@ -129,7 +154,8 @@
                 @endif
             @endif
 
-        </div>
+            </div>{{-- /col main --}}
+        </div>{{-- /row --}}
     </div>
 </section>
 
@@ -137,6 +163,32 @@
 
 @push('head')
 <style>
+    /* Sidebar area personale (condivisa con profilo) */
+    .pf-sidebar {
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+        padding: 28px 20px 22px; text-align: center;
+        position: sticky; top: 100px;
+    }
+    .pf-avatar {
+        width: 72px; height: 72px; border-radius: 50%;
+        background: var(--tg-theme-primary); color: #fff;
+        font-size: 1.8rem; font-weight: 700;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin-bottom: 12px;
+    }
+    .pf-sidebar-name { font-weight: 700; font-size: 1rem; color: #0E1B33; margin-bottom: 2px; }
+    .pf-sidebar-email { font-size: .8rem; color: #64748b; margin-bottom: 20px; word-break: break-all; }
+    .pf-sidebar-nav { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+    .pf-nav-link {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 14px; border-radius: 10px;
+        font-size: .88rem; font-weight: 600; text-decoration: none;
+        color: #475569; transition: background .15s, color .15s;
+    }
+    .pf-nav-link:hover { background: #f1f5f9; color: #0E1B33; }
+    .pf-nav-link.pf-nav-active { background: color-mix(in srgb, var(--tg-theme-primary) 10%, #fff); color: var(--tg-theme-primary); }
+    .pf-nav-link i { width: 16px; text-align: center; flex-shrink: 0; }
+
     .bk-card {
         background: #fff;
         border: 1px solid #e2e8f0;

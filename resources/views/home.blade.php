@@ -23,6 +23,12 @@
         object-fit: cover;
         object-position: center;
     }
+
+    /* About images: smooth parallax transition (desktop) */
+    [data-about-img] {
+        transition: transform 0.12s ease-out;
+        will-change: transform;
+    }
 </style>
 @endpush
 
@@ -86,13 +92,16 @@
     <div class="tg-about-area pb-100">
         <div class="container">
             <div class="row">
-                <div class="col-lg-3">
+                {{-- Colonna sinistra: visibile solo desktop --}}
+                <div class="col-lg-3 d-none d-lg-block">
                     <div class="tg-about-thumb-wrap mb-30">
-                        <div class="w-100 tg-round-15 mb-85 wow fadeInLeft" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 300px; height: 300px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
-                        <div class="tg-about-thumb-2 tg-round-15 wow fadeInLeft" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 200px; height: 200px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
+                        <div class="tg-round-15 mb-0 wow fadeInLeft" data-about-img="1" style="background: url({{ asset('assets/template/img/about/about-1.jpg') }}) no-repeat; background-size: cover; width: 250px; height: 250px; border-radius: 50%; border: 9px solid #ff7d2c;"></div>
+                        <div class="tg-about-thumb-2 tg-round-15 wow fadeInLeft" data-about-img="2" style="background: url({{ asset('assets/template/img/about/about-2.jpg') }}) no-repeat; background-size: cover; width: 220px; height: 220px; border-radius: 50%; border: 9px solid #ff7d2c;"></div>
                     </div>
                 </div>
-                <div class="col-lg-6 mb-30">
+                <div class="col-lg-6 mb-30 mt-lg-50">
+                    {{-- Immagine sopra il testo: solo mobile --}}
+                    <div class="d-block d-lg-none mb-3" style="background: url({{ asset('assets/template/img/about/about-1.jpg') }}) center/cover no-repeat; height: 250px; border-radius: 12px;"></div>
                     <div class="tg-about-content text-center">
                         <div class="tg-about-section-title mb-25">
                             <h4 class="tg-section-subtitle wow fadeInUp">Solarya</h4>
@@ -103,17 +112,15 @@
                                 regalarti emozioni autentiche e memorie indelebili.
                             </p>
                         </div>
-                        <div class="tp-about-btn-wrap wow fadeInUp">
-                            <a href="{{ route('about') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
-                                <span class="tg-btn-text">Scopri di più</span>
-                            </a>
-                        </div>
                     </div>
+                    {{-- Immagine sotto il testo: solo mobile --}}
+                    <div class="d-block d-lg-none mt-3" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}) center/cover no-repeat; height: 250px; border-radius: 12px;"></div>
                 </div>
-                <div class="col-lg-3">
+                {{-- Colonna destra: visibile solo desktop --}}
+                <div class="col-lg-3 d-none d-lg-block">
                     <div class="tg-about-thumb-wrap mb-30">
-                        <div class="w-100 mb-85 wow fadeInRight" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 300px; height: 300px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
-                        <div class="tg-about-thumb-4 tg-round-15 wow fadeInRight" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}); width: 200px; height: 200px; border-radius: 50%; border: 18px solid #ff7d2c;"></div>
+                        <div class="w-100 mb-20 wow fadeInRight" data-about-img="3" style="background: url({{ asset('assets/template/img/about/about-3.jpg') }}) no-repeat; background-size: cover; width: 290px; height: 290px; border-radius: 50%; border: 9px solid #ff7d2c;"></div>
+                        <div class="tg-about-thumb-4 tg-round-15 wow fadeInRight" data-about-img="4" style="background: url({{ asset('assets/template/img/about/about-4.jpg') }}) no-repeat; background-size: cover; width: 220px; height: 220px; border-radius: 50%; border: 9px solid #ff7d2c;"></div>
                     </div>
                 </div>
             </div>
@@ -122,9 +129,6 @@
 
     {{-- ============= LISTING (tours) ============= --}}
     <div class="tg-listing-area tg-grey-bg pt-140 pb-110 p-relative z-index-9">
-        <img class="tg-listing-shape d-none d-lg-block" src="{{ asset('assets/template/img/listing/about-shape.png') }}" alt="">
-        <img class="tg-listing-shape-2 d-none d-xl-block" src="{{ asset('assets/template/img/listing/about-shape-2.png') }}" alt="">
-        <img class="tg-listing-shape-3 d-none d-lg-block" src="{{ asset('assets/template/img/listing/about-shape-3.png') }}" alt="">
         <div class="container">
             <div class="row">
                 <div class="col-12">
@@ -145,23 +149,13 @@
                                     @else
                                         <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}">
                                     @endif
-                                    @if($i === 0)
-                                        <span class="tg-listing-item-price-discount shape">Top</span>
-                                    @endif
                                 </a>
-                                <div class="tg-listing-item-wishlist">
-                                    <a href="#" aria-label="Preferiti" style="cursor:pointer">
-                                        <svg width="20" height="18" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M10.5167 16.3416C10.2334 16.4416 9.76675 16.4416 9.48341 16.3416C7.06675 15.5166 1.66675 12.075 1.66675 6.24165C1.66675 3.66665 3.74175 1.58331 6.30008 1.58331C7.81675 1.58331 9.15841 2.31665 10.0001 3.44998C10.8417 2.31665 12.1917 1.58331 13.7001 1.58331C16.2584 1.58331 18.3334 3.66665 18.3334 6.24165C18.3334 12.075 12.9334 15.5166 10.5167 16.3416Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                    </a>
-                                </div>
                             </div>
                             <div class="tg-listing-card-content">
                                 <h4 class="tg-listing-card-title"><a href="{{ route('tours.show', $tour->slug) }}">{{ $tour->name }}</a></h4>
                                 <div class="tg-listing-card-duration-tour">
                                     <span class="tg-listing-card-duration-map mb-5">
-                                        <i class="fa-solid fa-location-dot me-1"></i> {{ $tour->departure_point ?? 'Costiera Amalfitana' }}
+                                        <i class="fa-solid fa-location-dot me-1"></i> {{ $tour->departure_point ?? '' }}
                                     </span>
                                     @if($tour->duration_hours)
                                         <span class="tg-listing-card-duration-time">
@@ -170,17 +164,16 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="tg-listing-card-price d-flex align-items-end justify-content-between">
+                            <div class="tg-listing-card-price d-flex align-items-center justify-content-between">
                                 <div class="tg-listing-card-price-wrap price-bg d-flex align-items-center">
                                     <span class="tg-listing-card-currency-amount mr-5">
                                         <span class="currency-symbol">€</span>{{ number_format($tour->price_from ?? 0, 0, ',', '.') }}
                                     </span>
                                     <span class="tg-listing-card-activity-person">/Persona</span>
                                 </div>
-                                <div class="tg-listing-card-review space">
-                                    <span class="tg-listing-rating-icon"><i class="fa-sharp fa-solid fa-star"></i></span>
-                                    <span class="tg-listing-rating-percent">(120 Recensioni)</span>
-                                </div>
+                                <a href="{{ route('tours.show', $tour->slug) }}" class="tg-card-tour-link" style="margin-right:24px">
+                                    Scopri <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -227,7 +220,7 @@
                             <div class="tg-chose-list d-flex mb-40 wow fadeInUp">
                                 <span class="tg-chose-list-icon mr-20">
                                     <span style="display:inline-flex;width:64px;height:64px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb, var(--tg-theme-primary) 10%, #fff);color:var(--tg-theme-primary);font-size:26px">
-                                        <i class="fa-solid fa-shield-halved"></i>
+                                        <i class="fa-solid fa-shield-alt"></i>
                                     </span>
                                 </span>
                                 <div class="tg-chose-list-content">
@@ -270,7 +263,7 @@
     </div>
 
     {{-- ============= CTA video + discount ============= --}}
-    <div class="tg-banner-area tg-banner-space">
+    <!-- <div class="tg-banner-area tg-banner-space">
         <div class="container">
             <div class="row">
                 <div class="col-12">
@@ -305,7 +298,7 @@
             </div>
         </div>
     </div>
-    <span class="tg-banner-transparent-bg"></span>
+    <span class="tg-banner-transparent-bg"></span> -->
 
     {{-- ============= CTA finale ============= --}}
     
@@ -319,7 +312,7 @@
             ['title' => 'Ischia',    'tours' => '05', 'img' => 'location-4.jpg'],
         ];
     @endphp
-    <div class="tg-location-area p-relative pb-40 tg-grey-bg pt-140">
+   <!-- <div class="tg-location-area p-relative pb-40 tg-grey-bg pt-140">
         
         <div class="container">
             <div class="row">
@@ -352,16 +345,16 @@
                 @endforeach
             </div>
         </div>
-    </div>
+    </div> -->
 
     {{-- ============= CTA TWO (banner full-width) ============= --}}
-    <div class="tg-banner-area include-bg" style="background-image: url('{{ asset('assets/template/img/banner/banner.jpg') }}')">
+    <div class="tg-banner-area include-bg" style="background-image: linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.38)), url('{{ asset('assets/template/img/banner/banner.jpg') }}')">
         <div class="container">
             <div class="col-lg-12">
                 <div class="tg-banner-2-content text-center">
                     <div class="tg-about-section-title mb-25">
                         <h5 class="tg-section-subtitle mb-10 wow fadeInUp">La tua prossima avventura</h5>
-                        <h2 class="tg-section-title-white mb-25 wow fadeInUp">Itinerari esclusivi <br>in Sardegna</h2>
+                        <h3 class="tg-section-title-white mb-25 wow fadeInUp">Il tuo biglietto ti sta aspettando, vivi con noi la tua prossima indimenticabile avventura!</h3>
                     </div>
                     <div class="tp-banner-btn-wrap wow fadeInUp">
                         <a href="{{ route('booking.start') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
@@ -525,6 +518,41 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+    // About images parallax on mouse move (desktop only)
+    (function () {
+        const section = document.querySelector('.tg-about-area');
+        if (!section) return;
+        const imgs = section.querySelectorAll('[data-about-img]');
+        if (!imgs.length) return;
+
+        // [x factor, y factor] — segni opposti per creare profondità
+        const factors = { '1': [-0.018, -0.014], '2': [0.024, 0.018], '3': [0.018, -0.014], '4': [-0.024, 0.018] };
+
+        let rafId = null;
+        let mx = 0, my = 0;
+
+        window.addEventListener('mousemove', function (e) {
+            if (window.innerWidth < 992) return;
+            const rect = section.getBoundingClientRect();
+            mx = e.clientX - (rect.left + rect.width / 2);
+            my = e.clientY - (rect.top + rect.height / 2);
+            if (!rafId) {
+                rafId = requestAnimationFrame(function () {
+                    imgs.forEach(function (img) {
+                        const f = factors[img.dataset.aboutImg];
+                        if (!f) return;
+                        img.style.transform = 'translate(' + (mx * f[0]).toFixed(2) + 'px, ' + (my * f[1]).toFixed(2) + 'px)';
+                    });
+                    rafId = null;
+                });
+            }
+        });
+
+        section.addEventListener('mouseleave', function () {
+            imgs.forEach(function (img) { img.style.transform = 'translate(0,0)'; });
+        });
+    })();
 
     if (typeof Swiper === 'undefined') return;
 
