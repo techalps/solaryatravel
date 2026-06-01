@@ -518,7 +518,7 @@
     </div> -->
 
     {{-- ============= CTA finale ============= --}}
-    <div class="tg-cta-area tg-cta-su-wrapper tg-cta-space z-index-9 p-relative">
+    <!--<div class="tg-cta-area tg-cta-su-wrapper tg-cta-space z-index-9 p-relative">
         <div class="container">
             <div class="row">
                 <div class="col-12">
@@ -552,7 +552,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div>-->
 
 @endsection
 
