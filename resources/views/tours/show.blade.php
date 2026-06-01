@@ -27,9 +27,9 @@
                     @if($tour->description_short)
                         <p class="lead mb-4 wow fadeInUp" style="max-width:700px;margin:0 auto;">{{ $tour->description_short }}</p>
                     @endif
-                    <a href="#book" class="tg-btn tg-btn-hero-cta wow fadeInUp">
+                    <button onclick="openBookingDrawer()" class="tg-btn tg-btn-hero-cta wow fadeInUp">
                         <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -39,7 +39,7 @@
     <div class="tg-tour-details-area pt-50 pb-25">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-xl-9 col-lg-10">
+                <div class="col-xl-12 col-lg-12">
 
                     {{-- Quick meta strip --}}
                     @if($tour->departure_point)
@@ -166,56 +166,64 @@
                     @endif
 
                     {{-- Age brackets / prices per period --}}
-                    @php $periodsWithPrices = $tour->periods->filter(fn($p) => $p->base_price > 0 || $p->ageBrackets->count()); @endphp
+                    @php $periodsWithPrices = $tour->periods->filter(fn($p) => $p->ageBrackets->count()); @endphp
                     @if($periodsWithPrices->count())
                         <div class="tg-tour-about-border mb-40"></div>
                         <div class="tg-tour-about-inner mb-40">
                             <h4 class="tg-tour-about-title mb-20"><i class="fa-solid fa-tags text-primary me-2"></i>Tariffe per fascia d'età</h4>
-                            @foreach($periodsWithPrices as $period)
-                                <div class="mb-30">
-                                    <div class="d-flex align-items-center justify-content-between mb-10 pb-10" style="border-bottom:2px solid #f0f0f0">
-                                        <span class="fw-semibold text-dark">
-                                            {{ $period->label ?: 'Periodo' }}
-                                        </span>
-                                        <span class="text-muted small">
-                                            {{ $period->start_date->format('d/m/Y') }} – {{ $period->end_date->format('d/m/Y') }}
-                                        </span>
+                            <div class="accordion" id="acc-tariffe">
+                                @foreach($periodsWithPrices as $loop_period => $period)
+                                    @php $accId = 'acc-period-' . $period->id; @endphp
+                                    <div class="accordion-item" style="border:1px solid #e4e4e4;border-radius:10px;margin-bottom:.5rem;overflow:hidden">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button {{ $loop_period > 0 ? 'collapsed' : '' }}"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#{{ $accId }}"
+                                                    aria-expanded="{{ $loop_period === 0 ? 'true' : 'false' }}"
+                                                    aria-controls="{{ $accId }}"
+                                                    style="font-weight:600;background:#fff">
+                                                <span>{{ $period->label ?: 'Periodo' }}</span>
+                                                <span class="ms-auto me-3 text-muted fw-normal small">
+                                                    {{ $period->start_date->format('d/m/Y') }} – {{ $period->end_date->format('d/m/Y') }}
+                                                </span>
+                                            </button>
+                                        </h2>
+                                        <div id="{{ $accId }}"
+                                             class="accordion-collapse collapse {{ $loop_period === 0 ? 'show' : '' }}"
+                                             data-bs-parent="#acc-tariffe">
+                                            <div class="accordion-body pt-0">
+                                                <div class="table-responsive">
+                                                    <table class="table table-borderless align-middle mb-0 tg-price-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Fascia</th>
+                                                                <th>Età</th>
+                                                                <th class="text-end">Prezzo</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($period->ageBrackets as $b)
+                                                                <tr>
+                                                                    <td><strong>{{ $b->label }}</strong></td>
+                                                                    <td class="text-muted small">
+                                                                        @if($b->max_age === null)
+                                                                            da {{ $b->min_age }} anni
+                                                                        @else
+                                                                            {{ $b->min_age }} – {{ $b->max_age }} anni
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-end fw-bold text-primary">€{{ number_format($b->price, 0, ',', '.') }}</td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-borderless align-middle mb-0 tg-price-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Fascia</th>
-                                                    <th>Età</th>
-                                                    <th class="text-end">Prezzo</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @if($period->base_price > 0)
-                                                    <tr>
-                                                        <td><strong>Adulti</strong></td>
-                                                        <td class="text-muted small">Prezzo base</td>
-                                                        <td class="text-end fw-bold text-primary">€{{ number_format($period->base_price, 0, ',', '.') }}</td>
-                                                    </tr>
-                                                @endif
-                                                @foreach($period->ageBrackets as $b)
-                                                    <tr>
-                                                        <td><strong>{{ $b->label }}</strong></td>
-                                                        <td class="text-muted small">
-                                                            @if($b->max_age === null)
-                                                                da {{ $b->min_age }} anni
-                                                            @else
-                                                                {{ $b->min_age }} – {{ $b->max_age }} anni
-                                                            @endif
-                                                        </td>
-                                                        <td class="text-end fw-bold text-primary">€{{ number_format($b->price, 0, ',', '.') }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            @endforeach
+                                @endforeach
+                            </div>
                         </div>
                     @endif
 
@@ -224,16 +232,65 @@
         </div>
     </div>
 
-    {{-- ============= BOOKING SECTION ============= --}}
-    <div id="book" class="tg-tour-booking-section py-5" style="background: #f8f9fc; scroll-margin-top: 90px;">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-xl-6 col-lg-7 col-md-9">
-                    <div class="text-center mb-4">
-                        <h3 class="tg-tour-about-title mb-2"><i class="fa-regular fa-calendar-check text-primary me-2"></i>Prenota la tua esperienza</h3>
-                        <p class="text-muted mb-0">Scegli la data, indica i partecipanti e completa la prenotazione in pochi passi.</p>
+    {{-- ============= BOOKING DRAWER ============= --}}
+    {{-- Overlay --}}
+    <div id="bk-overlay" onclick="closeBookingDrawer()"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1040;opacity:0;transition:opacity .3s ease"></div>
+
+    {{-- Drawer panel --}}
+    <div id="bk-drawer"
+         style="position:fixed;bottom:0;left:0;right:0;max-height:92dvh;background:#fff;border-radius:24px 24px 0 0;z-index:1041;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column;overflow:hidden">
+
+        {{-- Drawer header --}}
+        <div style="border-bottom:1px solid #f0f0f0;flex-shrink:0">
+            <div class="container py-3">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <span style="font-size:.75rem;color:#888;display:block;margin-bottom:2px">Stai prenotando</span>
+                        <h6 style="margin:0;font-weight:700;color:#0E1B33">{{ $tour->name }}</h6>
                     </div>
-                    <livewire:public.booking-form :tour="$tour" :available-dates="$departuresByDate ?? []" />
+                    <div class="col-auto">
+                        <button onclick="closeBookingDrawer()"
+                                style="background:#f4f4f4;border:none;border-radius:50%;width:36px;height:36px;font-size:1.1rem;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center"
+                                aria-label="Chiudi">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Drawer body --}}
+        <div style="overflow-y:auto;flex:1;padding-bottom:40px">
+            <div class="container" style="padding-top:20px">
+                <div class="row justify-content-center">
+                    <div class="col-xl-6 col-lg-7 col-md-9">
+                        <livewire:public.booking-form :tour="$tour" :available-dates="$departuresByDate ?? []" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ============= STICKY BOOKING BAR ============= --}}
+    <div id="bk-sticky-bar"
+         style="position:fixed;bottom:0;left:0;right:0;z-index:1039;background:#fff;border-top:1px solid #e8e8e8;box-shadow:0 -4px 20px rgba(0,0,0,.08)">
+        <div class="container py-2">
+            <div class="row align-items-center">
+                <div class="col">
+                    <span style="font-size:.72rem;color:#888;display:block;line-height:1.2">A partire da</span>
+                    @php $barPrice = $tour->periods->min('base_price'); @endphp
+                    @if($barPrice)
+                        <strong style="font-size:1.15rem;color:#0E1B33">€{{ number_format($barPrice, 0, ',', '.') }}<span style="font-size:.75rem;font-weight:400;color:#888"> /pers</span></strong>
+                    @else
+                        <strong style="font-size:1rem;color:#0E1B33">Scopri il prezzo</strong>
+                    @endif
+                </div>
+                <div class="col-auto">
+                    <button onclick="openBookingDrawer()"
+                            style="background:var(--tg-theme-secondary);color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:.95rem;cursor:pointer;transition:background .2s">
+                        <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
+                    </button>
                 </div>
             </div>
         </div>
@@ -280,7 +337,7 @@
         align-items: center;
         padding: 14px 32px;
         background: #fff;
-        color: var(--tg-theme-primary, #560CE3);
+        color: var(--tg-theme-secondary);
         font-weight: 700;
         border-radius: 50px;
         text-decoration: none;
@@ -289,7 +346,7 @@
     }
     .tg-btn-hero-cta:hover {
         transform: translateY(-3px);
-        background: var(--tg-theme-primary, #560CE3);
+        background: var(--tg-theme-secondary);
         color: #fff;
         box-shadow: 0 14px 34px rgba(0,0,0,.35);
     }
@@ -333,5 +390,50 @@
 
     /* Smooth scroll */
     html { scroll-behavior: smooth; }
+
+    /* Drawer body scrollbar */
+    #bk-drawer > div:last-child::-webkit-scrollbar { width: 4px; }
+    #bk-drawer > div:last-child::-webkit-scrollbar-track { background: transparent; }
+    #bk-drawer > div:last-child::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+    /* Body padding when sticky bar is visible */
+    body.bk-bar-visible { padding-bottom: 72px; }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+    // --- Drawer ---
+    function openBookingDrawer() {
+        var drawer  = document.getElementById('bk-drawer');
+        var overlay = document.getElementById('bk-overlay');
+        overlay.style.display = 'block';
+        requestAnimationFrame(function () {
+            overlay.style.opacity = '1';
+            drawer.style.transform = 'translateY(0)';
+        });
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeBookingDrawer() {
+        var drawer  = document.getElementById('bk-drawer');
+        var overlay = document.getElementById('bk-overlay');
+        drawer.style.transform = 'translateY(100%)';
+        overlay.style.opacity = '0';
+        setTimeout(function () { overlay.style.display = 'none'; }, 380);
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeBookingDrawer();
+    });
+
+    window.openBookingDrawer  = openBookingDrawer;
+    window.closeBookingDrawer = closeBookingDrawer;
+
+    // Padding bottom per la sticky bar sempre visibile
+    document.body.classList.add('bk-bar-visible');
+})();
+</script>
 @endpush

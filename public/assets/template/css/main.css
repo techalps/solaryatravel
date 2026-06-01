@@ -624,11 +624,11 @@ textarea {
   color: var(--tg-common-white);
   border-radius: 6px;
   padding: 12px 27px;
-  background: var(--tg-theme-primary);
+  background: var(--tg-theme-secondary);
   display: inline-block;
 }
 .tg-btn:hover {
-  background: var(--tg-theme-primary);
+  background: var(--tg-theme-secondary);
   color: var(--tg-common-white);
 }
 .tg-btn-black {
@@ -636,7 +636,7 @@ textarea {
 }
 .tg-btn-transparent {
   background: #f0e9ff;
-  color: var(--tg-theme-primary);
+  color: var(--tg-theme-secondary);
 }
 .tg-btn-transparent:hover {
   color: var(--tg-common-white);
@@ -690,8 +690,8 @@ textarea {
 }
 .tg-btn-header:hover {
   color: var(--tg-common-white);
-  background: var(--tg-theme-primary);
-  border-color: var(--tg-theme-primary);
+  background: var(--tg-theme-secondary);
+  border-color: var(--tg-theme-secondary);
 }
 .tg-btn-header span {
   transform: translateY(-2px);
@@ -700,7 +700,7 @@ textarea {
 }
 .tg-btn-gray {
   background: var(--tg-grey-7);
-  color: var(--tg-theme-primary);
+  color: var(--tg-theme-secondary);
 }
 .tg-btn-gray:hover {
   color: var(--tg-common-white);
@@ -710,7 +710,7 @@ textarea {
 }
 .tg-btn-su-transparent {
   background: #e1daf3;
-  color: var(--tg-theme-primary);
+  color: var(--tg-theme-secondary);
   font-family: var(--tg-ff-outfit);
   font-size: 16px;
   border-radius: 10px;

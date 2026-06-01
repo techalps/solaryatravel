@@ -9,7 +9,7 @@
 @section('content')
 
 {{-- HERO --}}
-<div class="tg-breadcrumb-area pt-150 pb-90 p-relative no-print" style="background: linear-gradient(135deg, #0066cc 0%, #06b6d4 100%);">
+<div class="tg-breadcrumb-area pt-150 pb-90 p-relative no-print" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-bookings.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8 text-white">
@@ -33,7 +33,7 @@
 
 <section class="py-5" style="background:#f8fafc">
     <div class="container">
-        <div class="mx-auto" style="max-width:880px">
+        <div class="mx-auto">
 
             <div class="alert alert-info border-0 rounded-3 d-flex align-items-start gap-2 mb-4 no-print" style="background:#dbeafe;color:#1e40af">
                 <i class="fa-solid fa-circle-info mt-1"></i>

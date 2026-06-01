@@ -136,7 +136,7 @@
             </div>
             <div class="row">
                 @forelse($tours as $i => $tour)
-                    <div class="col-xxl-3 col-xl-4 col-lg-4 col-md-6">
+                    <div class="col-xxl-4 col-xl-4 col-lg-4 col-md-6">
                         <div class="tg-listing-card-item mb-30">
                             <div class="tg-listing-card-thumb fix mb-15 p-relative">
                                 <a href="{{ route('tours.show', $tour->slug) }}">
@@ -215,7 +215,7 @@
                         <div class="tg-chose-list-wrap">
                             <div class="tg-chose-list d-flex mb-15 wow fadeInUp">
                                 <span class="tg-chose-list-icon mr-20">
-                                    <span style="display:inline-flex;width:64px;height:64px;align-items:center;justify-content:center;border-radius:50%;background:rgba(124,55,255,.08);color:#560CE3;font-size:26px">
+                                    <span style="display:inline-flex;width:64px;height:64px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb, var(--tg-theme-primary) 10%, #fff);color:var(--tg-theme-primary);font-size:26px">
                                         <i class="fa-solid fa-sailboat"></i>
                                     </span>
                                 </span>
@@ -226,7 +226,7 @@
                             </div>
                             <div class="tg-chose-list d-flex mb-40 wow fadeInUp">
                                 <span class="tg-chose-list-icon mr-20">
-                                    <span style="display:inline-flex;width:64px;height:64px;align-items:center;justify-content:center;border-radius:50%;background:rgba(124,55,255,.08);color:#560CE3;font-size:26px">
+                                    <span style="display:inline-flex;width:64px;height:64px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb, var(--tg-theme-primary) 10%, #fff);color:var(--tg-theme-primary);font-size:26px">
                                         <i class="fa-solid fa-shield-halved"></i>
                                     </span>
                                 </span>
@@ -291,7 +291,7 @@
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <div class="tg-cta-apps d-flex flex-wrap gap-3">
-                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:#7C37FF">
+                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:var(--tg-theme-primary)">
                                         <i class="fa-solid fa-calendar-check me-2"></i> Prenota ora
                                     </a>
                                     <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="{{ route('contact') }}">

@@ -17,7 +17,7 @@
 @section('content')
 
 {{-- HERO --}}
-<div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(135deg, #0066cc 0%, #06b6d4 100%);">
+<div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-bookings.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8 text-white">
@@ -35,7 +35,7 @@
 
 <section class="py-5" style="background:#f8fafc;min-height:50vh">
     <div class="container">
-        <div class="mx-auto" style="max-width:980px">
+        <div class="mx-auto">
 
             @if($bookings->isEmpty())
                 {{-- EMPTY STATE --}}
@@ -70,7 +70,7 @@
                                         $img = $booking->tour?->primaryImage;
                                     @endphp
                                     @if($img)
-                                        <img src="{{ \Illuminate\Support\Facades\Storage::url($img->path) }}" alt="{{ $booking->tour->name }}">
+                                        <img src="{{ $img->url }}" alt="{{ $booking->tour->name }}">
                                     @else
                                         <div class="bk-card-image-fallback">
                                             <i class="fa-solid fa-water"></i>

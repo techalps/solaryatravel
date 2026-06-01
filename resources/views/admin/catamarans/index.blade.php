@@ -71,7 +71,7 @@
                     {{-- Media --}}
                     <a href="{{ route('admin.catamarans.show', $catamaran) }}" class="cat-card-media text-decoration-none">
                         @if($catamaran->images->first())
-                            <img src="{{ Storage::url($catamaran->images->first()->path) }}" alt="{{ $catamaran->name }}">
+                            <img src="{{ $catamaran->images->first()->url }}" alt="{{ $catamaran->name }}">
                         @else
                             <div class="cat-media-placeholder"><i class="bi bi-image"></i></div>
                         @endif

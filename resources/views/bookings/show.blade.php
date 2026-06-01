@@ -19,7 +19,7 @@
 @section('content')
 
 {{-- HERO --}}
-<div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(135deg, #0066cc 0%, #06b6d4 100%);">
+<div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-bookings.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-9 text-white">
@@ -54,7 +54,7 @@
                     <h3 class="bk-show-section-title"><i class="fa-solid fa-water text-primary"></i>Il tuo tour</h3>
                     <div class="d-flex gap-3 align-items-start">
                         @if($booking->tour?->primaryImage)
-                            <img src="{{ \Illuminate\Support\Facades\Storage::url($booking->tour->primaryImage->path) }}"
+                            <img src="{{ $booking->tour->primaryImage->url }}"
                                  alt="" style="width:120px;height:120px;border-radius:14px;object-fit:cover;flex:0 0 auto">
                         @endif
                         <div class="flex-grow-1">

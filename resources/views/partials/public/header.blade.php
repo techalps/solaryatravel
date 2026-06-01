@@ -42,8 +42,8 @@
                         <div class="tg-header-contact-info d-flex align-items-center">
                             <span class="tg-header-contact-icon mr-10 d-none d-xl-block">
                                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect width="40" height="40" rx="20" fill="{{ $isHome ? 'white' : '#7C37FF' }}" fill-opacity="{{ $isHome ? '0.15' : '0.12' }}" />
-                                    <path d="M27.5 23.5l-3.06-1.31a1 1 0 00-1.16.29l-1.36 1.66a15.07 15.07 0 01-6.1-6.1l1.66-1.36a1 1 0 00.29-1.16L16.5 12.5a1 1 0 00-1.16-.58l-2.84.65A1 1 0 0011.75 13.6 16 16 0 0026.4 28.25a1 1 0 001.04-.75l.65-2.84a1 1 0 00-.59-1.16z" stroke="{{ $isHome ? '#fff' : '#7C37FF' }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                                    <rect width="40" height="40" rx="20" fill="{{ $isHome ? 'white' : 'currentColor' }}" fill-opacity="0.12" />
+                                    <path d="M27.5 23.5l-3.06-1.31a1 1 0 00-1.16.29l-1.36 1.66a15.07 15.07 0 01-6.1-6.1l1.66-1.36a1 1 0 00.29-1.16L16.5 12.5a1 1 0 00-1.16-.58l-2.84.65A1 1 0 0011.75 13.6 16 16 0 0026.4 28.25a1 1 0 001.04-.75l.65-2.84a1 1 0 00-.59-1.16z" stroke="{{ $isHome ? '#fff' : 'currentColor' }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
                                 </svg>
                             </span>
                             <div class="tg-header-contact-number d-none d-xl-block">
@@ -114,7 +114,7 @@
                     <i class="fa-solid fa-user me-2"></i>Accedi
                 </a>
             @endauth
-            <a href="{{ route('booking.start') }}" class="btn rounded-pill" style="background:#7C37FF;color:#fff">
+            <a href="{{ route('booking.start') }}" class="btn rounded-pill" style="background:var(--tg-theme-primary);color:#fff">
                 <i class="fa-solid fa-calendar-check me-2"></i>Prenota Ora
             </a>
         </div>

@@ -15,7 +15,7 @@
     {{-- Hero header card with overlay --}}
     <div class="cat-show-hero rounded-4 overflow-hidden mb-4 position-relative shadow-sm">
         @if($heroImage)
-            <img src="{{ Storage::url($heroImage->path) }}" alt="{{ $catamaran->name }}"
+            <img src="{{ $heroImage->url }}" alt="{{ $catamaran->name }}"
                  class="cat-show-hero-img">
         @else
             <div class="cat-show-hero-placeholder">
@@ -111,9 +111,9 @@
                         <div class="row g-2">
                             @foreach($extraImages as $image)
                                 <div class="col-6 col-md-4 col-lg-3">
-                                    <a href="{{ Storage::url($image->path) }}" target="_blank" rel="noopener"
+                                    <a href="{{ $image->url }}" target="_blank" rel="noopener"
                                        class="d-block ratio ratio-1x1 rounded-3 overflow-hidden bg-light border">
-                                        <img src="{{ Storage::url($image->path) }}" alt=""
+                                        <img src="{{ $image->url }}" alt=""
                                              class="w-100 h-100" style="object-fit:cover">
                                     </a>
                                 </div>

@@ -108,14 +108,14 @@
         }
         .tg-header__area:not(.tg-transparent) .tgmenu__navbar-wrap > ul > li.active > a,
         .tg-header__area:not(.tg-transparent) .tgmenu__navbar-wrap > ul > li:hover > a {
-            color: var(--tg-theme-primary, #7C37FF);
+            color: var(--tg-theme-primary);
         }
         .tg-header__area:not(.tg-transparent) .tg-header-contact-number span,
         .tg-header__area:not(.tg-transparent) .tg-header-contact-number a {
             color: var(--tg-common-black, #0E1B33);
         }
         .tg-header__area:not(.tg-transparent) .tg-btn-header {
-            background: var(--tg-theme-primary, #7C37FF);
+            background: var(--tg-theme-primary);
             color: #fff;
         }
 
@@ -130,6 +130,66 @@
         .btn {
             border-radius: 50px !important;
         }
+
+        /* Testi bianchi in tutte le hero/breadcrumb */
+        .tg-breadcrumb-area { color: #fff; }
+        .tg-breadcrumb-area h1, .tg-breadcrumb-area h2, .tg-breadcrumb-area h3,
+        .tg-breadcrumb-area h4, .tg-breadcrumb-area h5, .tg-breadcrumb-area h6,
+        .tg-breadcrumb-area p, .tg-breadcrumb-area span, .tg-breadcrumb-area small,
+        .tg-breadcrumb-area a:not(.btn):not(.tg-btn),
+        .tg-breadcrumb-area .lead { color: #fff !important; }
+        .tg-breadcrumb-area .breadcrumb-item::before { color: rgba(255,255,255,.55) !important; }
+
+        /* Sovrascrive Bootstrap primary/secondary con le variabili del tema */
+        :root {
+            --bs-primary:           var(--tg-theme-primary);
+            --bs-primary-rgb:       0, 69, 96;   /* #004560 */
+            --bs-secondary:         var(--tg-theme-secondary);
+            --bs-secondary-rgb:     255, 125, 44; /* #ff7d2c */
+            --bs-link-color:        var(--tg-theme-primary);
+            --bs-link-hover-color:  var(--tg-theme-primary);
+        }
+        .text-primary   { color: var(--tg-theme-primary)   !important; }
+        .text-secondary { color: var(--tg-theme-secondary) !important; }
+
+        /* btn-primary */
+        .btn-primary {
+            --bs-btn-bg:               var(--tg-theme-primary);
+            --bs-btn-border-color:     var(--tg-theme-primary);
+            --bs-btn-hover-bg:         var(--tg-theme-primary);
+            --bs-btn-hover-border-color: var(--tg-theme-primary);
+            --bs-btn-active-bg:        var(--tg-theme-primary);
+            --bs-btn-active-border-color: var(--tg-theme-primary);
+            --bs-btn-disabled-bg:      var(--tg-theme-primary);
+            --bs-btn-disabled-border-color: var(--tg-theme-primary);
+            --bs-btn-color: #fff;
+            --bs-btn-hover-color: #fff;
+            filter: none;
+        }
+        .btn-primary:hover,
+        .btn-primary:active,
+        .btn-primary:focus-visible { filter: brightness(.88); }
+
+        /* btn-outline-primary */
+        .btn-outline-primary {
+            --bs-btn-color:              var(--tg-theme-primary);
+            --bs-btn-border-color:       var(--tg-theme-primary);
+            --bs-btn-hover-bg:           var(--tg-theme-primary);
+            --bs-btn-hover-border-color: var(--tg-theme-primary);
+            --bs-btn-active-bg:          var(--tg-theme-primary);
+            --bs-btn-active-border-color: var(--tg-theme-primary);
+            --bs-btn-hover-color: #fff;
+            --bs-btn-active-color: #fff;
+        }
+
+        /* form-check focus ring */
+        .form-check-input:checked          { background-color: var(--tg-theme-primary); border-color: var(--tg-theme-primary); }
+        .form-check-input:focus            { border-color: var(--tg-theme-primary); box-shadow: 0 0 0 .25rem rgba(0,69,96,.25); }
+
+        /* border-primary / bg-primary */
+        .border-primary { border-color: var(--tg-theme-primary) !important; }
+        .bg-primary     { background-color: var(--tg-theme-primary) !important; }
+        .link-primary   { color: var(--tg-theme-primary) !important; }
     </style>
 
     @livewireStyles
@@ -143,11 +203,6 @@
     </main>
 
     @include('partials.public.footer')
-
-    {{-- Scroll to top --}}
-    <button id="scrollUp" title="Scroll To Top" aria-label="Scroll to top">
-        <i class="fa-solid fa-arrow-up"></i>
-    </button>
 
     {{-- Scripts --}}
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
@@ -184,7 +239,7 @@
     <style>
         #scrollUp {
             position: fixed; right: 24px; bottom: 24px; width: 44px; height: 44px;
-            border-radius: 50%; border: 0; background: #7C37FF; color: #fff;
+            border-radius: 50%; border: 0; background: var(--tg-theme-primary); color: #fff;
             display: none; align-items: center; justify-content: center;
             box-shadow: 0 6px 20px rgba(124,55,255,.35); cursor: pointer; z-index: 1040;
             transition: all .25s ease;

@@ -23,9 +23,9 @@
                            data-current="{{ $selectedDate }}"
                            autocomplete="off"
                            readonly>
-                    <span class="calender">
+                    <span class="calender" style="color:var(--tg-theme-primary)">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M11.1111 1V3.80003M4.88888 1V3.80003M1 6.59992H15M2.55556 2.39988H13.4444C14.3036 2.39988 15 3.02668 15 3.79989V13.6C15 14.3732 14.3036 15 13.4444 15H2.55556C1.69645 15 1 14.3732 1 13.6V3.79989C1 3.02668 1.69645 2.39988 2.55556 2.39988Z" stroke="#560CE3" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M11.1111 1V3.80003M4.88888 1V3.80003M1 6.59992H15M2.55556 2.39988H13.4444C14.3036 2.39988 15 3.02668 15 3.79989V13.6C15 14.3732 14.3036 15 13.4444 15H2.55556C1.69645 15 1 14.3732 1 13.6V3.79989C1 3.02668 1.69645 2.39988 2.55556 2.39988Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </span>
                     <span class="angle"><i class="fa-sharp fa-solid fa-angle-down"></i></span>
@@ -307,15 +307,15 @@
     {{-- Styles --}}
     <style>
         .booking-widget .bk-input { border-radius: 50px; padding: .55rem 1rem; border: 1.5px solid #eef0f3; width: 100%; background: #fff; font-size: .88rem; }
-        .booking-widget .bk-input:focus { outline: none; border-color: #7C37FF; box-shadow: 0 0 0 3px rgba(124,55,255,.12); }
+        .booking-widget .bk-input:focus { outline: none; border-color: var(--tg-theme-secondary); box-shadow: 0 0 0 3px rgba(var(--tg-theme-secondary-rgb, 124,55,255),.12); }
         .booking-widget .bk-textarea { border-radius: 14px; padding: .65rem 1rem; border: 1.5px solid #eef0f3; width: 100%; font-size: .88rem; resize: vertical; }
-        .booking-widget .bk-textarea:focus { outline: none; border-color: #7C37FF; box-shadow: 0 0 0 3px rgba(124,55,255,.12); }
+        .booking-widget .bk-textarea:focus { outline: none; border-color: var(--tg-theme-secondary); box-shadow: 0 0 0 3px rgba(var(--tg-theme-secondary-rgb, 124,55,255),.12); }
         .booking-widget .bk-label { font-size: .78rem; font-weight: 600; color: #0E1B33; margin-bottom: .35rem; display: block; }
 
         .booking-widget .bk-stepper { display: inline-flex; align-items: center; background: #f4f4f4; border-radius: 50px; padding: 3px; gap: 4px; }
         .booking-widget .bk-stepper button { width: 26px; height: 26px; border-radius: 50%; border: 0; background: #fff; color: #0E1B33; font-weight: 700; font-size: 1rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
         .booking-widget .bk-stepper button:disabled { opacity: .3; cursor: not-allowed; }
-        .booking-widget .bk-stepper button.plus { background: #7C37FF; color: #fff; }
+        .booking-widget .bk-stepper button.plus { background: var(--tg-theme-secondary); color: #fff; }
         .booking-widget .bk-stepper .qty { min-width: 22px; text-align: center; font-weight: 700; font-size: .9rem; color: #0E1B33; }
 
         .booking-widget .bk-summary-mini { background: #fafafa; border-radius: 10px; padding: .65rem .85rem; }
@@ -323,14 +323,14 @@
         .booking-widget .bk-summary-line.discount { color: #198754; }
 
         .booking-widget .tg-tour-about-coast .total-price { font-size: 22px; }
-        .booking-widget .tg-btn { background: #7C37FF; color: #fff; padding: 14px 22px; font-weight: 600; }
-        .booking-widget .tg-btn:hover { background: #5b1fd8; color: #fff; }
-        .booking-widget .tg-btn:disabled { background: #c7b8e8; cursor: not-allowed; }
+        .booking-widget .tg-btn { background: var(--tg-theme-secondary); color: #fff; padding: 14px 22px; font-weight: 600; }
+        .booking-widget .tg-btn:hover { background: var(--tg-theme-secondary); filter: brightness(.85); color: #fff; }
+        .booking-widget .tg-btn:disabled { opacity: .5; cursor: not-allowed; }
         .booking-widget .tg-tour-about-extra .tg-filter-list ul li { padding: .35rem 0; }
 
         .booking-widget .bk-reductions-info { line-height: 1.7; }
         .booking-widget .bk-reduction-chip {
-            display: inline-block; background: #f7f3ff; color: #4c1d95; border-radius: 50px;
+            display: inline-block; background: color-mix(in srgb, var(--tg-theme-secondary) 10%, #fff); color: var(--tg-theme-secondary); border-radius: 50px;
             padding: 2px 10px; font-size: .72rem; font-weight: 600;
             margin-right: .25rem; margin-bottom: .2rem;
         }
@@ -366,8 +366,8 @@
 
         /* Flatpickr theme override (purple) */
         .flatpickr-calendar.bk-fp-theme .flatpickr-day.selected,
-        .flatpickr-calendar.bk-fp-theme .flatpickr-day.selected:hover { background: #7C37FF; border-color: #7C37FF; }
-        .flatpickr-calendar.bk-fp-theme .flatpickr-day.today:not(.selected) { border-color: #7C37FF; color: #7C37FF; }
+        .flatpickr-calendar.bk-fp-theme .flatpickr-day.selected:hover { background: var(--tg-theme-secondary); border-color: var(--tg-theme-secondary); }
+        .flatpickr-calendar.bk-fp-theme .flatpickr-day.today:not(.selected) { border-color: var(--tg-theme-secondary); color: var(--tg-theme-secondary); }
         .flatpickr-calendar.bk-fp-theme .flatpickr-day.flatpickr-disabled { text-decoration: line-through; opacity: .35; }
     </style>
 
