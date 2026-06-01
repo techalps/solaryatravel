@@ -45,10 +45,10 @@
                         <div class="col-xl-10">
                             <div class="tg-hero-content text-center">
                                 <div class="tg-hero-title-box mb-10">
-                                    <h5 class="tg-hero-subtitle mb-5 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".7s">Vivi la magia della Sardegna</h5>
-                                    <h1 class="tg-hero-title wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">SOLARYA TRAVEL</h1>
+                                    <h5 class="tg-hero-subtitle mb-5 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".7s">Solarya</h5>
+                                    <h1 class="tg-hero-title wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Your Ticket to the Next Experience<br><span style="font-size: 80%;">Escursioni in Catamarano in Sardegna</span></h1>
                                     <p class="tg-hero-para mb-0 wow fadeInUp" data-wow-delay=".6s" data-wow-duration="1.1s">
-                                        Escursioni esclusive in catamarano in Sardegna.<br>Comfort, eleganza e mare cristallino in ogni viaggio!
+                                        Solarya è il tuo biglietto per il mare della Sardegna. <br>Escursioni in catamarano lungo la costa nord-est:<br>Daily Cruise, Sunset Cruise, calette nascoste e momenti indimenticabili.
                                     </p>
                                 </div>
                                 <div class="tg-hero-btn-box wow fadeInUp" data-wow-delay=".8s" data-wow-duration="1.5s">
@@ -94,12 +94,9 @@
                 </div>
                 <div class="col-lg-6 mb-30">
                     <div class="tg-about-content text-center">
-                        <div class="tg-about-logo mb-30 wow fadeInUp">
-                            <img src="{{ asset('assets/template/img/about/logo.png') }}" alt="logo">
-                        </div>
                         <div class="tg-about-section-title mb-25">
-                            <h5 class="tg-section-subtitle wow fadeInUp">Chi Siamo</h5>
-                            <h2 class="mb-15 wow fadeInUp">Scopri il mare con noi, vivi un'esperienza unica</h2>
+                            <h4 class="tg-section-subtitle wow fadeInUp">Solarya</h4>
+                            <h2 class="mb-15 wow fadeInUp">Sei stanco delle solite mete affollate? Con Solarya Travel vivi il mare in modo diverso: relax, comfort e itinerari su misura.</h2>
                             <p class="wow fadeInUp">
                                 Solarya Travel è il tuo partner per escursioni in catamarano in Sardegna.
                                 Equipaggi qualificati, comfort di bordo e itinerari curati nel dettaglio per
@@ -144,7 +141,7 @@
                             <div class="tg-listing-card-thumb fix mb-15 p-relative">
                                 <a href="{{ route('tours.show', $tour->slug) }}">
                                     @if($tour->primaryImage)
-                                        <img class="tg-card-border w-100" src="{{ \Illuminate\Support\Facades\Storage::url($tour->primaryImage->path) }}" alt="{{ $tour->name }}">
+                                        <img class="tg-card-border w-100" src="{{ $tour->primaryImage->url }}" alt="{{ $tour->name }}">
                                     @else
                                         <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}">
                                     @endif
@@ -210,11 +207,9 @@
                     <div class="tg-chose-content mb-25">
                         <div class="tg-chose-section-title mb-30">
                             <h5 class="tg-section-subtitle mb-15 wow fadeInUp">Pianifica la tua avventura</h5>
-                            <h2 class="mb-15 text-capitalize wow fadeInUp">Scopri quando vuoi <br>partire con noi</h2>
-                            <p class="text-capitalize wow fadeInUp">
-                                Sei stanco delle solite mete affollate? Con Solarya Travel
-                                vivi il mare in modo diverso: relax, comfort e itinerari su
-                                misura per te e i tuoi cari.
+                            <h2 class="mb-15 wow fadeInUp">Scopri quando vuoi <br>partire con noi</h2>
+                            <p class="wow fadeInUp">
+                                Sei stanco delle solite mete affollate? Con Solarya Travel vivi il mare in modo diverso: relax, comfort e itinerari su misura.
                             </p>
                         </div>
                         <div class="tg-chose-list-wrap">
@@ -277,29 +272,33 @@
     {{-- ============= CTA video + discount ============= --}}
     <div class="tg-banner-area tg-banner-space">
         <div class="container">
-            <div class="row gx-0">
-                <div class="col-lg-7">
-                    <div class="tg-banner-video-wrap include-bg" style="background-image: url('{{ asset('assets/template/img/banner/thumb.jpg') }}')">
-                        <div class="tg-banner-video-inner text-center">
-                            <a href="https://www.youtube.com/watch?v=eEzD-Y97ges" target="_blank" rel="noopener" class="tg-video-play popup-video tg-pulse-border" style="cursor:pointer">
-                                <span class="p-relative z-index-11">
-                                    <svg width="19" height="21" viewBox="0 0 19 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M17.3616 8.34455C19.0412 9.31425 19.0412 11.7385 17.3616 12.7082L4.13504 20.3445C2.45548 21.3142 0.356021 20.1021 0.356021 18.1627L0.356022 2.89C0.356022 0.950609 2.45548 -0.261512 4.13504 0.708185L17.3616 8.34455Z" fill="currentColor"/>
-                                    </svg>
-                                </span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-5">
-                    <div class="tg-banner-content p-relative z-index-1 text-center">
-                        <img class="tg-banner-shape" src="{{ asset('assets/template/img/banner/shape.png') }}" alt="shape">
-                        <h4 class="tg-banner-subtitle mb-10">Promo estate</h4>
-                        <h2 class="tg-banner-title mb-25">Fino al 40% di sconto!</h2>
-                        <div class="tg-banner-btn">
-                            <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-switch-animation">
-                                <span class="tg-btn-text">Scopri le offerte</span>
-                            </a>
+            <div class="row">
+                <div class="col-12">
+                    <div class="tg-cta-wrap include-bg" style="background-image: url('{{ asset('assets/template/img/cta/banner.jpg') }}')">
+                        <div class="row align-items-end">
+                            <div class="col-lg-3 d-none d-lg-block">
+                                <div class="tg-cta-thumb pt-50 ml-60">
+                                    <img src="{{ asset('assets/template/img/cta/phone.png') }}" alt="">
+                                </div>
+                            </div>
+                            <div class="col-lg-5 col-md-6">
+                                <div class="tg-cta-content">
+                                    <h5 class="tg-section-subtitle text-white mb-10">Pronto a salpare?</h5>
+                                    <h2 class="mb-15 tg-cta-title text-white text-none">
+                                        Prenota oggi<br>la tua escursione di lusso!
+                                    </h2>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="tg-cta-apps d-flex flex-wrap gap-3">
+                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:#7C37FF">
+                                        <i class="fa-solid fa-calendar-check me-2"></i> Prenota ora
+                                    </a>
+                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="{{ route('contact') }}">
+                                        <i class="fa-solid fa-phone me-2"></i> Contattaci
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -307,6 +306,9 @@
         </div>
     </div>
     <span class="tg-banner-transparent-bg"></span>
+
+    {{-- ============= CTA finale ============= --}}
+    
 
     {{-- ============= LOCATION (4 destinazioni) ============= --}}
     @php
@@ -324,8 +326,8 @@
                 <div class="col-lg-12">
                     <div class="tg-location-section-title text-center mb-30">
                         <h5 class="tg-section-subtitle mb-15 wow fadeInUp">Le nostre mete</h5>
-                        <h2 class="mb-15 text-capitalize wow fadeInUp">Le destinazioni più amate <br>della Costiera</h2>
-                        <p class="text-capitalize wow fadeInUp">
+                        <h2 class="mb-15 text-none wow fadeInUp">Le destinazioni più amate <br>della Costiera</h2>
+                        <p class="text-none wow fadeInUp">
                             Lasciati guidare dalle bellezze del Mediterraneo:<br>
                             ogni meta è un'esperienza unica da vivere.
                         </p>
@@ -359,7 +361,7 @@
                 <div class="tg-banner-2-content text-center">
                     <div class="tg-about-section-title mb-25">
                         <h5 class="tg-section-subtitle mb-10 wow fadeInUp">La tua prossima avventura</h5>
-                        <h2 class="tg-section-title-white mb-25 wow fadeInUp">Itinerari esclusivi <br>nel Mediterraneo</h2>
+                        <h2 class="tg-section-title-white mb-25 wow fadeInUp">Itinerari esclusivi <br>in Sardegna</h2>
                     </div>
                     <div class="tp-banner-btn-wrap wow fadeInUp">
                         <a href="{{ route('booking.start') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
@@ -373,7 +375,7 @@
                     <div class="row">
                         <div class="col-lg-12">
                             <div class="tg-banner-2-big-title text-center wow fadeInUp">
-                                <h2>Solarya Travel</h2>
+                                <h2>Solarya</h2>
                             </div>
                         </div>
                     </div>
@@ -394,14 +396,14 @@
             ]);
         }
     @endphp
-    <div class="tg-testimonial-area pt-105 pb-100">
+    <!-- <div class="tg-testimonial-area pt-105 pb-100">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
                     <div class="tg-location-section-title text-center mb-30">
                         <h5 class="tg-section-subtitle mb-15 wow fadeInUp">Cosa dicono di noi</h5>
-                        <h2 class="mb-15 text-capitalize wow fadeInUp">Le parole dei nostri ospiti</h2>
-                        <p class="text-capitalize wow fadeInUp">
+                        <h2 class="mb-15 text-none wow fadeInUp">Le parole dei nostri ospiti</h2>
+                        <p class="text-none wow fadeInUp">
                             Recensioni autentiche di chi ha già scelto Solarya<br>
                             per vivere il mare in modo speciale.
                         </p>
@@ -443,7 +445,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     {{-- ============= BLOG ============= --}}
     @php
@@ -453,14 +455,14 @@
             ['img' => 'blog-3.jpg', 'tag' => 'Consigli',   'title' => 'Cosa portare a bordo: la guida definitiva',   'date' => '21 Lug 2024', 'time' => '6 min'],
         ];
     @endphp
-    <div class="tg-blog-area tg-blog-space tg-grey-bg pt-135 p-relative z-index-1">
+    <!-- <div class="tg-blog-area tg-blog-space tg-grey-bg pt-135 p-relative z-index-1">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
                     <div class="tg-location-section-title text-center mb-30">
                         <h5 class="tg-section-subtitle mb-15 wow fadeInUp">Blog &amp; Consigli</h5>
-                        <h2 class="mb-15 text-capitalize wow fadeInUp">Ultime news dal blog</h2>
-                        <p class="text-capitalize wow fadeInUp">
+                        <h2 class="mb-15 text-none wow fadeInUp">Ultime news dal blog</h2>
+                        <p class="text-none wow fadeInUp">
                             Itinerari, consigli e curiosità per vivere il mare<br>
                             come un vero esperto della Costiera.
                         </p>
@@ -515,44 +517,8 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
-    {{-- ============= CTA finale ============= --}}
-    <div class="tg-cta-area tg-cta-su-wrapper tg-cta-space z-index-9 p-relative">
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <div class="tg-cta-wrap include-bg" style="background-image: url('{{ asset('assets/template/img/cta/banner.jpg') }}')">
-                        <div class="row align-items-end">
-                            <div class="col-lg-3 d-none d-lg-block">
-                                <div class="tg-cta-thumb pt-50 ml-60">
-                                    <img src="{{ asset('assets/template/img/cta/phone.png') }}" alt="">
-                                </div>
-                            </div>
-                            <div class="col-lg-5 col-md-6">
-                                <div class="tg-cta-content">
-                                    <h5 class="tg-section-subtitle text-white mb-10">Pronto a salpare?</h5>
-                                    <h2 class="mb-15 tg-cta-title text-white text-capitalize">
-                                        Prenota oggi<br>la tua escursione di lusso!
-                                    </h2>
-                                </div>
-                            </div>
-                            <div class="col-lg-4 col-md-6">
-                                <div class="tg-cta-apps d-flex flex-wrap gap-3">
-                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:#7C37FF">
-                                        <i class="fa-solid fa-calendar-check me-2"></i> Prenota ora
-                                    </a>
-                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="{{ route('contact') }}">
-                                        <i class="fa-solid fa-phone me-2"></i> Contattaci
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
 @endsection
 

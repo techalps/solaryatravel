@@ -8,9 +8,9 @@
     {{-- ============= HERO / BREADCRUMB ============= --}}
     <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="
         @if($tour->primaryImage)
-            background: linear-gradient(rgba(11,61,92,.55),rgba(11,61,92,.55)), url('{{ \Illuminate\Support\Facades\Storage::url($tour->primaryImage->path) }}') center/cover;
+            background: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)), url('{{ $tour->primaryImage->url }}') center/cover;
         @else
-            background: linear-gradient(135deg, #560CE3 0%, #7C37FF 100%);
+            background: linear-gradient(135deg, #111 0%, #333 100%);
         @endif
     ">
         <div class="container">
@@ -29,9 +29,6 @@
                     @endif
                     <a href="#book" class="tg-btn tg-btn-hero-cta wow fadeInUp">
                         <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
-                        @if($tour->price_from)
-                            <span class="ms-2 opacity-75 small">— da €{{ number_format($tour->price_from, 0, ',', '.') }}</span>
-                        @endif
                     </a>
                 </div>
             </div>
@@ -45,18 +42,11 @@
                 <div class="col-xl-9 col-lg-10">
 
                     {{-- Quick meta strip --}}
+                    @if($tour->departure_point)
                     <div class="tg-tour-details-video-location d-flex flex-wrap align-items-center mb-25 justify-content-center">
-                        @if($tour->departure_point)
-                            <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ $tour->departure_point }}</span>
-                        @endif
-                        @if($tour->duration_hours)
-                            <span class="mr-25"><i class="fa-regular fa-clock me-1"></i> {{ $tour->duration_hours }} ore</span>
-                        @endif
-                        <span class="mr-25"><i class="fa-regular fa-user-group me-1"></i> fino a {{ $tour->max_capacity ?: $tour->total_capacity }} posti</span>
-                        @if($tour->price_from)
-                            <span class="text-primary fw-bold"><i class="fa-solid fa-tag me-1"></i>da €{{ number_format($tour->price_from, 0, ',', '.') }}/pers</span>
-                        @endif
+                        <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ $tour->departure_point }}</span>
                     </div>
+                    @endif
 
                     {{-- Gallery: 1 main + up to 3 thumbs --}}
                     @if($tour->images->count())
@@ -68,7 +58,7 @@
                         <div class="row gx-15 mb-25">
                             <div class="col-lg-7">
                                 <div class="tg-tour-details-video-thumb mb-15">
-                                    <img class="w-100" src="{{ \Illuminate\Support\Facades\Storage::url($main->path) }}" alt="{{ $tour->name }}" style="height:420px;object-fit:cover;border-radius:15px;">
+                                    <img class="w-100" src="{{ $main->url }}" alt="{{ $tour->name }}" style="height:420px;object-fit:cover;border-radius:15px;">
                                 </div>
                             </div>
                             <div class="col-lg-5">
@@ -76,7 +66,7 @@
                                     @foreach($rest as $img)
                                         <div class="{{ $rest->count() === 1 ? 'col-12' : ($loop->iteration === 1 ? 'col-12' : 'col-md-6') }}">
                                             <div class="tg-tour-details-video-thumb mb-15">
-                                                <img class="w-100" src="{{ \Illuminate\Support\Facades\Storage::url($img->path) }}" alt="" style="height:{{ $rest->count() === 1 ? '420' : ($loop->iteration === 1 ? '200' : '205') }}px;object-fit:cover;border-radius:15px;">
+                                                <img class="w-100" src="{{ $img->url }}" alt="" style="height:{{ $rest->count() === 1 ? '420' : ($loop->iteration === 1 ? '200' : '205') }}px;object-fit:cover;border-radius:15px;">
                                             </div>
                                         </div>
                                     @endforeach
@@ -98,13 +88,16 @@
                                         </div>
                                     </li>
                                 @endif
-                                <li>
-                                    <span class="icon"><i class="fa-regular fa-user-group"></i></span>
-                                    <div>
-                                        <span class="title">Posti</span>
-                                        <span class="duration">fino a {{ $tour->max_capacity ?: $tour->total_capacity }}</span>
-                                    </div>
-                                </li>
+                                @php $adultBasePrice = $tour->periods->min('base_price'); @endphp
+                                @if($adultBasePrice)
+                                    <li>
+                                        <span class="icon"><i class="fa-solid fa-tag"></i></span>
+                                        <div>
+                                            <span class="title">A partire da</span>
+                                            <span class="duration">€{{ number_format($adultBasePrice, 0, ',', '.') }}/pers</span>
+                                        </div>
+                                    </li>
+                                @endif
                                 @if($tour->departure_point)
                                     <li>
                                         <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
@@ -114,13 +107,6 @@
                                         </div>
                                     </li>
                                 @endif
-                                <li>
-                                    <span class="icon"><i class="fa-solid fa-water"></i></span>
-                                    <div>
-                                        <span class="title">Tour</span>
-                                        <span class="duration">Catamarano</span>
-                                    </div>
-                                </li>
                             </ul>
                         </div>
                     </div>
@@ -179,37 +165,57 @@
                         </div>
                     @endif
 
-                    {{-- Age brackets / prices --}}
-                    @if($tour->ageBrackets->count())
+                    {{-- Age brackets / prices per period --}}
+                    @php $periodsWithPrices = $tour->periods->filter(fn($p) => $p->base_price > 0 || $p->ageBrackets->count()); @endphp
+                    @if($periodsWithPrices->count())
                         <div class="tg-tour-about-border mb-40"></div>
                         <div class="tg-tour-about-inner mb-40">
                             <h4 class="tg-tour-about-title mb-20"><i class="fa-solid fa-tags text-primary me-2"></i>Tariffe per fascia d'età</h4>
-                            <div class="table-responsive">
-                                <table class="table table-borderless align-middle mb-0 tg-price-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Fascia</th>
-                                            <th>Età</th>
-                                            <th class="text-end">Prezzo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($tour->ageBrackets as $b)
-                                            <tr>
-                                                <td><strong>{{ $b->label }}</strong></td>
-                                                <td class="text-muted small">
-                                                    @if($b->max_age === null)
-                                                        da {{ $b->min_age }} anni
-                                                    @else
-                                                        {{ $b->min_age }} – {{ $b->max_age }} anni
-                                                    @endif
-                                                </td>
-                                                <td class="text-end fw-bold text-primary">€{{ number_format($b->price, 0, ',', '.') }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
+                            @foreach($periodsWithPrices as $period)
+                                <div class="mb-30">
+                                    <div class="d-flex align-items-center justify-content-between mb-10 pb-10" style="border-bottom:2px solid #f0f0f0">
+                                        <span class="fw-semibold text-dark">
+                                            {{ $period->label ?: 'Periodo' }}
+                                        </span>
+                                        <span class="text-muted small">
+                                            {{ $period->start_date->format('d/m/Y') }} – {{ $period->end_date->format('d/m/Y') }}
+                                        </span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-borderless align-middle mb-0 tg-price-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fascia</th>
+                                                    <th>Età</th>
+                                                    <th class="text-end">Prezzo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if($period->base_price > 0)
+                                                    <tr>
+                                                        <td><strong>Adulti</strong></td>
+                                                        <td class="text-muted small">Prezzo base</td>
+                                                        <td class="text-end fw-bold text-primary">€{{ number_format($period->base_price, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                @endif
+                                                @foreach($period->ageBrackets as $b)
+                                                    <tr>
+                                                        <td><strong>{{ $b->label }}</strong></td>
+                                                        <td class="text-muted small">
+                                                            @if($b->max_age === null)
+                                                                da {{ $b->min_age }} anni
+                                                            @else
+                                                                {{ $b->min_age }} – {{ $b->max_age }} anni
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-end fw-bold text-primary">€{{ number_format($b->price, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @endif
 
@@ -244,7 +250,7 @@
                             <a href="{{ route('tours.show', $st->slug) }}" class="text-decoration-none">
                                 <div class="bg-white border rounded-4 overflow-hidden h-100 shadow-sm tg-similar-card">
                                     @if($st->primaryImage)
-                                        <img src="{{ \Illuminate\Support\Facades\Storage::url($st->primaryImage->path) }}" class="w-100" alt="{{ $st->name }}" style="height:200px;object-fit:cover">
+                                        <img src="{{ $st->primaryImage->url }}" class="w-100" alt="{{ $st->name }}" style="height:200px;object-fit:cover">
                                     @else
                                         <img src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" class="w-100" alt="{{ $st->name }}" style="height:200px;object-fit:cover">
                                     @endif
@@ -274,19 +280,24 @@
         align-items: center;
         padding: 14px 32px;
         background: #fff;
-        color: #560CE3;
+        color: var(--tg-theme-primary, #560CE3);
         font-weight: 700;
         border-radius: 50px;
         text-decoration: none;
-        box-shadow: 0 10px 28px rgba(0,0,0,.18);
+        box-shadow: 0 10px 28px rgba(0,0,0,.25);
         transition: transform .2s, box-shadow .2s, background .2s, color .2s;
     }
     .tg-btn-hero-cta:hover {
         transform: translateY(-3px);
-        background: #7C37FF;
+        background: var(--tg-theme-primary, #560CE3);
         color: #fff;
-        box-shadow: 0 14px 34px rgba(124,55,255,.45);
+        box-shadow: 0 14px 34px rgba(0,0,0,.35);
     }
+
+    /* Hero: testi bianchi */
+    .tg-breadcrumb-area h1,
+    .tg-breadcrumb-area p,
+    .tg-breadcrumb-area .breadcrumb-item { color: #fff !important; }
 
     /* Centered feature list */
     .tg-tour-details-feature-list-wrap .tg-tour-details-video-feature-list ul {

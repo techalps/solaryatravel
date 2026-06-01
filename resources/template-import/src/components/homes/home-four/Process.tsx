@@ -60,7 +60,7 @@ const Process = () => {
                <div className="tg-chose-section-title text-center mb-30">
                   <h5 className="tg-section-subtitle wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".6s">Next Adventure Destination</h5>
                   <h2 className="mb-15 wow fadeInUp" data-wow-delay=".5s" data-wow-duration=".7s">Why You Should Work With Us</h2>
-                  <p className="text-capitalize wow fadeInUp" data-wow-delay=".6s" data-wow-duration=".8s">Are you tired of the typical tourist destinations and looking<br />
+                  <p className="text-none wow fadeInUp" data-wow-delay=".6s" data-wow-duration=".8s">Are you tired of the typical tourist destinations and looking<br />
                      to step out of your comfort zonetravel</p>
                </div>
             </div>

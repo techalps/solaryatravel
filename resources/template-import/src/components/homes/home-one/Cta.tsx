@@ -21,7 +21,7 @@ const Cta = () => {
                         <div className="col-lg-5 col-md-6">
                            <div className="tg-cta-content">
                               <h5 className="tg-section-subtitle text-white mb-10">Explore Tour</h5>
-                              <h2 className="mb-15 tg-cta-title text-white text-capitalize">Download Our App <br /> Form Google & App Store!</h2>
+                              <h2 className="mb-15 tg-cta-title text-white text-none">Download Our App <br /> Form Google & App Store!</h2>
                            </div>
                         </div>
                         <div className="col-lg-4 col-md-6">

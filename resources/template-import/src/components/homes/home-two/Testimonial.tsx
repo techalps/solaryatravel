@@ -40,7 +40,7 @@ const Testimonial = () => {
                <div className="col-xl-7 col-lg-8 col-md-8">
                   <div className="tg-location-section-title text-center mb-40">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-20 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Clients Feedback About Us</h5>
-                     <h2 className="tg-section-su-title text-capitalize wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">See Those Lovely Words From Clients</h2>
+                     <h2 className="tg-section-su-title text-none wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">See Those Lovely Words From Clients</h2>
                      <p className="tg-section-su-para tg-section-su-para-2 mb-0">Are you tired of the typical tourist destinations and looking
                         <br /> to step out of your comfort zonetravel</p>
                   </div>

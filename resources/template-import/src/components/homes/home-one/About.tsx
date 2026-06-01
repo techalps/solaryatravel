@@ -59,7 +59,7 @@ const About = () => {
                   <div className="tg-about-su-content-wrap ml-80 mb-30 wow fadeInRight" data-wow-delay=".4s" data-wow-duration=".6s">
                      <div className="tg-location-section-title mb-30">
                         <h5 className="tg-section-su-subtitle mb-15">Who we are</h5>
-                        <h2 className="tg-section-su-title text-capitalize mb-15">Here is Great opportunity for adventure & travels</h2>
+                        <h2 className="tg-section-su-title text-none mb-15">Here is Great opportunity for adventure & travels</h2>
                         <p className="tg-section-su-para mb-10">Dorem ipsum dolor sit amet consectetur adipiscing elit. Mauris nullam the Lorem<br />
                            ipsum dolor sit amet consectetur adipiscing elit. consectetur adipiscing elit.<br />
                            Mauris nullam the Lorem ipsum dolor</p>

@@ -47,7 +47,7 @@
                         font-family: var(--tg-ff-outfit);
                         font-weight: 500;
                         font-size: 15px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         color: var(--tg-common-white);
                         margin-right: 9px;
                     }
@@ -92,7 +92,7 @@
             height: 18px;
             display: inline-block;
             font-size: 12px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             background: var(--tg-theme-secondary);
             text-align: center;
@@ -125,14 +125,14 @@
         &-number{
             & span{
                 font-size: 12px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-white);
                 display: block;
                 line-height: 1;
                 font-weight: 500;
             }
             & a{
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-white);
                 font-weight: 600;
                 &:hover{
@@ -192,7 +192,7 @@
                 & a {
                     font-weight: 500;
                     font-size: 15px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-common-white);
                     padding: 35px 12px;
                     @include flexbox();

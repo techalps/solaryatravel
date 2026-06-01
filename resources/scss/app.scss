@@ -691,14 +691,14 @@ body.admin-body { letter-spacing: -.01em; }
         font-weight: 700;
         color: $navy-900;
         letter-spacing: -.01em;
-        text-transform: capitalize;
+        text-transform: none;
     }
     .fc .fc-button {
         border-radius: .55rem !important;
         padding: .4rem .85rem;
         font-size: .82rem;
         font-weight: 600;
-        text-transform: capitalize;
+        text-transform: none;
         box-shadow: none !important;
         transition: all .15s ease;
     }

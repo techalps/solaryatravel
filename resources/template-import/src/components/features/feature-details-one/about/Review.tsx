@@ -3,7 +3,7 @@ const Review = () => {
    return (
       <div className="tg-tour-about-review-wrap mb-45">
          <h4 className="tg-tour-about-title mb-15">Customer Reviews</h4>
-         <p className="text-capitalize lh-28 mb-20">Castle in one day is next to impossible. Designed specifically for trave arelimited time in London, this tour
+         <p className="text-none lh-28 mb-20">Castle in one day is next to impossible. Designed specifically for trave arelimited time in London, this tour
             ws you to check off a range of southern England‘s are historical</p>
          <div className="tg-tour-about-review">
             <div className="head-reviews">

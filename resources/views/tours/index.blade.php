@@ -45,7 +45,7 @@
                             <div class="tg-listing-card-thumb fix mb-15 p-relative">
                                 <a href="{{ route('tours.show', $tour->slug) }}">
                                     @if($tour->primaryImage)
-                                        <img class="tg-card-border w-100" src="{{ \Illuminate\Support\Facades\Storage::url($tour->primaryImage->path) }}" alt="{{ $tour->name }}" style="height:240px;object-fit:cover">
+                                        <img class="tg-card-border w-100" src="{{ $tour->primaryImage->url }}" alt="{{ $tour->name }}" style="height:240px;object-fit:cover">
                                     @else
                                         <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}" style="height:240px;object-fit:cover">
                                     @endif

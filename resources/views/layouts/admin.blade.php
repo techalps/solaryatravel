@@ -233,5 +233,6 @@
             backdrop?.addEventListener('click', hide);
         })();
     </script>
+    @stack('end-of-body')
 </body>
 </html>

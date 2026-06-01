@@ -75,7 +75,7 @@ const Choose = () => {
                      <div className="col-xxl-8 col-xl-9 col-lg-8 col-md-8">
                         <div className="tg-chose-section-title mb-20">
                            <h5 className="tg-section-su-subtitle su-subtitle-2 mb-20 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Explore the world</h5>
-                           <h2 className="tg-section-su-title text-capitalize wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Here is Great opportunity  for adventure & travels</h2>
+                           <h2 className="tg-section-su-title text-none wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Here is Great opportunity  for adventure & travels</h2>
                            <p className="tg-section-su-para tg-section-su-para-2 mb-0">Are you tired of the typical tourist destinations and looking
                               to step out of your comfort zone? Adventure travel may be
                               the perfect solution for you! Here are four.</p>

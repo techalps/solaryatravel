@@ -162,13 +162,19 @@ class BookingForm extends Component
             return;
         }
 
+        $startTime = strlen($this->selectedTime) === 5 ? $this->selectedTime . ':00' : $this->selectedTime;
+        $endTime = \Carbon\Carbon::parse($startTime)
+            ->addMinutes((int) round(($this->tour->duration_hours ?? 1) * 60))
+            ->format('H:i:s');
+
         $this->departure = TourDeparture::firstOrCreate(
             [
                 'tour_id' => $this->tour->id,
                 'departure_date' => $this->selectedDate,
-                'start_time' => strlen($this->selectedTime) === 5 ? $this->selectedTime . ':00' : $this->selectedTime,
+                'start_time' => $startTime,
             ],
             [
+                'end_time' => $endTime,
                 'status' => 'scheduled',
                 'price_modifier' => 1.0,
             ]

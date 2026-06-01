@@ -27,7 +27,7 @@ const About = () => {
                      <div className="tg-about-section-title mb-25">
                         <h5 className="tg-section-subtitle wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".6s">Most Popular Tour</h5>
                         <h2 className="mb-15 wow fadeInUp" data-wow-delay=".5s" data-wow-duration=".7s">Let’s Discover The World With Our Excellent Eyes</h2>
-                        <p className="text-capitalize wow fadeInUp" data-wow-delay=".6s" data-wow-duration=".8s">Whether you&apos;re looking for a romantic getawaamily-friendly
+                        <p className="text-none wow fadeInUp" data-wow-delay=".6s" data-wow-duration=".8s">Whether you&apos;re looking for a romantic getawaamily-friendly
                            solo journey to explore the world, a travel agency can provide
                            tailored itinerary that exceeds your expectations.</p>
                      </div>

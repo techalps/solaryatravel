@@ -56,7 +56,7 @@
                 padding: 0;
                 font-weight: 500;
                 font-size: 15px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-grey-1);
                 width: 147px;
             }
@@ -83,7 +83,7 @@
         &-title{
             font-weight: 500;
             font-size: 16px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-black);
             & a{
                 &:hover{
@@ -225,7 +225,7 @@
         &-title{
             font-weight: 500;
             font-size: 30px;
-            text-transform: capitalize;
+            text-transform: none;
         }
         &-rating{
             &-count{
@@ -259,7 +259,7 @@
         &-para{
             font-weight: 400;
             font-size: 16px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-1);
         }
         &-quantity{
@@ -294,7 +294,7 @@
         &-button{
             & .tg-btn{
                 font-weight: 600;
-                text-transform: capitalize;
+                text-transform: none;
                 font-size: 16px;
                 & span{
                     transform: translateY(-2px);
@@ -338,7 +338,7 @@
                     & button{
                         font-weight: 600;
                         font-size: 20px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         color: #9d9fa8;
                         margin-right: 20px;
                         padding: 20px 20px;
@@ -380,19 +380,19 @@
             &-content{
                 & p{
                     line-height: 28px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-grey-1);
                 }
                 & h3{
                     font-weight: 600;
                     font-size: 24px;
-                    text-transform: capitalize;
+                    text-transform: none;
                 }
                 & ul{
                     & li{
                         font-weight: 500;
                         font-size: 16px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         color: var(--tg-common-black);
                         position: relative;
                         padding-left: 17px;
@@ -622,7 +622,7 @@
                 height: 45px;
                 background: var(--tg-common-white);
                 padding-left: 17px;
-                text-transform: capitalize;
+                text-transform: none;
                 line-height: 26px;
                 @include placeholder{
                     font-weight: 400;
@@ -726,7 +726,7 @@
     &-para{
         font-weight: 400;
         font-size: 14px;
-        text-transform: capitalize;
+        text-transform: none;
         color: var(--tg-grey-1);
     }
     &-payment{
@@ -734,7 +734,7 @@
         & label{
             font-weight: 500;
             font-size: 15px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-1);
             margin-left: 7px;
         }

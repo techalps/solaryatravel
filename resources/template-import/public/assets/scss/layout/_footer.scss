@@ -11,13 +11,13 @@
         }
         & p{
             line-height: 24px;
-            text-transform: capitalize;
+            text-transform: none;
             color: #acadb5;
             font-size: 15px;
         }
         &-title{
             font-size: 20px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
         }
     }
@@ -31,7 +31,7 @@
         & ul{
             & li{
                 & a{
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: #acadb5;
                     display: inline-block;
                     padding: 6px 0px;
@@ -49,7 +49,7 @@
         }
         & ul{
             & li{
-                text-transform: capitalize;
+                text-transform: none;
                 color: #acadb5;
                 display: inline-block;
                 font-weight: 500;
@@ -124,7 +124,7 @@
         & span{
             font-weight: 500;
             font-size: 14px;
-            text-transform: capitalize;
+            text-transform: none;
             color: #7b7e88;
             display: inline-block;
             & a{

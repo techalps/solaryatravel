@@ -84,7 +84,7 @@ class TourController extends Controller
     public function show(string $slug, Request $request): View
     {
         $tour = Tour::active()->where('slug', $slug)
-            ->with(['images', 'ageBrackets', 'periods', 'catamarans'])
+            ->with(['images', 'ageBrackets', 'periods.ageBrackets', 'catamarans'])
             ->firstOrFail();
 
         // Prossime partenze (180 giorni) generate dai periodi.

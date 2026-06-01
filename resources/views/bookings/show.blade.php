@@ -201,7 +201,7 @@
                         </div>
                         <div class="d-flex justify-content-between small mb-2">
                             <span class="text-muted">Metodo</span>
-                            <span class="fw-semibold text-capitalize">{{ $payment->gateway ?? '—' }}</span>
+                            <span class="fw-semibold text-none">{{ $payment->gateway ?? '—' }}</span>
                         </div>
                         <div class="d-flex justify-content-between small">
                             <span class="text-muted">Data</span>

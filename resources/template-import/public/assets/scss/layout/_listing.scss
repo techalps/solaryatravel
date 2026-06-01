@@ -64,7 +64,7 @@
                 & span{
                     font-size: 14px;
                     line-height: 24px;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-common-black);
                     display: flex;
                     align-items: center;
@@ -77,7 +77,7 @@
         &-title{
             font-weight: 600;
             line-height: 133%;
-            text-transform: capitalize;
+            text-transform: none;
             &:hover{
                 & a{
                     color: var(--tg-theme-primary);
@@ -105,14 +105,14 @@
                 font-weight: 700;
                 font-size: 20px;
                 line-height: 24px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-white);
             }
             &-old{
                 font-weight: 500;
                 font-size: 14px;
                 line-height: 1;
-                text-transform: capitalize;
+                text-transform: none;
                 color: #dbe6f7;
                 display: block;
             }
@@ -121,7 +121,7 @@
             &-person{
                 font-weight: 500;
                 font-size: 12px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-white);
                 line-height: 22px;
             }
@@ -156,7 +156,7 @@
         &-percent{
             font-size: 13px;
             line-height: 24px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-black);
         }
     }
@@ -168,7 +168,7 @@
                 left: 0;
                 font-weight: 600;
                 font-size: 12px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-white);
                 padding: 6px 20px 6px 14px;
                 line-height: 1;
@@ -211,7 +211,7 @@
             & button{
                 font-weight: 500;
                 font-size: 15px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-black);
                 padding: 0 17px;
                 border-bottom: 4px solid #e1e1e1;
@@ -333,7 +333,7 @@
         }
         &-price{
             font-weight: 600;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-common-white);
             border: 1px solid var(--tg-common-white);
             border-radius: 100px;
@@ -519,20 +519,20 @@
                         font-weight: 500;
                         font-size: 12px;
                         line-height: 200%;
-                        text-transform: capitalize;
+                        text-transform: none;
                     }
                 }
                 & .tg-listing-card-price{
                     & .form{
                         font-weight: 500;
                         font-size: 13px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         color: #767676;
                     }
                     & .price{
                         font-weight: 600;
                         font-size: 20px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         color: var(--tg-theme-primary);
                     }
                 }
@@ -579,7 +579,7 @@
                 font-weight: 400;
                 font-size: 14px;
                 padding: 0px 15px;
-                text-transform: capitalize;
+                text-transform: none;
                 @media #{$lg,$md,$sm,$xs} {
                     width: 170px;
                 }
@@ -599,7 +599,7 @@
                     text-align: right;
                 }
                 & span{
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-common-black);
                 }
             }
@@ -685,7 +685,7 @@
                 font-size: 14px;
                 padding: 0px 10px;
                 padding-right: 37px;
-                text-transform: capitalize;
+                text-transform: none;
                 border: 1px solid #e1e1e1;
                 border-radius: 5px;
                 margin-right: 8px;
@@ -756,7 +756,7 @@
                     font-size: 15px;
                     line-height: 20px;
                     letter-spacing: 0;
-                    text-transform: capitalize;
+                    text-transform: none;
                     color: var(--tg-grey-1);
                 }
                 & .destination{
@@ -765,7 +765,7 @@
                     flex-wrap: wrap;
                     & span{
                         font-size: 14px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         margin-right: 18px;
                         margin-bottom: 5px;
                         & svg{
@@ -866,7 +866,7 @@
                         font-family: var(--tg-ff-outfit);
                         font-weight: 400;
                         font-size: 16px;
-                        text-transform: capitalize;
+                        text-transform: none;
                         color: var(--tg-grey-1);
                     }
                 }

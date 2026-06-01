@@ -24,7 +24,7 @@ const Cta = () => {
                         </div>
                         <div className="col-lg-6 col-md-6">
                            <div className="tg-cta-4-content mb-20 pt-15">
-                              <h2 className="mb-15 tg-cta-title text-white text-capitalize mb-15">Get 5% off on your First app<br /> booking Travel with us</h2>
+                              <h2 className="mb-15 tg-cta-title text-white text-none mb-15">Get 5% off on your First app<br /> booking Travel with us</h2>
                               <p className="text-white">Are you tired of the typical tourist destinations and looking
                                  comfort zonetravelAre you tired of the typical tourist destin
                                  to step out of your comfort zonetravel</p>

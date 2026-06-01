@@ -34,7 +34,7 @@
             font-weight: 600;
             font-size: 22px;
             line-height: 100%;
-            text-transform: capitalize;
+            text-transform: none;
             margin-bottom: 4px;
             & a{
                 &:hover{
@@ -45,7 +45,7 @@
         & span{
             font-weight: 400;
             font-size: 16px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-1);
             margin-bottom: 10px;
             display: inline-block;
@@ -113,7 +113,7 @@
             & h6{
                 font-weight: 600;
                 font-size: 24px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-common-black);
             }
             & p{
@@ -121,7 +121,7 @@
             }
         }
         &-contact{
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-1);
             display: flex;
             margin-bottom: 5px;
@@ -149,7 +149,7 @@
         &-title {
             font-weight: 500;
             font-size: 16px;
-            text-transform: capitalize;
+            text-transform: none;
             color: var(--tg-grey-1);
             margin-bottom: 12px;
         }
@@ -166,7 +166,7 @@
                 top: -32px;
                 font-weight: 500;
                 font-size: 16px;
-                text-transform: capitalize;
+                text-transform: none;
                 color: var(--tg-grey-1);
            }
         }

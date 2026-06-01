@@ -24,7 +24,7 @@ const Listing = () => {
                <div className="col-lg-6 col-md-8">
                   <div className="tg-listing-section-title-wrap text-center mb-40">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-15 wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Explore the world</h5>
-                     <h2 className="tg-section-su-title text-capitalize wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Our Amazing Featured Tour  Package The World</h2>
+                     <h2 className="tg-section-su-title text-none wow fadeInUp mb-15" data-wow-delay=".5s" data-wow-duration=".9s">Our Amazing Featured Tour  Package The World</h2>
                   </div>
                </div>
             </div>

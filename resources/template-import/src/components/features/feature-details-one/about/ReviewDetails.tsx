@@ -25,7 +25,7 @@ const ReviewDetails = () => {
                            <i className="fa-sharp fa-solid fa-star"></i>
                         </span>
                      </div>
-                     <p className="text-capitalize lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
+                     <p className="text-none lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
                         time in London, this tour allou to check off a range of southern  day is next together
                         impossible. Designed speciEngland.</p>
                      <Link className="tg-tour-about-cus-reply" href="#">Reply</Link>
@@ -49,7 +49,7 @@ const ReviewDetails = () => {
                            <i className="fa-sharp fa-solid fa-star"></i>
                         </span>
                      </div>
-                     <p className="text-capitalize lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
+                     <p className="text-none lh-28 mb-10">Castle in one day is next to impossible. Designed specifically for trave areli areafol
                         time in London, this tour allou to check off a range of southern  day is next together
                         impossible. Designed speciEngland.</p>
                      <Link className="tg-tour-about-cus-reply" href="#">Reply</Link>

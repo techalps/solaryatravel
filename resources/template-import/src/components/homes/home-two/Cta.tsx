@@ -16,7 +16,7 @@ const Cta = () => {
                <div className="col-lg-6 col-md-6">
                   <div className="tg-cta-3-content tg-process-content pt-50 pb-50">
                      <h5 className="tg-section-su-subtitle su-subtitle-2 mb-15">our Working Process</h5>
-                     <h2 className="tg-section-su-title text-capitalize mb-25">Get 5% off on your first <br />
+                     <h2 className="tg-section-su-title text-none mb-25">Get 5% off on your first <br />
                         app booking Apps</h2>
                      <div className="tg-cta-3-apps d-flex align-items-center">
                         <Link className="d-inline-block mr-10" href="#"><Image src={icon_1} alt="" /></Link>

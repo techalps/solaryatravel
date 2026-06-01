@@ -11,7 +11,7 @@
  </svg>
  </button>
  
- <h3 class="fs-5 fw-semibold text-navy text-capitalize">{{ $monthName }}</h3>
+ <h3 class="fs-5 fw-semibold text-navy text-none">{{ $monthName }}</h3>
  
  <button 
  wire:click="nextMonth"
