@@ -298,7 +298,7 @@ class BookingController extends Controller
             }
 
             try {
-                Mail::to(Settings::adminNotificationEmail())->send(new AdminBookingCancelled($booking->fresh(), $reason));
+                \App\Support\AdminMailer::send(new AdminBookingCancelled($booking->fresh(), $reason));
             } catch (\Throwable $e) {
                 Log::error('Notifica admin annullamento fallita', [
                     'booking' => $booking->booking_number,
@@ -370,7 +370,7 @@ class BookingController extends Controller
         }
 
         try {
-            Mail::to(Settings::adminNotificationEmail())->send(new AdminBookingRefunded($booking->fresh(), $amount, $note));
+            \App\Support\AdminMailer::send(new AdminBookingRefunded($booking->fresh(), $amount, $note));
         } catch (\Throwable $e) {
             Log::error('Notifica admin rimborso fallita', [
                 'booking' => $booking->booking_number,

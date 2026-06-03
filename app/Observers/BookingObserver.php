@@ -44,7 +44,7 @@ class BookingObserver
 
         // Notifica all'amministratore: nuova prenotazione confermata.
         try {
-            Mail::to(Settings::adminNotificationEmail())->send(new AdminNewBooking($booking));
+            \App\Support\AdminMailer::send(new AdminNewBooking($booking));
         } catch (\Throwable $e) {
             Log::error('Notifica admin nuova prenotazione fallita', [
                 'booking' => $booking->booking_number,

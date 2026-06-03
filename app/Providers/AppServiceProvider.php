@@ -84,5 +84,23 @@ class AppServiceProvider extends ServiceProvider
         if ($fromName !== '') {
             Config::set('mail.from.name', $fromName);
         }
+
+        // SMTP dedicato alle notifiche admin: registra un mailer "smtp_admin"
+        // separato, usato dalle Mailable Adm*. Se non configurato, le notifiche
+        // admin usano il mailer di default (fallback gestito in AdminMailer).
+        $adminHost = trim($settings['admin_smtp_host'] ?? '');
+        if ($adminHost !== '') {
+            $adminEnc = $settings['admin_smtp_encryption'] ?? 'tls';
+            Config::set('mail.mailers.smtp_admin', [
+                'transport' => 'smtp',
+                'host' => $adminHost,
+                'port' => (int) ($settings['admin_smtp_port'] ?? 587),
+                'username' => $settings['admin_smtp_username'] ?? null,
+                'password' => $settings['admin_smtp_password'] ?? null,
+                'encryption' => $adminEnc === '' ? null : $adminEnc,
+                'scheme' => $adminEnc === 'ssl' ? 'smtps' : null,
+                'timeout' => null,
+            ]);
+        }
     }
 }

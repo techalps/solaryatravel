@@ -52,6 +52,14 @@ class SettingsController extends Controller
             'smtp_encryption' => 'nullable|string|in:tls,ssl',
             'mail_from_name' => 'nullable|string|max:100',
             'mail_from_address' => 'nullable|email|max:100',
+            // SMTP dedicato alle notifiche admin (nuova prenotazione, cancellazione, rimborso)
+            'admin_smtp_host' => 'nullable|string|max:100',
+            'admin_smtp_port' => 'nullable|integer|min:1|max:65535',
+            'admin_smtp_username' => 'nullable|string|max:100',
+            'admin_smtp_password' => 'nullable|string|max:100',
+            'admin_smtp_encryption' => 'nullable|string|in:tls,ssl',
+            'admin_mail_from_name' => 'nullable|string|max:100',
+            'admin_mail_from_address' => 'nullable|email|max:100',
             'enable_notifications' => 'boolean',
             'maintenance_mode' => 'boolean',
         ]);
@@ -156,6 +164,13 @@ class SettingsController extends Controller
             'smtp_encryption' => 'tls',
             'mail_from_name' => config('mail.from.name', 'Solarya Travel'),
             'mail_from_address' => config('mail.from.address', 'noreply@solaryatravel.com'),
+            'admin_smtp_host' => '',
+            'admin_smtp_port' => 587,
+            'admin_smtp_username' => '',
+            'admin_smtp_password' => '',
+            'admin_smtp_encryption' => 'tls',
+            'admin_mail_from_name' => 'Solarya Travel · Sistema',
+            'admin_mail_from_address' => '',
             'enable_notifications' => true,
             'maintenance_mode' => false,
         ];

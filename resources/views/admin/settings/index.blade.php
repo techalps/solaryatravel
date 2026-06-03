@@ -338,6 +338,56 @@
                                     </div>
                                 </div>
 
+                                {{-- SMTP dedicato alle notifiche admin --}}
+                                <div class="mt-4 pt-3 border-top">
+                                    <h5 class="fw-bold mb-1"><i class="bi bi-bell me-2 text-primary"></i>SMTP notifiche admin</h5>
+                                    <p class="small text-muted mb-3">SMTP separato per le email che il sistema invia agli amministratori (nuova prenotazione, cancellazione, rimborso). Se lasciato vuoto, vengono usate le impostazioni SMTP principali qui sopra.</p>
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-hdd-network me-1"></i>Host SMTP</label>
+                                            <input type="text" name="admin_smtp_host"
+                                                   value="{{ old('admin_smtp_host', $settings['admin_smtp_host'] ?? '') }}"
+                                                   placeholder="ssl0.ovh.net" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-ethernet me-1"></i>Porta</label>
+                                            <input type="number" name="admin_smtp_port" min="1" max="65535"
+                                                   value="{{ old('admin_smtp_port', $settings['admin_smtp_port'] ?? 587) }}" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-person me-1"></i>Username</label>
+                                            <input type="text" name="admin_smtp_username"
+                                                   value="{{ old('admin_smtp_username', $settings['admin_smtp_username'] ?? '') }}"
+                                                   placeholder="sistema@solaryatravel.com" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-key me-1"></i>Password</label>
+                                            <input type="password" name="admin_smtp_password"
+                                                   value="{{ old('admin_smtp_password', $settings['admin_smtp_password'] ?? '') }}"
+                                                   class="form-control" autocomplete="new-password">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-shield-check me-1"></i>Crittografia</label>
+                                            <select name="admin_smtp_encryption" class="form-select">
+                                                <option value="tls" {{ old('admin_smtp_encryption', $settings['admin_smtp_encryption'] ?? 'tls') === 'tls' ? 'selected' : '' }}>TLS</option>
+                                                <option value="ssl" {{ old('admin_smtp_encryption', $settings['admin_smtp_encryption'] ?? '') === 'ssl' ? 'selected' : '' }}>SSL</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-pencil-square me-1"></i>Nome mittente (notifiche)</label>
+                                            <input type="text" name="admin_mail_from_name"
+                                                   value="{{ old('admin_mail_from_name', $settings['admin_mail_from_name'] ?? '') }}"
+                                                   placeholder="Solarya Travel · Sistema" class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-at me-1"></i>Email mittente (notifiche)</label>
+                                            <input type="email" name="admin_mail_from_address"
+                                                   value="{{ old('admin_mail_from_address', $settings['admin_mail_from_address'] ?? '') }}"
+                                                   placeholder="sistema@solaryatravel.com" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="mt-4 pt-3 border-top">
                                     <h5 class="fw-bold mb-2"><i class="bi bi-send-check me-2 text-success"></i>Test invio email</h5>
                                     <p class="small text-muted mb-3">Salva prima le impostazioni qui sopra (pulsante "Salva" in fondo), poi torna qui per inviare una mail di prova.</p>
