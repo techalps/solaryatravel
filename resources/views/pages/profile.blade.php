@@ -123,6 +123,17 @@
                                 @enderror
                             </div>
 
+                            <div class="col-md-6">
+                                <label class="pf-label" for="pf-tax">Codice fiscale</label>
+                                <input type="text" id="pf-tax" name="tax_code" maxlength="16"
+                                       class="pf-input @error('tax_code') is-invalid @enderror"
+                                       value="{{ old('tax_code', $user->tax_code) }}"
+                                       placeholder="RSSMRA80A01H501U" style="text-transform:uppercase">
+                                @error('tax_code')
+                                    <div class="pf-field-error">{{ $message }}</div>
+                                @enderror
+                            </div>
+
                             <div class="col-12">
                                 <button type="submit" class="pf-btn pf-btn-primary">
                                     <i class="fa-solid fa-floppy-disk me-2"></i>Salva modifiche

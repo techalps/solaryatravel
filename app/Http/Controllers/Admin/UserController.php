@@ -53,19 +53,23 @@ class UserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role'     => ['required', Rule::in(['customer', 'admin', 'super_admin'])],
-            'phone'    => ['nullable', 'string', 'max:30'],
+            'name'          => ['required', 'string', 'max:255'],
+            'email'         => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'      => ['required', 'string', 'min:8', 'confirmed'],
+            'role'          => ['required', Rule::in(['customer', 'admin', 'super_admin'])],
+            'phone'         => ['nullable', 'string', 'max:30'],
+            'tax_code'      => ['nullable', 'string', 'min:11', 'max:16'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
         ]);
 
         User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role'     => $validated['role'],
-            'phone'    => $validated['phone'] ?? null,
+            'name'          => $validated['name'],
+            'email'         => $validated['email'],
+            'password'      => Hash::make($validated['password']),
+            'role'          => $validated['role'],
+            'phone'         => $validated['phone'] ?? null,
+            'tax_code'      => !empty($validated['tax_code']) ? strtoupper(trim($validated['tax_code'])) : null,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
             'email_verified_at' => now(),
         ]);
 
@@ -87,11 +91,13 @@ class UserController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'role'     => ['required', Rule::in(['customer', 'admin', 'super_admin'])],
-            'phone'    => ['nullable', 'string', 'max:30'],
+            'name'          => ['required', 'string', 'max:255'],
+            'email'         => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password'      => ['nullable', 'string', 'min:8', 'confirmed'],
+            'role'          => ['required', Rule::in(['customer', 'admin', 'super_admin'])],
+            'phone'         => ['nullable', 'string', 'max:30'],
+            'tax_code'      => ['nullable', 'string', 'min:11', 'max:16'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
         ]);
 
         // Prevent demoting the only super_admin
@@ -103,10 +109,12 @@ class UserController extends Controller
         }
 
         $data = [
-            'name'  => $validated['name'],
-            'email' => $validated['email'],
-            'role'  => $validated['role'],
-            'phone' => $validated['phone'] ?? null,
+            'name'          => $validated['name'],
+            'email'         => $validated['email'],
+            'role'          => $validated['role'],
+            'phone'         => $validated['phone'] ?? null,
+            'tax_code'      => !empty($validated['tax_code']) ? strtoupper(trim($validated['tax_code'])) : null,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
         ];
 
         if (!empty($validated['password'])) {

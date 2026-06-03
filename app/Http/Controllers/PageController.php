@@ -61,10 +61,16 @@ class PageController extends Controller
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|max:255|unique:users,email,' . $user->id,
             'phone'         => 'nullable|string|max:50',
+            'tax_code'      => 'nullable|string|min:11|max:16',
             'date_of_birth' => 'nullable|date|before:today',
         ], [
             'date_of_birth.before' => 'La data di nascita deve essere nel passato.',
+            'tax_code.min'         => 'Codice fiscale non valido.',
         ]);
+
+        if (! empty($validated['tax_code'])) {
+            $validated['tax_code'] = strtoupper(trim($validated['tax_code']));
+        }
 
         $user->update($validated);
 

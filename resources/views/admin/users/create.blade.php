@@ -73,6 +73,26 @@
                                     @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
+                            <div class="col-md-7">
+                                <label for="tax_code" class="form-label fw-semibold">Codice fiscale</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                                    <input type="text" id="tax_code" name="tax_code" maxlength="16" value="{{ old('tax_code') }}"
+                                           class="form-control @error('tax_code') is-invalid @enderror" style="text-transform:uppercase"
+                                           placeholder="RSSMRA80A01H501U">
+                                    @error('tax_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="date_of_birth" class="form-label fw-semibold">Data di nascita</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+                                    <input type="date" id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}"
+                                           max="{{ now()->subDay()->format('Y-m-d') }}"
+                                           class="form-control @error('date_of_birth') is-invalid @enderror">
+                                    @error('date_of_birth') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

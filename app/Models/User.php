@@ -24,6 +24,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'role',
         'phone',
+        'tax_code',
         'locale',
         'date_of_birth',
     ];
@@ -50,6 +51,17 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'date_of_birth' => 'date',
         ];
+    }
+
+    /**
+     * Normalizza il codice fiscale in maiuscolo (vuoto → null), a prescindere
+     * dal punto di ingresso (prenotazione, profilo, admin).
+     */
+    protected function taxCode(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            set: fn ($value) => filled($value) ? strtoupper(trim($value)) : null,
+        );
     }
 
     /**

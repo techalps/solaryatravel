@@ -573,6 +573,7 @@ class BookingForm extends Component
                     'name' => trim($this->customer_first_name . ' ' . $this->customer_last_name),
                     'email' => $this->customer_email,
                     'phone' => $this->customer_phone ?: null,
+                    'tax_code' => $this->customer_tax_code ? strtoupper(trim($this->customer_tax_code)) : null,
                     'password' => Hash::make($this->accountPassword),
                     'role' => UserRole::CUSTOMER,
                     'locale' => app()->getLocale(),
