@@ -11,26 +11,29 @@ use Symfony\Component\HttpFoundation\Response;
  * Quando la modalità "coming soon" (maintenance_mode) è attiva, mostra una
  * pagina di attesa a tutti i visitatori, tranne:
  *  - gli amministratori autenticati (vedono il sito normalmente);
- *  - le rotte di autenticazione (login/logout/reset password) necessarie
- *    per accedere all'area riservata;
+ *  - le pagine di autenticazione (login/logout/reset password), necessarie
+ *    per accedere all'area riservata — sia in GET sia in POST;
  *  - il webhook Stripe (deve restare sempre raggiungibile).
+ *
+ * Il filtro è basato sui PATH e non sui nomi di rotta, perché alcune rotte
+ * POST (es. l'invio del form di login su /accedi) non hanno un nome assegnato
+ * e verrebbero altrimenti bloccate, impedendo l'accesso.
  */
 class ComingSoonMiddleware
 {
     /**
-     * Nomi di rotta sempre accessibili anche in coming soon.
+     * Path sempre accessibili anche in coming soon (match su prefisso).
      */
-    private const ALLOWED_ROUTES = [
-        'login',
+    private const ALLOWED_PATHS = [
+        'accedi',
         'logout',
-        'password.request',
-        'password.email',
-        'password.reset',
-        'password.store',
-        'verification.notice',
-        'verification.verify',
-        'verification.send',
-        'webhooks.stripe',
+        'password-dimenticata',
+        'reset-password',
+        'reset-password/*',
+        'verifica-email',
+        'verifica-email/*',
+        'email/verification-notification',
+        'webhooks/stripe',
     ];
 
     public function handle(Request $request, Closure $next): Response
@@ -40,31 +43,12 @@ class ComingSoonMiddleware
         }
 
         // Gli amministratori autenticati vedono il sito normalmente.
-        // Leggo il guard web esplicitamente per non dipendere dal guard di default.
-        $user = $request->user() ?? auth()->guard('web')->user();
-
-        // Diagnostica temporanea: aggiungi ?cs-debug=1 all'URL per vedere cosa vede il server.
-        if ($request->query('cs-debug') === '1') {
-            return response()->json([
-                'coming_soon_attivo' => Settings::comingSoon(),
-                'request_user' => $request->user()?->email,
-                'guard_web_user' => auth()->guard('web')->user()?->email,
-                'auth_check' => auth()->check(),
-                'is_admin' => $user?->isAdmin() ?? false,
-                'session_id_presente' => $request->hasSession() ? (bool) $request->session()->getId() : false,
-                'cookie_sessione_ricevuto' => $request->hasCookie(config('session.cookie')),
-                'session_cookie_name' => config('session.cookie'),
-                'session_domain' => config('session.domain'),
-            ]);
-        }
-
-        if ($user && $user->isAdmin()) {
+        if (($user = $request->user()) && $user->isAdmin()) {
             return $next($request);
         }
 
-        // Consenti le rotte di autenticazione e il webhook.
-        $routeName = $request->route()?->getName();
-        if ($routeName && in_array($routeName, self::ALLOWED_ROUTES, true)) {
+        // Consenti le pagine di autenticazione e il webhook (GET e POST).
+        if ($request->is(self::ALLOWED_PATHS)) {
             return $next($request);
         }
 
