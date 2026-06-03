@@ -40,7 +40,25 @@ class ComingSoonMiddleware
         }
 
         // Gli amministratori autenticati vedono il sito normalmente.
-        if ($request->user() && $request->user()->isAdmin()) {
+        // Leggo il guard web esplicitamente per non dipendere dal guard di default.
+        $user = $request->user() ?? auth()->guard('web')->user();
+
+        // Diagnostica temporanea: aggiungi ?cs-debug=1 all'URL per vedere cosa vede il server.
+        if ($request->query('cs-debug') === '1') {
+            return response()->json([
+                'coming_soon_attivo' => Settings::comingSoon(),
+                'request_user' => $request->user()?->email,
+                'guard_web_user' => auth()->guard('web')->user()?->email,
+                'auth_check' => auth()->check(),
+                'is_admin' => $user?->isAdmin() ?? false,
+                'session_id_presente' => $request->hasSession() ? (bool) $request->session()->getId() : false,
+                'cookie_sessione_ricevuto' => $request->hasCookie(config('session.cookie')),
+                'session_cookie_name' => config('session.cookie'),
+                'session_domain' => config('session.domain'),
+            ]);
+        }
+
+        if ($user && $user->isAdmin()) {
             return $next($request);
         }
 
