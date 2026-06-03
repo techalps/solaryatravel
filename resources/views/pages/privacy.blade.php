@@ -1,95 +1,121 @@
-@extends('layouts.app')
+@extends('layouts.public')
 
-@section('title', 'Privacy Policy - Solarya Travel')
+@section('title', 'Privacy Policy')
+@section('meta_description', 'Informativa sul trattamento dei dati personali di Solarya Travel S.r.l. ai sensi del Regolamento UE 2016/679 (GDPR).')
 
 @section('content')
-    <section class="py-5 bg-white">
-        <div class="container py-4">
-            <div class="mx-auto" style="max-width:780px">
-                <h1 class="display-5 fw-bold text-navy mb-4 font-serif">Privacy Policy</h1>
-                
-                <div class="text-secondary">
-                    <p class="lead text-secondary">
-                        La presente Privacy Policy descrive le modalità di gestione del sito 
-                        in riferimento al trattamento dei dati personali degli utenti.
-                    </p>
 
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">1. Titolare del Trattamento</h2>
-                    <p>
-                        Il Titolare del trattamento dei dati è Solarya Travel S.r.l., con sede legale in 
-                        Via del Mare, 123 - 00100 Città di Mare (RM), P.IVA 01234567890.
-                    </p>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">2. Dati Raccolti</h2>
-                    <p>
-                        I dati personali raccolti durante la navigazione sul sito e l'utilizzo dei servizi includono:
-                    </p>
-                    <ul class="ps-4">
-                        <li>Dati identificativi (nome, cognome, codice fiscale)</li>
-                        <li>Dati di contatto (email, telefono, indirizzo)</li>
-                        <li>Dati di pagamento (trattati tramite gateway sicuri)</li>
-                        <li>Dati di navigazione (indirizzo IP, browser, sistema operativo)</li>
-                    </ul>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">3. Finalità del Trattamento</h2>
-                    <p>I dati personali sono trattati per le seguenti finalità:</p>
-                    <ul class="ps-4">
-                        <li>Gestione delle prenotazioni e dei pagamenti</li>
-                        <li>Comunicazioni relative ai servizi richiesti</li>
-                        <li>Adempimento di obblighi legali e fiscali</li>
-                        <li>Marketing e promozioni (previo consenso)</li>
-                    </ul>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">4. Base Giuridica</h2>
-                    <p>
-                        Il trattamento dei dati personali si basa su:
-                    </p>
-                    <ul class="ps-4">
-                        <li>Esecuzione di un contratto di cui l'interessato è parte</li>
-                        <li>Adempimento di obblighi legali</li>
-                        <li>Consenso dell'interessato per attività di marketing</li>
-                        <li>Legittimo interesse del titolare</li>
-                    </ul>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">5. Conservazione dei Dati</h2>
-                    <p>
-                        I dati personali sono conservati per il tempo strettamente necessario a conseguire 
-                        le finalità per cui sono stati raccolti, nel rispetto dei termini di legge.
-                    </p>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">6. Diritti dell'Interessato</h2>
-                    <p>
-                        In qualsiasi momento è possibile esercitare i diritti previsti dal GDPR:
-                    </p>
-                    <ul class="ps-4">
-                        <li>Diritto di accesso ai dati personali</li>
-                        <li>Diritto di rettifica dei dati inesatti</li>
-                        <li>Diritto alla cancellazione ("diritto all'oblio")</li>
-                        <li>Diritto alla limitazione del trattamento</li>
-                        <li>Diritto alla portabilità dei dati</li>
-                        <li>Diritto di opposizione</li>
-                    </ul>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">7. Sicurezza</h2>
-                    <p>
-                        Adottiamo misure di sicurezza tecniche e organizzative adeguate per proteggere 
-                        i dati personali da accessi non autorizzati, perdita o distruzione.
-                    </p>
-
-                    <h2 class="h3 fw-bold text-navy mt-5 mb-3 font-serif">8. Contatti</h2>
-                    <p>
-                        Per esercitare i propri diritti o per qualsiasi informazione relativa alla 
-                        privacy, è possibile contattarci all'indirizzo: 
-                        <a href="mailto:privacy@solaryatravel.it" class="text-primary">
-                            privacy@solaryatravel.it
-                        </a>
-                    </p>
-
-                    <p class="small text-muted mt-4">
-                        Ultimo aggiornamento: {{ date('d/m/Y') }}
-                    </p>
+    {{-- ============= BREADCRUMB ============= --}}
+    <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-tours.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center text-white">
+                    <h1 class="mb-3 wow fadeInUp">Privacy Policy</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb justify-content-center mb-0">
+                            <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white-50 text-decoration-none">Home</a></li>
+                            <li class="breadcrumb-item active text-white" aria-current="page">Privacy Policy</li>
+                        </ol>
+                    </nav>
                 </div>
             </div>
         </div>
+    </div>
+
+    <section class="py-130" style="padding-top:80px;padding-bottom:90px;background:#fff">
+        <div class="container">
+            <div class="mx-auto legal-page" style="max-width:820px">
+                <p class="legal-lead">Ai sensi del Regolamento UE 2016/679 (GDPR)</p>
+
+                <h2 class="legal-h2">1. Titolare del Trattamento</h2>
+                <p class="legal-p mb-0"><strong>SOLARYA TRAVEL S.R.L.</strong></p>
+                <p class="legal-p mb-0">Via Toscanini 9/C – 07026 Olbia (SS)</p>
+                <p class="legal-p mb-0">P. IVA 03071410900</p>
+                <p class="legal-p mb-0">Email: <a href="mailto:info@solaryatravel.com">info@solaryatravel.com</a></p>
+                <p class="legal-p mb-0">PEC: <a href="mailto:solaryatravel@pec.it">solaryatravel@pec.it</a></p>
+                <p class="legal-p">Telefono: <a href="tel:+393450884743">+39 345 088 4743</a></p>
+
+                <h2 class="legal-h2">2. Tipologia di Dati Raccolti</h2>
+                <p class="legal-p">Possono essere raccolti:</p>
+                <ul class="legal-list">
+                    <li>nome e cognome;</li>
+                    <li>indirizzo email;</li>
+                    <li>numero di telefono;</li>
+                    <li>dati necessari alla prenotazione;</li>
+                    <li>dati di navigazione;</li>
+                    <li>indirizzo IP;</li>
+                    <li>informazioni inviate tramite moduli di contatto;</li>
+                    <li>dati forniti tramite WhatsApp.</li>
+                </ul>
+
+                <h2 class="legal-h2">3. Finalità del Trattamento</h2>
+                <p class="legal-p">I dati sono trattati per:</p>
+                <ul class="legal-list">
+                    <li>gestione delle prenotazioni;</li>
+                    <li>esecuzione dei servizi richiesti;</li>
+                    <li>assistenza clienti;</li>
+                    <li>adempimenti fiscali e amministrativi;</li>
+                    <li>comunicazioni operative;</li>
+                    <li>invio di newsletter e comunicazioni promozionali previo consenso;</li>
+                    <li>miglioramento del sito e dei servizi offerti;</li>
+                    <li>analisi statistiche.</li>
+                </ul>
+
+                <h2 class="legal-h2">4. Base Giuridica del Trattamento</h2>
+                <p class="legal-p">Il trattamento è effettuato sulla base di:</p>
+                <ul class="legal-list">
+                    <li>esecuzione di un contratto;</li>
+                    <li>obblighi di legge;</li>
+                    <li>consenso dell'interessato;</li>
+                    <li>legittimo interesse del titolare.</li>
+                </ul>
+
+                <h2 class="legal-h2">5. Modalità di Trattamento</h2>
+                <p class="legal-p">I dati sono trattati con strumenti elettronici e cartacei adottando adeguate misure di sicurezza per prevenirne perdita, uso illecito o accessi non autorizzati.</p>
+
+                <h2 class="legal-h2">6. Conservazione dei Dati</h2>
+                <p class="legal-p">I dati saranno conservati per il tempo necessario al raggiungimento delle finalità per cui sono stati raccolti e comunque nei termini previsti dalla normativa vigente.</p>
+
+                <h2 class="legal-h2">7. Comunicazione dei Dati</h2>
+                <p class="legal-p">I dati potranno essere comunicati a:</p>
+                <ul class="legal-list">
+                    <li>consulenti fiscali e amministrativi;</li>
+                    <li>fornitori di servizi informatici;</li>
+                    <li>piattaforme di pagamento;</li>
+                    <li>autorità competenti quando richiesto dalla legge.</li>
+                </ul>
+                <p class="legal-p">I dati non saranno diffusi pubblicamente.</p>
+
+                <h2 class="legal-h2">8. Newsletter e Marketing</h2>
+                <p class="legal-p">L'utente può iscriversi volontariamente alla newsletter. Il consenso potrà essere revocato in qualsiasi momento mediante il link presente nelle comunicazioni ricevute o scrivendo a <a href="mailto:info@solaryatravel.com">info@solaryatravel.com</a>.</p>
+
+                <h2 class="legal-h2">9. Cookie e Strumenti di Analisi</h2>
+                <p class="legal-p">Il sito può utilizzare:</p>
+                <ul class="legal-list">
+                    <li>cookie tecnici;</li>
+                    <li>Google Analytics;</li>
+                    <li>Meta Pixel;</li>
+                    <li>cookie funzionali e statistici.</li>
+                </ul>
+                <p class="legal-p">L'utente può gestire le proprie preferenze tramite il banner cookie presente sul sito.</p>
+
+                <h2 class="legal-h2">10. Diritti dell'Interessato</h2>
+                <p class="legal-p">L'interessato può esercitare in qualsiasi momento i diritti previsti dagli articoli 15-22 del GDPR, inclusi:</p>
+                <ul class="legal-list">
+                    <li>accesso ai dati;</li>
+                    <li>rettifica;</li>
+                    <li>cancellazione;</li>
+                    <li>limitazione del trattamento;</li>
+                    <li>portabilità;</li>
+                    <li>opposizione al trattamento.</li>
+                </ul>
+                <p class="legal-p">Le richieste possono essere inviate a <a href="mailto:info@solaryatravel.com">info@solaryatravel.com</a> oppure <a href="mailto:solaryatravel@pec.it">solaryatravel@pec.it</a>.</p>
+
+                <h2 class="legal-h2">11. Reclami</h2>
+                <p class="legal-p">L'interessato può presentare reclamo all'Autorità Garante per la Protezione dei Dati Personali secondo le modalità previste dalla normativa vigente.</p>
+            </div>
+        </div>
     </section>
+
+    @include('partials.public.legal-styles')
 @endsection

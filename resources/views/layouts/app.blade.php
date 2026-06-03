@@ -126,8 +126,8 @@
                 <div class="col-6 col-lg-3">
                     <h6 class="text-warning fw-semibold mb-3">Contatti</h6>
                     <ul class="list-unstyled d-flex flex-column gap-2 text-white-50">
-                        <li><i class="bi bi-geo-alt-fill text-warning me-2"></i>Porto Turistico di Salerno<br><span class="ms-4">Molo Manfredi, 84121 SA</span></li>
-                        <li><i class="bi bi-telephone-fill text-warning me-2"></i><a href="tel:+391234567890" class="text-white-50 text-decoration-none">+39 123 456 7890</a></li>
+                        <li><i class="bi bi-geo-alt-fill text-warning me-2"></i>Via Toscanini 9/C<br><span class="ms-4">07026 Olbia (SS)</span></li>
+                        <li><i class="bi bi-telephone-fill text-warning me-2"></i><a href="tel:+393450884743" class="text-white-50 text-decoration-none">+39 345 088 4743</a></li>
                         <li><i class="bi bi-envelope-fill text-warning me-2"></i><a href="mailto:info@solaryatravel.com" class="text-white-50 text-decoration-none">info@solaryatravel.com</a></li>
                     </ul>
                 </div>
@@ -161,7 +161,7 @@
     </footer>
 
     {{-- WhatsApp float --}}
-    <a href="https://wa.me/391234567890" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Contattaci su WhatsApp">
+    <a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Contattaci su WhatsApp">
         <i class="bi bi-whatsapp fs-3"></i>
     </a>
 

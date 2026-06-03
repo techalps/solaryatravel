@@ -9,6 +9,13 @@
     <title>@yield('title', 'Solarya Travel') – Escursioni in Catamarano</title>
     <meta name="description" content="@yield('meta_description', 'Vivi esperienze esclusive in catamarano lungo la Costiera. Solarya Travel: lusso, comfort ed eleganza in mare.')">
 
+    @if(config('services.tracking.search_console'))
+        <meta name="google-site-verification" content="{{ config('services.tracking.search_console') }}">
+    @endif
+
+    {{-- Tracciamento (Consent Mode v2): deve stare il più in alto possibile nell'head --}}
+    @include('partials.public.tracking')
+
     <link rel="icon" type="image/png" href="{{ asset('images/logo_black.svg') }}">
 
     {{-- Font del sito: HelveticaNowDisplay (locale, sostituisce Poppins + Outfit) --}}
@@ -212,6 +219,11 @@
     @stack('head')
 </head>
 <body>
+    @if(config('services.tracking.gtm_id'))
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ config('services.tracking.gtm_id') }}"
+            height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    @endif
+
     @include('partials.public.header')
 
     <main>
@@ -219,6 +231,9 @@
     </main>
 
     @include('partials.public.footer')
+
+    {{-- Banner consenso cookie --}}
+    @include('partials.public.cookie-banner')
 
     {{-- Scripts --}}
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
