@@ -228,9 +228,10 @@
                     <div class="text-muted small">#${p.booking_number}</div>
                 </div>
                 <div class="bg-light rounded-3 p-3">
+                    ${row('bi-compass', 'Tour', p.tour || 'N/A')}
                     ${row('bi-calendar3', 'Data', dateStr)}
                     ${row('bi-clock', 'Orario', `${startStr} – ${endStr}`)}
-                    ${row('bi-water', 'Catamarano', p.catamaran)}
+                    ${row('bi-water', 'Catamarano', p.catamaran || '<span class="text-muted fw-normal">Non assegnato</span>')}
                     <div class="d-flex justify-content-between align-items-center pt-2">
                         <span class="text-muted small"><i class="bi bi-people me-2"></i>Ospiti</span>
                         <span class="fw-semibold">${p.guests}</span>

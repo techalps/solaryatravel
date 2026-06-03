@@ -90,6 +90,16 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-semibold text-secondary mb-1">
+                                            <i class="bi bi-bell me-1"></i>Email notifiche admin
+                                        </label>
+                                        <input type="email" name="admin_notification_email" value="{{ old('admin_notification_email', $settings['admin_notification_email'] ?? '') }}"
+                                               class="form-control @error('admin_notification_email') is-invalid @enderror"
+                                               placeholder="Lascia vuoto per usare l'email del sito">
+                                        <div class="small text-muted mt-1">Riceve avvisi di nuove prenotazioni, cancellazioni e rimborsi.</div>
+                                        @error('admin_notification_email') <div class="small text-danger mt-1">{{ $message }}</div> @enderror
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">
                                             <i class="bi bi-telephone me-1"></i>Telefono
                                         </label>
                                         <input type="text" name="site_phone" value="{{ old('site_phone', $settings['site_phone'] ?? '') }}"

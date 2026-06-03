@@ -210,22 +210,37 @@
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
             body: JSON.stringify({ qr_code: code })
         })
-        .then(async r => ({ ok: r.ok, status: r.status, body: await r.json() }))
-        .then(({ ok, body }) => {
-            if (ok && body.success) {
+        .then(async r => {
+            // Parsing difensivo: alcune risposte (proxy/HTTP2, sessione) possono
+            // non essere JSON valido pur essendo l'imbarco andato a buon fine.
+            let body = null;
+            try { body = await r.json(); } catch (e) { body = null; }
+            return { ok: r.ok, status: r.status, body };
+        })
+        .then(({ ok, status, body }) => {
+            if (ok && body && body.success) {
                 showFeedback('success', `${body.seat.name} imbarcato!`);
                 if (navigator.vibrate) navigator.vibrate(150);
                 fetchState();
                 setTimeout(() => flashSeat(body.seat.id), 200);
-            } else if (body.code === 'already_boarded') {
+            } else if (body && body.code === 'already_boarded') {
                 showFeedback('warn', body.message);
                 if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
-            } else {
-                showFeedback('error', body.message || 'Errore di scansione.');
+            } else if (body && body.message) {
+                showFeedback('error', body.message);
                 if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
+            } else {
+                // Risposta non interpretabile: NON dichiarare un errore secco.
+                // Ricarico lo stato dal server: se l'imbarco è avvenuto, l'UI lo riflette.
+                fetchState();
+                showFeedback('warn', 'Risposta non confermata — verifica lo stato del passeggero.');
             }
         })
-        .catch(() => showFeedback('error', 'Errore di rete.'));
+        .catch(() => {
+            // Errore di rete reale: ricarico comunque lo stato per non lasciare l'UI ferma.
+            fetchState();
+            showFeedback('warn', 'Connessione instabile — stato aggiornato, riprova se necessario.');
+        });
     }
 
     // ====== Scanner ======

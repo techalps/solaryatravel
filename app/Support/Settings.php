@@ -35,4 +35,19 @@ class Settings
     {
         return (bool) self::get('maintenance_mode', false);
     }
+
+    /**
+     * Indirizzo email a cui inviare le notifiche operative all'amministratore.
+     * Fallback: l'email del sito, poi l'indirizzo aziendale.
+     */
+    public static function adminNotificationEmail(): string
+    {
+        $email = trim((string) self::get('admin_notification_email', ''));
+
+        if ($email === '') {
+            $email = trim((string) self::get('site_email', ''));
+        }
+
+        return $email !== '' ? $email : 'info@solaryatravel.com';
+    }
 }

@@ -137,6 +137,8 @@ class PaymentController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+        // Nota: la notifica admin di nuova prenotazione è gestita centralmente
+        // da BookingObserver quando lo status passa a CONFIRMED (qualunque origine).
     }
 
     /**

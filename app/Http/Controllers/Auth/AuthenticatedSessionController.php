@@ -28,6 +28,13 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Redirect esplicito (es. ritorno alla pagina di pagamento dopo login),
+        // accettato solo se è un percorso interno per evitare open-redirect.
+        $redirect = $request->input('redirect');
+        if (! $request->user()->isAdmin() && is_string($redirect) && str_starts_with($redirect, url('/'))) {
+            return redirect()->to($redirect);
+        }
+
         // Redirect admin users to admin dashboard
         if ($request->user()->isAdmin()) {
             return redirect()->intended(route('admin.dashboard'));

@@ -144,11 +144,18 @@ class DashboardController extends Controller
      */
     public function schedule(): View
     {
-        $bookings = Booking::with(['tour', 'departure'])
+        $bookings = Booking::with(['tour', 'departure', 'seatRecords.catamaran'])
             ->whereBetween('booking_date', [now()->startOfMonth(), now()->endOfMonth()->addMonth()])
             ->where('status', '!=', BookingStatus::CANCELLED)
             ->get()
             ->map(function ($booking) {
+                // Catamarani distinti assegnati ai posti della prenotazione (di norma uno).
+                $catamarans = $booking->seatRecords
+                    ->pluck('catamaran.name')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
                 return [
                     'id' => $booking->id,
                     'title' => "{$booking->customer_first_name} {$booking->customer_last_name}",
@@ -160,6 +167,7 @@ class DashboardController extends Controller
                         'tour' => $booking->tour?->name ?? 'N/A',
                         'tour_id' => $booking->tour_id,
                         'guests' => $booking->seats,
+                        'catamaran' => $catamarans->isNotEmpty() ? $catamarans->implode(', ') : null,
                         'status' => $booking->status->value ?? $booking->status,
                     ],
                 ];

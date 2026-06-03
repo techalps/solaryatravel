@@ -214,6 +214,10 @@
     .tg-tour-about-sidebar .tg-btn { background: var(--tg-theme-primary); color: #fff; padding: 14px 22px; font-weight: 600; }
     .tg-tour-about-sidebar .tg-btn:hover { background: #5b1fd8; color: #fff; }
     .tg-tour-about-sidebar .tg-btn:disabled { background: #c7b8e8; cursor: not-allowed; }
+    .bk-register-box { background:#f8fafc; border:1px solid #e9eef5; border-radius:12px; padding:14px 16px; }
+    .bk-register-box summary { list-style:none; }
+    .bk-register-box summary::-webkit-details-marker { display:none; }
+    .bk-register-box .form-control-sm { border-radius:8px; }
 
     .breadcrumb-item.active { color: #fff !important; }
     .breadcrumb-item + .breadcrumb-item::before { color: rgba(255,255,255,.6); }

@@ -9,6 +9,9 @@ use App\Mail\BookingCancelled;
 use App\Mail\BookingPaymentLink;
 use App\Mail\BookingRefunded;
 use App\Mail\BookingTickets;
+use App\Mail\AdminBookingCancelled;
+use App\Mail\AdminBookingRefunded;
+use App\Support\Settings;
 use App\Models\Booking;
 use App\Models\BookingSeat;
 use App\Models\Catamaran;
@@ -294,6 +297,15 @@ class BookingController extends Controller
                 ]);
             }
 
+            try {
+                Mail::to(Settings::adminNotificationEmail())->send(new AdminBookingCancelled($booking->fresh(), $reason));
+            } catch (\Throwable $e) {
+                Log::error('Notifica admin annullamento fallita', [
+                    'booking' => $booking->booking_number,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return back()->with('success', 'Prenotazione annullata. Email inviata al cliente.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -355,6 +367,15 @@ class BookingController extends Controller
                 'error' => $e->getMessage(),
             ]);
             return back()->with('error', 'Rimborso registrato sulla prenotazione, ma l\'invio email è fallito (controlla il log).');
+        }
+
+        try {
+            Mail::to(Settings::adminNotificationEmail())->send(new AdminBookingRefunded($booking->fresh(), $amount, $note));
+        } catch (\Throwable $e) {
+            Log::error('Notifica admin rimborso fallita', [
+                'booking' => $booking->booking_number,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return back()->with('success', 'Rimborso registrato (€' . number_format($amount, 2, ',', '.') . '). Email inviata al cliente.');

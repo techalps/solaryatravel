@@ -17,18 +17,35 @@ class BoardingController extends Controller
      */
     public function index(Request $request): View
     {
+        $request->validate([
+            'date' => 'nullable|date',
+            'tour' => 'nullable|integer',
+        ]);
+
+        // Vista per singolo giorno (default oggi): pensata per l'operatività di imbarco.
         $date = $request->date('date') ?? now()->startOfDay();
+        $tourId = $request->integer('tour') ?: null;
 
         $departures = TourDeparture::with(['tour'])
-            ->whereDate('departure_date', $date)
+            ->whereDate('departure_date', $date->toDateString())
             ->whereIn('status', ['scheduled', 'confirmed'])
+            ->when($tourId, fn ($q) => $q->where('tour_id', $tourId))
+            ->whereHas('tour', fn ($q) => $q->where('is_active', true))
             ->orderBy('start_time')
             ->withCount(['bookings as confirmed_bookings_count' => function ($q) {
                 $q->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN]);
             }])
             ->get();
 
-        return view('admin.boarding.index', compact('departures', 'date'));
+        // Elenco tour attivi per il filtro a tendina.
+        $tours = \App\Models\Tour::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+
+        return view('admin.boarding.index', [
+            'departures' => $departures,
+            'date' => $date,
+            'tours' => $tours,
+            'selectedTour' => $tourId,
+        ]);
     }
 
     /**
@@ -126,7 +143,7 @@ class BoardingController extends Controller
             'success' => true,
             'code' => 'boarded',
             'message' => 'Imbarco registrato.',
-            'seat' => $this->seatPayload($seat->fresh(['boarded_by', 'booking'])),
+            'seat' => $this->seatPayload($seat->fresh(['boardedBy', 'booking'])),
         ]);
     }
 
@@ -148,7 +165,7 @@ class BoardingController extends Controller
         return response()->json([
             'success' => true,
             'action' => $action,
-            'seat' => $this->seatPayload($seat->fresh(['boarded_by', 'booking'])),
+            'seat' => $this->seatPayload($seat->fresh(['boardedBy', 'booking'])),
         ]);
     }
 

@@ -18,9 +18,16 @@ class DepartureAssignmentController extends Controller
      */
     public function index(Request $request): View
     {
-        $request->validate(['date' => 'nullable|date']);
-        $date = $request->date('date') ?? Carbon::today();
-        $dateString = $date->toDateString();
+        $request->validate([
+            'date' => 'nullable|date',
+            'tour' => 'nullable|integer',
+        ]);
+
+        // Vista a intervallo: dalla data scelta (default oggi) per 14 giorni,
+        // così si vedono tutte le partenze da assegnare, non solo quelle di un giorno.
+        $from = $request->date('date') ?? Carbon::today();
+        $to = $from->copy()->addDays(14)->endOfDay();
+        $tourId = $request->integer('tour') ?: null;
 
         $departures = TourDeparture::query()
             ->with([
@@ -34,9 +41,11 @@ class DepartureAssignmentController extends Controller
                 'bookings.seatRecords.ageBracket',
                 'bookings.seatRecords.catamaran',
             ])
-            ->whereDate('departure_date', $dateString)
+            ->whereBetween('departure_date', [$from->toDateString(), $to->toDateString()])
             ->whereIn('status', ['scheduled', 'confirmed'])
+            ->when($tourId, fn ($q) => $q->where('tour_id', $tourId))
             ->whereHas('tour', fn ($q) => $q->where('is_active', true))
+            ->orderBy('departure_date')
             ->orderBy('start_time')
             ->get();
 
@@ -47,13 +56,21 @@ class DepartureAssignmentController extends Controller
             ] + $this->buildAssignmentData($dep);
         });
 
-        // Raggruppa per tour mantenendo l'ordine cronologico delle partenze
-        $byTour = $blocks->groupBy(fn ($b) => $b['departure']->tour_id);
+        // Raggruppa prima per mese (Y-m) e poi per giorno (Y-m-d), così l'intestazione
+        // del mese compare una sola volta. Ordine cronologico preservato.
+        $byMonth = $blocks
+            ->groupBy(fn ($b) => Carbon::parse($b['departure']->departure_date)->format('Y-m'))
+            ->map(fn ($monthBlocks) => $monthBlocks->groupBy(
+                fn ($b) => Carbon::parse($b['departure']->departure_date)->toDateString()
+            ));
+
+        $tours = Tour::where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.departures.index', [
-            'date' => $date,
-            'blocks' => $blocks,
-            'byTour' => $byTour,
+            'from' => $from,
+            'byMonth' => $byMonth,
+            'tours' => $tours,
+            'selectedTour' => $tourId,
         ]);
     }
 

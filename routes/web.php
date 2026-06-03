@@ -88,10 +88,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/programma', [DashboardController::class, 'schedule'])->name('schedule');
 
-    Route::get('/checkin', [CheckInController::class, 'scanner'])->name('checkin');
-    Route::post('/checkin/verify', [CheckInController::class, 'verifyAndCheckIn'])->name('checkin.verify');
-    Route::post('/checkin/manual', [CheckInController::class, 'manualCheckIn'])->name('checkin.manual');
-
     // Imbarco passeggeri (QR scan per partenza)
     Route::get('/imbarco', [AdminBoardingController::class, 'index'])->name('boarding.index');
     Route::get('/imbarco/{departure}', [AdminBoardingController::class, 'show'])->name('boarding.show');

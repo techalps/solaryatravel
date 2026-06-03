@@ -269,6 +269,32 @@
                 </div>
             </div>
 
+            {{-- Crea account (solo ospiti non loggati) --}}
+            @guest
+                <div class="bk-account-box mb-15">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" wire:model.live="wantsAccount" id="bk-wants-account">
+                        <label class="form-check-label small fw-semibold" for="bk-wants-account">
+                            <i class="fa-solid fa-user-plus text-primary me-1"></i>Crea un account per gestire le tue prenotazioni
+                        </label>
+                    </div>
+                    @if($wantsAccount)
+                        <div class="row g-2 mt-2">
+                            <div class="col-12">
+                                <small class="text-muted d-block mb-2">L'account sarà creato con l'email <strong>{{ $customer_email ?: 'indicata sopra' }}</strong>.</small>
+                            </div>
+                            <div class="col-sm-6">
+                                <input type="password" wire:model="accountPassword" class="bk-input" placeholder="Password *" autocomplete="new-password">
+                                @error('accountPassword') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                            </div>
+                            <div class="col-sm-6">
+                                <input type="password" wire:model="accountPassword_confirmation" class="bk-input" placeholder="Conferma password *" autocomplete="new-password">
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endguest
+
             {{-- Total --}}
             <div class="tg-tour-about-coast d-flex align-items-center flex-wrap justify-content-between mb-5">
                 <span class="tg-tour-about-sidebar-title d-inline-block">Costo totale:</span>
@@ -310,6 +336,7 @@
         .booking-widget .bk-input:focus { outline: none; border-color: var(--tg-theme-secondary); box-shadow: 0 0 0 3px rgba(var(--tg-theme-secondary-rgb, 124,55,255),.12); }
         .booking-widget .bk-textarea { border-radius: 14px; padding: .65rem 1rem; border: 1.5px solid #eef0f3; width: 100%; font-size: .88rem; resize: vertical; }
         .booking-widget .bk-textarea:focus { outline: none; border-color: var(--tg-theme-secondary); box-shadow: 0 0 0 3px rgba(var(--tg-theme-secondary-rgb, 124,55,255),.12); }
+        .booking-widget .bk-account-box { background: #f8fafc; border: 1.5px solid #eef0f3; border-radius: 14px; padding: .75rem 1rem; }
         .booking-widget .bk-label { font-size: .78rem; font-weight: 600; color: #0E1B33; margin-bottom: .35rem; display: block; }
 
         .booking-widget .bk-stepper { display: inline-flex; align-items: center; background: #f4f4f4; border-radius: 50px; padding: 3px; gap: 4px; }

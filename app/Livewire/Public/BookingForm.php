@@ -5,10 +5,16 @@ namespace App\Livewire\Public;
 use App\Models\Addon;
 use App\Models\Tour;
 use App\Models\TourDeparture;
+use App\Models\User;
+use App\Enums\UserRole;
 use App\Services\BookingService;
 use App\Services\PricingService;
 use Carbon\Carbon;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -66,6 +72,11 @@ class BookingForm extends Component
     public string $customer_tax_code = '';
     public string $special_requests = '';
     public bool $terms = false;
+
+    /** Creazione account opzionale (solo per ospiti non loggati). */
+    public bool $wantsAccount = false;
+    public string $accountPassword = '';
+    public string $accountPassword_confirmation = '';
 
     public ?string $errorMessage = null;
 
@@ -474,6 +485,22 @@ class BookingForm extends Component
             'children.*.last_name.required' => 'Inserisci il cognome di ogni bambino.',
         ]);
 
+        // Validazione password solo se l'ospite ha scelto di creare un account.
+        $creatingAccount = $this->wantsAccount && ! Auth::check();
+        if ($creatingAccount) {
+            if (User::where('email', $this->customer_email)->exists()) {
+                $this->errorMessage = 'Esiste già un account con questa email. Accedi prima di proseguire, oppure deseleziona "Crea un account".';
+                return null;
+            }
+            $this->validate(
+                ['accountPassword' => ['required', 'confirmed', Password::defaults()]],
+                [
+                    'accountPassword.required' => 'Inserisci una password per il tuo account.',
+                    'accountPassword.confirmed' => 'Le password non corrispondono.',
+                ]
+            );
+        }
+
         if (!$this->departure) {
             $this->errorMessage = 'Seleziona una data di partenza.';
             return null;
@@ -538,6 +565,27 @@ class BookingForm extends Component
                 'special_requests' => $this->special_requests,
                 'guests' => $guests,
             ], 'website');
+
+            // Creazione account opzionale dell'ospite: dopo il booking, così
+            // un fallimento nella prenotazione non lascia account orfani.
+            if ($creatingAccount) {
+                $user = User::create([
+                    'name' => trim($this->customer_first_name . ' ' . $this->customer_last_name),
+                    'email' => $this->customer_email,
+                    'phone' => $this->customer_phone ?: null,
+                    'password' => Hash::make($this->accountPassword),
+                    'role' => UserRole::CUSTOMER,
+                    'locale' => app()->getLocale(),
+                ]);
+
+                // Collega questo booking (e altri con la stessa email) al nuovo account.
+                \App\Models\Booking::where('customer_email', $user->email)
+                    ->whereNull('user_id')
+                    ->update(['user_id' => $user->id]);
+
+                event(new Registered($user));
+                Auth::login($user);
+            }
 
             return redirect()->route('payment.show', $booking->uuid);
         } catch (\Throwable $e) {

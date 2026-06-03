@@ -30,7 +30,7 @@
                     <a href="{{ route('admin.bookings.index') }}" class="btn btn-light rounded-pill px-3 fw-semibold">
                         <i class="bi bi-journal-check me-2"></i>Prenotazioni
                     </a>
-                    <a href="{{ route('admin.checkin') }}" class="btn btn-warning rounded-pill px-3 fw-semibold text-navy">
+                    <a href="{{ route('admin.boarding.index') }}" class="btn btn-warning rounded-pill px-3 fw-semibold text-navy">
                         <i class="bi bi-qr-code-scan me-2"></i>Check-in
                     </a>
                 </div>

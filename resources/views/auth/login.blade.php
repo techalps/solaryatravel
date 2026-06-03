@@ -166,10 +166,14 @@
         <form method="POST" action="{{ route('login') }}">
             @csrf
 
+            @if(request('redirect'))
+                <input type="hidden" name="redirect" value="{{ request('redirect') }}">
+            @endif
+
             <div class="auth-field">
                 <i class="fa-regular fa-envelope auth-field-icon"></i>
                 <input type="email" name="email" placeholder="Indirizzo email"
-                       value="{{ old('email') }}" required autofocus autocomplete="username">
+                       value="{{ old('email', request('email')) }}" required autofocus autocomplete="username">
             </div>
 
             <div class="auth-field">
