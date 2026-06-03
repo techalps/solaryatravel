@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,6 +17,34 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->applyMailSettings();
+        $this->serveLivewireAssetsAsStaticFile();
+    }
+
+    /**
+     * Su OVH la rotta dinamica /livewire/livewire.min.js (servita da PHP) sotto
+     * HTTP/2 con molti stream concorrenti causa ERR_HTTP2_PROTOCOL_ERROR.
+     *
+     * Puntiamo lo <script src> al file statico reale in public/vendor/livewire/:
+     * poiché il file esiste fisicamente, il web server lo serve direttamente
+     * senza passare da PHP, eliminando il problema HTTP/2.
+     *
+     * Il file va pubblicato in fase di deploy con:
+     *   php artisan livewire:publish --assets
+     */
+    protected function serveLivewireAssetsAsStaticFile(): void
+    {
+        $assetPath = public_path('vendor/livewire/livewire.min.js');
+
+        // Se gli asset non sono stati pubblicati, lascia il comportamento di default.
+        if (! is_file($assetPath)) {
+            return;
+        }
+
+        // La URI di questa rotta diventa lo "src" dello script Livewire.
+        // Corrisponde al file statico in public/, quindi il server lo serve diretto.
+        Livewire::setScriptRoute(function ($handle) {
+            return Route::get('/vendor/livewire/livewire.min.js', $handle);
+        });
     }
 
     /**
