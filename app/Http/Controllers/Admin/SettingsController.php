@@ -155,7 +155,7 @@ class SettingsController extends Controller
             'smtp_password' => '',
             'smtp_encryption' => 'tls',
             'mail_from_name' => config('mail.from.name', 'Solarya Travel'),
-            'mail_from_address' => config('mail.from.address', ''),
+            'mail_from_address' => config('mail.from.address', 'noreply@solaryatravel.com'),
             'enable_notifications' => true,
             'maintenance_mode' => false,
         ];
