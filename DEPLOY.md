@@ -90,6 +90,44 @@ ln -s ../storage/app/public public/storage
 ls -la public/storage
 ```
 
+### 1.5 Asset Livewire come file statici (PUNTO CRITICO)
+
+⚠️ Su OVH, la rotta dinamica `/livewire/livewire.min.js` (servita da PHP) sotto
+HTTP/2 con molti stream concorrenti causa `ERR_HTTP2_PROTOCOL_ERROR` nel browser
+→ Livewire non si carica → i componenti (form di prenotazione) e gli `onclick`
+che dipendono da JS della pagina si rompono.
+
+Soluzione: servire lo script Livewire come **file statico** da `public/vendor/livewire/`.
+`AppServiceProvider::serveLivewireAssetsAsStaticFile()` punta automaticamente lo
+`<script src>` a quel percorso **se il file esiste**. Va quindi pubblicato:
+
+```bash
+php artisan livewire:publish --assets
+# verifica: deve esistere public/vendor/livewire/livewire.min.js
+ls -la public/vendor/livewire/
+```
+
+Da rieseguire dopo ogni aggiornamento di Livewire (vedi sotto).
+
+### 1.6 Struttura cartelle storage
+
+Se cartelle standard di `storage` non sono state copiate (es. via git), ricrearle:
+
+```bash
+mkdir -p storage/logs storage/framework/cache/data storage/framework/views storage/framework/sessions storage/app/public
+chmod -R 775 storage bootstrap/cache
+```
+
+### 1.7 Sessione e cookie
+
+Per il login in produzione (HTTPS dietro proxy OVH), nel `.env`:
+
+```env
+SESSION_DRIVER=database          # richiede la tabella sessions (php artisan migrate)
+SESSION_SECURE_COOKIE=true
+APP_URL=https://www.solaryatravel.com
+```
+
 ---
 
 ## 2. Aggiornamenti successivi (deploy di nuove versioni)
@@ -98,6 +136,7 @@ ls -la public/storage
 cd ~/www
 # 1. aggiorna i file (git pull / FTP)
 php composer.phar install --no-dev --optimize-autoloader   # se cambiate dipendenze
+php artisan livewire:publish --assets                      # ripubblica asset Livewire statici
 php artisan migrate --force                                # se ci sono nuove migration
 php artisan config:clear
 php artisan cache:clear
@@ -117,6 +156,9 @@ Se hai rilanciato `storage:link` per errore, ripristina il link relativo (vedi 1
 | 500 dopo aver copiato i file | config cache vecchia | `php artisan config:clear` + `rm -f bootstrap/cache/config.php` |
 | Immagini 403 | symlink storage **assoluto** (vedi 1.4) | ricreare il symlink **relativo** |
 | Immagini 404 | file non caricati o `APP_URL` errato | verificare `storage/app/public` e `APP_URL` |
+| `ERR_HTTP2_PROTOCOL_ERROR` su `livewire.min.js` + funzioni JS "is not defined" | asset Livewire serviti via PHP sotto HTTP/2 | `php artisan livewire:publish --assets` (vedi 1.5) |
+| Login non persiste (torna al login) in coming soon | il middleware bloccava il POST di login | risolto: `ComingSoonMiddleware` filtra per path, non per nome rotta |
+| `storage/logs` mancante / niente log | cartelle storage non copiate | ricrearle (vedi 1.6) |
 | Errori non visibili | log | `tail -n 50 storage/logs/laravel.log` |
 
 ### .htaccess
