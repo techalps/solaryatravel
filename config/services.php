@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tracciamento e analisi (cookie banner)
+    |--------------------------------------------------------------------------
+    | Gli script vengono caricati solo previo consenso dell'utente tramite il
+    | banner cookie. Lasciare vuoto un ID disattiva il relativo strumento.
+    | La verifica Search Console è un meta tag e non installa cookie.
+    */
+    'tracking' => [
+        'gtm_id' => env('GTM_ID'),                            // GTM-XXXXXXX
+        'ga4_id' => env('GOOGLE_ANALYTICS_ID'),               // G-XXXXXXXXXX
+        'meta_pixel_id' => env('META_PIXEL_ID'),              // ID numerico
+        'search_console' => env('GOOGLE_SITE_VERIFICATION'),  // token meta verifica
+    ],
+
 ];

@@ -63,9 +63,9 @@
 
                         @php
                             $contacts = [
-                                ['icon' => 'geo-alt', 'title' => 'Indirizzo', 'html' => 'Porto Turistico Marina<br>Via del Mare, 123<br>00100 Città di Mare (RM)'],
-                                ['icon' => 'telephone', 'title' => 'Telefono', 'html' => '<a href="tel:+390612345678" class="text-secondary text-decoration-none">+39 06 1234 5678</a>'],
-                                ['icon' => 'envelope', 'title' => 'Email', 'html' => '<a href="mailto:info@solaryatravel.it" class="text-secondary text-decoration-none">info@solaryatravel.it</a>'],
+                                ['icon' => 'geo-alt', 'title' => 'Indirizzo', 'html' => 'Via Toscanini 9/C<br>07026 Olbia (SS)'],
+                                ['icon' => 'telephone', 'title' => 'Telefono', 'html' => '<a href="tel:+393450884743" class="text-secondary text-decoration-none">+39 345 088 4743</a>'],
+                                ['icon' => 'envelope', 'title' => 'Email', 'html' => '<a href="mailto:info@solaryatravel.com" class="text-secondary text-decoration-none">info@solaryatravel.com</a>'],
                                 ['icon' => 'clock', 'title' => 'Orari', 'html' => 'Lun - Sab: 9:00 - 18:00<br>Domenica: su appuntamento'],
                             ];
                         @endphp

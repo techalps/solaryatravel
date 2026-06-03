@@ -20,7 +20,7 @@
                                 <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
                                 <a href="#" aria-label="X"><i class="fa-brands fa-twitter"></i></a>
                                 <a href="#" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
-                                <a href="https://wa.me/391234567890" aria-label="WhatsApp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i></a>
+                                <a href="https://wa.me/393450884743" aria-label="WhatsApp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i></a>
                             </div>
                         </div>
                     </div>
@@ -45,6 +45,7 @@
                                 <li><a href="{{ route('privacy') }}">Privacy Policy</a></li>
                                 <li><a href="{{ route('terms') }}">Termini e Condizioni</a></li>
                                 <li><a href="{{ route('cookies') }}">Cookie Policy</a></li>
+                                <li><a href="#" class="open-cookie-settings">Preferenze cookie</a></li>
                                 @auth
                                     <li><a href="{{ route('bookings.my') }}">Le mie prenotazioni</a></li>
                                 @else
@@ -60,20 +61,14 @@
                             <h3 class="tg-footer-widget-title mb-25">Contatti</h3>
                             <ul>
                                 <li>
-                                    <a class="d-flex" href="https://maps.google.com" target="_blank" rel="noopener">
+                                    <a class="d-flex" href="https://www.google.com/maps/search/?api=1&query=Via+Toscanini+9%2FC+07026+Olbia+SS" target="_blank" rel="noopener">
                                         <span class="mr-15">
                                             <svg width="20" height="24" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M19.0013 10.0608C19.0013 16.8486 10.3346 22.6668 10.3346 22.6668C10.3346 22.6668 1.66797 16.8486 1.66797 10.0608C1.66797 7.74615 2.58106 5.52634 4.20638 3.88965C5.83169 2.25297 8.03609 1.3335 10.3346 1.3335C12.6332 1.3335 14.8376 2.25297 16.4629 3.88965C18.0882 5.52634 19.0013 7.74615 19.0013 10.0608Z" stroke="white" stroke-width="1.73333" stroke-linecap="round" stroke-linejoin="round"/>
                                                 <path d="M10.3346 12.9699C11.9301 12.9699 13.2235 11.6674 13.2235 10.0608C13.2235 8.45412 11.9301 7.15168 10.3346 7.15168C8.73915 7.15168 7.44575 8.45412 7.44575 10.0608C7.44575 11.6674 8.73915 12.9699 10.3346 12.9699Z" stroke="white" stroke-width="1.73333" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         </span>
-                                        Porto Turistico di Salerno<br>Molo Manfredi, 84121 SA
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="d-flex" href="tel:+391234567890">
-                                        <span class="mr-15"><i class="fa-sharp text-white fa-solid fa-phone"></i></span>
-                                        +39 123 456 7890
+                                        Via Toscanini 9/C<br>07026 Olbia (SS)
                                     </a>
                                 </li>
                                 <li>
@@ -81,17 +76,6 @@
                                         <span class="mr-15"><i class="fa-sharp text-white fa-solid fa-envelope"></i></span>
                                         info@solaryatravel.com
                                     </a>
-                                </li>
-                                <li class="d-flex">
-                                    <span class="mr-15">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M11.9987 5.60006V12.0001L16.2654 14.1334M22.6654 12.0002C22.6654 17.8912 17.8897 22.6668 11.9987 22.6668C6.10766 22.6668 1.33203 17.8912 1.33203 12.0002C1.33203 6.10912 6.10766 1.3335 11.9987 1.3335C17.8897 1.3335 22.6654 6.10912 22.6654 12.0002Z" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                    </span>
-                                    <p class="mb-0">
-                                        Lun – Sab: 8:00 – 20:00<br>
-                                        Domenica: <span class="text-white d-inline-block">CHIUSO</span>
-                                    </p>
                                 </li>
                             </ul>
                         </div>

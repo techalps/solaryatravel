@@ -249,7 +249,7 @@
                     <strong style="font-size:.95rem;color:#0E1B33">Contattaci per disponibilità e tariffe</strong>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    <a href="tel:+391234567890"
+                    <a href="tel:+393450884743"
                        style="background:var(--tg-theme-primary);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
                         <i class="fa-solid fa-phone"></i><span class="d-none d-sm-inline">Chiama</span>
                     </a>
