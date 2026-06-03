@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
+        // Modalità "coming soon": blocca il sito ai non-admin (tranne il login).
+        $middleware->appendToGroup('web', \App\Http\Middleware\ComingSoonMiddleware::class);
         $middleware->validateCsrfTokens(except: [
             'webhooks/stripe',
         ]);
