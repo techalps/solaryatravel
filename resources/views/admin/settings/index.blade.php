@@ -204,6 +204,110 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Penali di storno --}}
+                        <div class="dash-card mb-3">
+                            <div class="dash-card-header">
+                                <h3><i class="bi bi-percent me-2 text-primary"></i>Penali di cancellazione</h3>
+                            </div>
+                            <div class="dash-card-body">
+                                <p class="small text-muted mb-3">Percentuale di rimborso applicata quando il cliente annulla, in base ai giorni di anticipo rispetto alla partenza. Il rimborso è calcolato sull'importo effettivamente versato.</p>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Oltre N giorni prima → rimborso</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">oltre</span>
+                                            <input type="number" name="cancel_penalty_days_1" min="0" max="365"
+                                                   value="{{ old('cancel_penalty_days_1', $settings['cancel_penalty_days_1'] ?? 14) }}" class="form-control" required>
+                                            <span class="input-group-text">gg →</span>
+                                            <input type="number" name="cancel_penalty_refund_1" min="0" max="100"
+                                                   value="{{ old('cancel_penalty_refund_1', $settings['cancel_penalty_refund_1'] ?? 70) }}" class="form-control" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Tra N e fascia successiva → rimborso</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">oltre</span>
+                                            <input type="number" name="cancel_penalty_days_2" min="0" max="365"
+                                                   value="{{ old('cancel_penalty_days_2', $settings['cancel_penalty_days_2'] ?? 7) }}" class="form-control" required>
+                                            <span class="input-group-text">gg →</span>
+                                            <input type="number" name="cancel_penalty_refund_2" min="0" max="100"
+                                                   value="{{ old('cancel_penalty_refund_2', $settings['cancel_penalty_refund_2'] ?? 50) }}" class="form-control" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Sotto la soglia minima → rimborso</label>
+                                        <div class="input-group">
+                                            <input type="number" name="cancel_penalty_refund_under" min="0" max="100"
+                                                   value="{{ old('cancel_penalty_refund_under', $settings['cancel_penalty_refund_under'] ?? 0) }}" class="form-control" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Acconto e bonifico --}}
+                        <div class="dash-card mb-3">
+                            <div class="dash-card-header">
+                                <h3><i class="bi bi-cash-coin me-2 text-primary"></i>Modalità di pagamento</h3>
+                            </div>
+                            <div class="dash-card-body">
+                                {{-- Toggle acconto --}}
+                                <label class="d-flex align-items-start gap-3 p-3 border rounded-3 mb-3"
+                                       style="background: rgba(124,55,255,.04); border-color: rgba(124,55,255,.2)!important">
+                                    <div class="form-check form-switch m-0 pt-1">
+                                        <input type="checkbox" name="deposit_enabled" value="1"
+                                               class="form-check-input" role="switch" style="width:2.5rem; height:1.4rem"
+                                               {{ old('deposit_enabled', $settings['deposit_enabled'] ?? false) ? 'checked' : '' }}>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold text-dark"><i class="bi bi-wallet2 me-1 text-primary"></i>Consenti pagamento con acconto</div>
+                                        <div class="small text-muted">Il cliente può scegliere di versare un acconto per confermare la prenotazione, e saldare il resto entro le ore indicate prima della partenza.</div>
+                                    </div>
+                                </label>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-percent me-1"></i>Percentuale acconto</label>
+                                        <div class="input-group">
+                                            <input type="number" name="deposit_percentage" min="1" max="99"
+                                                   value="{{ old('deposit_percentage', $settings['deposit_percentage'] ?? 50) }}" class="form-control" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-hourglass-bottom me-1"></i>Saldo entro</label>
+                                        <div class="input-group">
+                                            <input type="number" name="balance_due_hours" min="1" max="720"
+                                                   value="{{ old('balance_due_hours', $settings['balance_due_hours'] ?? 12) }}" class="form-control" required>
+                                            <span class="input-group-text">ore prima</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Toggle bonifico --}}
+                                <label class="d-flex align-items-start gap-3 p-3 border rounded-3 mb-3"
+                                       style="background: rgba(16,185,129,.04); border-color: rgba(16,185,129,.2)!important">
+                                    <div class="form-check form-switch m-0 pt-1">
+                                        <input type="checkbox" name="bank_transfer_enabled" value="1"
+                                               class="form-check-input" role="switch" style="width:2.5rem; height:1.4rem"
+                                               {{ old('bank_transfer_enabled', $settings['bank_transfer_enabled'] ?? false) ? 'checked' : '' }}>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold text-dark"><i class="bi bi-bank me-1 text-success"></i>Consenti pagamento con bonifico bancario</div>
+                                        <div class="small text-muted">La prenotazione resta in attesa di bonifico finché un amministratore non conferma l'incasso.</div>
+                                    </div>
+                                </label>
+                                <div>
+                                    <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-card-text me-1"></i>Dati per il bonifico (IBAN, intestatario)</label>
+                                    <textarea name="bank_transfer_details" rows="3" class="form-control"
+                                              placeholder="Intestatario: Solarya Travel S.r.l.&#10;IBAN: IT00 X000 0000 0000 0000 0000 000&#10;Causale: numero prenotazione">{{ old('bank_transfer_details', $settings['bank_transfer_details'] ?? '') }}</textarea>
+                                    <small class="text-muted">Mostrato al cliente che sceglie il bonifico e incluso nell'email. La causale consigliata è il numero di prenotazione.</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Stripe --}}

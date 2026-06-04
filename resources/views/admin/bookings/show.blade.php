@@ -6,6 +6,8 @@
     @php
         $statusMeta = [
             'pending'    => ['label' => 'In attesa',  'icon' => 'bi-hourglass-split', 'color' => 'warning'],
+            'deposit_paid'      => ['label' => 'Acconto versato', 'icon' => 'bi-wallet2', 'color' => 'info'],
+            'awaiting_transfer' => ['label' => 'Attesa bonifico', 'icon' => 'bi-bank',    'color' => 'warning'],
             'confirmed'  => ['label' => 'Confermata', 'icon' => 'bi-check-circle',   'color' => 'success'],
             'checked_in' => ['label' => 'Check-in',   'icon' => 'bi-qr-code-scan',   'color' => 'info'],
             'completed'  => ['label' => 'Completata', 'icon' => 'bi-flag-fill',      'color' => 'secondary'],
@@ -52,6 +54,15 @@
                     @csrf
                     <button class="btn btn-success rounded-pill px-3 fw-semibold">
                         <i class="bi bi-check-lg me-2"></i>Conferma
+                    </button>
+                </form>
+            @endif
+            @if ($statusValue === 'awaiting_transfer')
+                <form action="{{ route('admin.bookings.confirm-transfer', $booking) }}" method="POST" class="d-inline"
+                      onsubmit="return confirm('Confermi di aver ricevuto il bonifico per questa prenotazione?');">
+                    @csrf
+                    <button class="btn btn-success rounded-pill px-3 fw-semibold">
+                        <i class="bi bi-bank me-2"></i>Conferma incasso bonifico
                     </button>
                 </form>
             @endif
@@ -392,9 +403,48 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    @php
+                        $refundCalc = app(\App\Services\PaymentService::class)->calculateRefundAmount($booking);
+                        $paidAmount = (float) ($refundCalc['paid'] ?? 0);
+                    @endphp
                     <p class="text-muted">Indica il motivo dell'annullamento. Verrà registrato nello storico e inviato per email al cliente.</p>
-                    <textarea name="reason" rows="3" class="form-control rounded-3" required maxlength="500"
+                    <textarea name="reason" rows="3" class="form-control rounded-3 mb-3" required maxlength="500"
                               placeholder="Es. richiesta del cliente, maltempo…"></textarea>
+
+                    @if($paidAmount > 0)
+                        <label class="form-label fw-semibold small">Rimborso al cliente</label>
+                        <div class="small text-muted mb-2">Versato: € {{ number_format($paidAmount, 2, ',', '.') }}</div>
+                        <div class="d-flex flex-column gap-2 mb-2">
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="penalty" class="form-check-input mt-1" checked>
+                                <span class="small">Applica penale ({{ $refundCalc['percentage'] }}%) → rimborsa <strong>€ {{ number_format((float) $refundCalc['amount'], 2, ',', '.') }}</strong>
+                                    <span class="text-muted d-block">{{ $refundCalc['days_until'] }} giorni alla partenza</span></span>
+                            </label>
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="full" class="form-check-input mt-1">
+                                <span class="small">Rimborso totale → <strong>€ {{ number_format($paidAmount, 2, ',', '.') }}</strong></span>
+                            </label>
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="custom" class="form-check-input mt-1" id="cancelCustomRadio">
+                                <span class="small flex-grow-1">Importo personalizzato
+                                    <span class="input-group input-group-sm mt-1" style="max-width:200px">
+                                        <span class="input-group-text">€</span>
+                                        <input type="number" step="0.01" min="0" max="{{ number_format($paidAmount, 2, '.', '') }}"
+                                               name="refund_amount" class="form-control" placeholder="0,00"
+                                               onfocus="document.getElementById('cancelCustomRadio').checked=true">
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="none" class="form-check-input mt-1">
+                                <span class="small">Nessun rimborso</span>
+                            </label>
+                        </div>
+                        <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Per i pagamenti con carta il rimborso è eseguito su Stripe; per i bonifici va effettuato manualmente.</p>
+                    @else
+                        <input type="hidden" name="refund_mode" value="none">
+                        <p class="small text-muted mb-0">Nessun importo risulta versato: non verrà eseguito alcun rimborso.</p>
+                    @endif
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>

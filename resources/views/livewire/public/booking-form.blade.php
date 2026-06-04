@@ -302,6 +302,44 @@
             </div>
             <div class="text-end text-muted small mb-15" style="font-size:.78rem">IVA inclusa</div>
 
+            @php
+                $depositOn = \App\Support\Settings::depositEnabled();
+                $bankOn = \App\Support\Settings::bankTransferEnabled();
+                $total = (float) ($this->pricing['total_amount'] ?? 0);
+                $depAmount = round($total * \App\Support\Settings::depositPercentage() / 100, 2);
+            @endphp
+
+            {{-- Scelta acconto / intero --}}
+            @if($depositOn)
+                <div class="bk-pay-box mb-15">
+                    <div class="small fw-semibold mb-2"><i class="fa-solid fa-wallet text-primary me-1"></i>Importo da pagare ora</div>
+                    <label class="bk-pay-opt">
+                        <input type="radio" wire:model="paymentChoice" value="full">
+                        <span>Intero · <strong>€{{ number_format($total, 2, ',', '.') }}</strong></span>
+                    </label>
+                    <label class="bk-pay-opt">
+                        <input type="radio" wire:model="paymentChoice" value="deposit">
+                        <span>Acconto {{ \App\Support\Settings::depositPercentage() }}% · <strong>€{{ number_format($depAmount, 2, ',', '.') }}</strong>
+                            <span class="text-muted d-block" style="font-size:.76rem">Saldo entro {{ \App\Support\Settings::balanceDueHours() }}h dalla partenza</span></span>
+                    </label>
+                </div>
+            @endif
+
+            {{-- Scelta metodo: carta / bonifico --}}
+            @if($bankOn)
+                <div class="bk-pay-box mb-15">
+                    <div class="small fw-semibold mb-2"><i class="fa-solid fa-credit-card text-primary me-1"></i>Metodo di pagamento</div>
+                    <label class="bk-pay-opt">
+                        <input type="radio" wire:model="paymentMethod" value="card">
+                        <span>Carta di credito <span class="text-muted">(immediato)</span></span>
+                    </label>
+                    <label class="bk-pay-opt">
+                        <input type="radio" wire:model="paymentMethod" value="bank_transfer">
+                        <span>Bonifico bancario <span class="text-muted">(conferma dopo l'incasso)</span></span>
+                    </label>
+                </div>
+            @endif
+
             {{-- Terms --}}
             <div class="form-check mb-15">
                 <input class="form-check-input" type="checkbox" wire:model="terms" id="bk-terms">
@@ -337,6 +375,9 @@
         .booking-widget .bk-textarea { border-radius: 14px; padding: .65rem 1rem; border: 1.5px solid #eef0f3; width: 100%; font-size: .88rem; resize: vertical; }
         .booking-widget .bk-textarea:focus { outline: none; border-color: var(--tg-theme-secondary); box-shadow: 0 0 0 3px rgba(var(--tg-theme-secondary-rgb, 124,55,255),.12); }
         .booking-widget .bk-account-box { background: #f8fafc; border: 1.5px solid #eef0f3; border-radius: 14px; padding: .75rem 1rem; }
+        .booking-widget .bk-pay-box { background: #f8fafc; border: 1.5px solid #eef0f3; border-radius: 14px; padding: .75rem 1rem; }
+        .booking-widget .bk-pay-opt { display: flex; align-items: flex-start; gap: .55rem; padding: .4rem 0; font-size: .88rem; cursor: pointer; }
+        .booking-widget .bk-pay-opt input { margin-top: .2rem; }
         .booking-widget .bk-label { font-size: .78rem; font-weight: 600; color: #0E1B33; margin-bottom: .35rem; display: block; }
 
         .booking-widget .bk-stepper { display: inline-flex; align-items: center; background: #f4f4f4; border-radius: 50px; padding: 3px; gap: 4px; }

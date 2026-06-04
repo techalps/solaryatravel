@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Booking;
+use App\Support\Settings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -10,23 +11,21 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Notifica all'amministratore: prenotazione cancellata.
+ * Email al cliente con le istruzioni per il pagamento tramite bonifico bancario.
  */
-class AdminBookingCancelled extends Mailable
+class BookingAwaitingTransfer extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
         public Booking $booking,
-        public ?string $reason = null,
-        public ?array $refundCalc = null,
-        public ?array $refundResult = null,
+        public float $amountDue,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '❌ Prenotazione annullata · #' . $this->booking->booking_number,
+            subject: 'Istruzioni per il bonifico · Prenotazione #' . $this->booking->booking_number,
         );
     }
 
@@ -35,12 +34,11 @@ class AdminBookingCancelled extends Mailable
         $this->booking->loadMissing(['tour', 'departure']);
 
         return new Content(
-            view: 'emails.admin.booking-cancelled',
+            view: 'emails.bookings.awaiting-transfer',
             with: [
                 'booking' => $this->booking,
-                'reason' => $this->reason ?: $this->booking->cancellation_reason,
-                'refundCalc' => $this->refundCalc,
-                'refundResult' => $this->refundResult,
+                'amountDue' => $this->amountDue,
+                'bankDetails' => Settings::bankTransferDetails(),
             ],
         );
     }

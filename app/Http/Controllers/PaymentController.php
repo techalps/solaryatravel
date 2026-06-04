@@ -54,7 +54,12 @@ class PaymentController extends Controller
         }
 
         try {
-            $session = $this->paymentService->createCheckoutSession($booking);
+            // Se è una prenotazione con acconto, al primo pagamento si versa l'acconto.
+            $intent = ($booking->payment_type === 'deposit' && (float) $booking->deposit_amount > 0)
+                ? 'deposit'
+                : 'full';
+
+            $session = $this->paymentService->createCheckoutSession($booking, $intent);
             $booking->update(['checkout_url' => $session['url']]);
             return redirect($session['url']);
         } catch (\Exception $e) {
@@ -78,26 +83,9 @@ class PaymentController extends Controller
 
                 if ($session->payment_status === 'paid') {
                     $payment = Payment::where('gateway_payment_id', $sessionId)->first();
-                    if ($payment && $payment->status !== PaymentStatus::SUCCEEDED) {
-                        $payment->update([
-                            'status' => PaymentStatus::SUCCEEDED,
-                            'paid_at' => now(),
-                            'gateway_payment_intent' => $session->payment_intent,
-                            'gateway_response' => array_merge(
-                                $payment->gateway_response ?? [],
-                                ['payment_intent' => $session->payment_intent]
-                            ),
-                        ]);
+                    if ($payment) {
+                        $this->applySuccessfulPayment($payment, $session->payment_intent);
                     }
-
-                    if ($booking->status !== BookingStatus::CONFIRMED) {
-                        $booking->update([
-                            'status' => BookingStatus::CONFIRMED,
-                            'confirmed_at' => now(),
-                        ]);
-                    }
-
-                    $this->sendTicketsEmail($booking);
 
                     return view('payments.success', compact('booking'));
                 }
@@ -139,6 +127,61 @@ class PaymentController extends Controller
         }
         // Nota: la notifica admin di nuova prenotazione è gestita centralmente
         // da BookingObserver quando lo status passa a CONFIRMED (qualunque origine).
+    }
+
+    /**
+     * Applica un pagamento Stripe riuscito alla prenotazione, gestendo i tre
+     * intenti (full/deposit/balance): aggiorna il Payment, l'importo incassato
+     * (amount_paid) e lo stato del booking. È idempotente (controlla lo stato
+     * del Payment) e centralizza la logica usata da success() e dai webhook.
+     */
+    protected function applySuccessfulPayment(Payment $payment, ?string $paymentIntentId = null): void
+    {
+        if ($payment->status === PaymentStatus::SUCCEEDED) {
+            return; // già elaborato
+        }
+
+        $payment->update([
+            'status' => PaymentStatus::SUCCEEDED,
+            'paid_at' => now(),
+            'gateway_payment_intent' => $paymentIntentId ?? $payment->gateway_payment_intent,
+            'gateway_response' => array_merge(
+                $payment->gateway_response ?? [],
+                $paymentIntentId ? ['payment_intent' => $paymentIntentId] : []
+            ),
+        ]);
+
+        $booking = $payment->booking;
+        $intent = $payment->gateway_response['intent'] ?? 'full';
+
+        // Aggiorna l'importo effettivamente incassato.
+        $booking->update(['amount_paid' => (float) $booking->amount_paid + (float) $payment->amount]);
+
+        if ($intent === 'deposit' && (float) $booking->balance_amount > 0) {
+            // Acconto versato: confermato con saldo in sospeso.
+            if ($booking->status !== BookingStatus::DEPOSIT_PAID) {
+                $booking->update([
+                    'status' => BookingStatus::DEPOSIT_PAID,
+                    'confirmed_at' => $booking->confirmed_at ?? now(),
+                ]);
+            }
+            // Biglietti emessi solo a saldo completo: qui niente invio.
+            return;
+        }
+
+        if ($intent === 'balance') {
+            // Saldo pagato: azzera il residuo e conferma definitivamente.
+            $booking->update(['balance_amount' => 0]);
+        }
+
+        if ($booking->status !== BookingStatus::CONFIRMED) {
+            $booking->update([
+                'status' => BookingStatus::CONFIRMED,
+                'confirmed_at' => $booking->confirmed_at ?? now(),
+            ]);
+        }
+
+        $this->sendTicketsEmail($booking);
     }
 
     /**
@@ -189,24 +232,7 @@ class PaymentController extends Controller
         $payment = Payment::where('gateway_payment_id', $session->id)->first();
 
         if ($payment && $session->payment_status === 'paid') {
-            $payment->update([
-                'status' => PaymentStatus::SUCCEEDED,
-                'paid_at' => now(),
-                'gateway_payment_intent' => $session->payment_intent,
-                'gateway_response' => array_merge(
-                    $payment->gateway_response ?? [],
-                    ['payment_intent' => $session->payment_intent]
-                ),
-            ]);
-
-            $booking = $payment->booking;
-            if ($booking->status !== BookingStatus::CONFIRMED) {
-                $booking->update([
-                    'status' => BookingStatus::CONFIRMED,
-                    'confirmed_at' => now(),
-                ]);
-            }
-            $this->sendTicketsEmail($booking);
+            $this->applySuccessfulPayment($payment, $session->payment_intent);
         }
     }
 
@@ -217,20 +243,8 @@ class PaymentController extends Controller
     {
         $payment = Payment::where('gateway_payment_intent', $paymentIntent->id)->first();
 
-        if ($payment && $payment->status !== PaymentStatus::SUCCEEDED) {
-            $payment->update([
-                'status' => PaymentStatus::SUCCEEDED,
-                'paid_at' => now(),
-            ]);
-
-            $booking = $payment->booking;
-            if ($booking->status !== BookingStatus::CONFIRMED) {
-                $booking->update([
-                    'status' => BookingStatus::CONFIRMED,
-                    'confirmed_at' => now(),
-                ]);
-            }
-            $this->sendTicketsEmail($booking);
+        if ($payment) {
+            $this->applySuccessfulPayment($payment, $paymentIntent->id);
         }
     }
 

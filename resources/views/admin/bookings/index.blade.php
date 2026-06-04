@@ -6,6 +6,8 @@
     @php
         $statusMeta = [
             'pending'    => ['label' => 'In attesa',  'icon' => 'bi-hourglass-split', 'color' => 'warning'],
+            'deposit_paid'      => ['label' => 'Acconto versato', 'icon' => 'bi-wallet2', 'color' => 'info'],
+            'awaiting_transfer' => ['label' => 'Attesa bonifico', 'icon' => 'bi-bank',    'color' => 'warning'],
             'confirmed'  => ['label' => 'Confermata', 'icon' => 'bi-check-circle',   'color' => 'success'],
             'checked_in' => ['label' => 'Check-in',   'icon' => 'bi-qr-code-scan',   'color' => 'info'],
             'completed'  => ['label' => 'Completata', 'icon' => 'bi-flag-fill',      'color' => 'secondary'],

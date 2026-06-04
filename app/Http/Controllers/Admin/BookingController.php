@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Models\Payment;
 use App\Http\Controllers\Controller;
 use App\Mail\BookingCancelled;
 use App\Mail\BookingPaymentLink;
@@ -279,34 +280,108 @@ class BookingController extends Controller
         return back()->with('success', 'Prenotazione confermata.');
     }
 
+    /**
+     * Conferma l'incasso di un bonifico: registra il pagamento, aggiorna lo stato
+     * (CONFIRMED, oppure DEPOSIT_PAID se era un acconto con saldo residuo) e
+     * triggera l'invio biglietti tramite l'Observer sul passaggio a CONFIRMED.
+     */
+    public function confirmTransfer(Booking $booking): RedirectResponse
+    {
+        if ($booking->status !== BookingStatus::AWAITING_TRANSFER) {
+            return back()->with('error', 'Questa prenotazione non è in attesa di bonifico.');
+        }
+
+        // Importo incassato: acconto se previsto, altrimenti intero.
+        $isDeposit = $booking->payment_type === 'deposit' && (float) $booking->deposit_amount > 0;
+        $amount = $isDeposit ? (float) $booking->deposit_amount : (float) $booking->total_amount;
+
+        // Registra il pagamento bonifico.
+        Payment::create([
+            'booking_id' => $booking->id,
+            'gateway' => 'bank_transfer',
+            'amount' => $amount,
+            'currency' => $booking->currency ?: 'EUR',
+            'status' => PaymentStatus::SUCCEEDED,
+            'payment_method_type' => 'bank_transfer',
+            'paid_at' => now(),
+        ]);
+
+        $newStatus = ($isDeposit && (float) $booking->balance_amount > 0)
+            ? BookingStatus::DEPOSIT_PAID
+            : BookingStatus::CONFIRMED;
+
+        $booking->update([
+            'amount_paid' => (float) $booking->amount_paid + $amount,
+            'status' => $newStatus,
+            'confirmed_at' => $booking->confirmed_at ?? now(),
+        ]);
+
+        // L'Observer su CONFIRMED invia biglietti + notifica admin.
+        return back()->with('success', 'Bonifico confermato. La prenotazione è ora ' . $newStatus->label() . '.');
+    }
+
     public function cancel(Request $request, Booking $booking): RedirectResponse
     {
-        $request->validate(['reason' => 'nullable|string|max:500']);
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500',
+            // penalty = applica penale da policy · full = rimborso totale · custom = importo libero · none = nessun rimborso
+            'refund_mode' => 'nullable|in:penalty,full,custom,none',
+            'refund_amount' => 'nullable|numeric|min:0',
+        ]);
+
         try {
-            $reason = $request->filled('reason')
-                ? $request->input('reason')
-                : 'Annullata da amministratore';
+            $reason = $request->filled('reason') ? $request->input('reason') : 'Annullata da amministratore';
+            $mode = $validated['refund_mode'] ?? 'penalty';
+
+            // Calcola sempre la situazione (importo versato + penale da policy).
+            $calc = $this->paymentService->calculateRefundAmount($booking);
+            $paid = (float) ($calc['paid'] ?? 0);
+
+            // Determina l'importo da rimborsare in base alla scelta admin.
+            $refundAmount = match ($mode) {
+                'full'   => $paid,
+                'custom' => min((float) ($validated['refund_amount'] ?? 0), $paid),
+                'none'   => 0.0,
+                default  => (float) ($calc['amount'] ?? 0), // penalty
+            };
+
             $this->bookingService->cancel($booking, $reason);
 
+            $refund = null;
+            if ($paid > 0) {
+                $refund = $this->paymentService->applyCancellationRefund($booking, $refundAmount, $reason);
+                if (($refund['amount'] ?? 0) > 0 && ! ($refund['manual'] ?? false)) {
+                    $booking->update(['status' => BookingStatus::REFUNDED]);
+                }
+            }
+
+            // Per l'email cliente, riflette l'importo effettivamente deciso dall'admin.
+            $emailCalc = array_merge($calc, [
+                'amount' => $refundAmount,
+                'penalty' => round(max(0, $paid - $refundAmount), 2),
+                'percentage' => $paid > 0 ? (int) round($refundAmount / $paid * 100) : 0,
+            ]);
+
             try {
-                Mail::to($booking->customer_email)->send(new BookingCancelled($booking->fresh(), $reason));
+                Mail::to($booking->customer_email)->send(new BookingCancelled($booking->fresh(), $reason, $emailCalc));
             } catch (\Throwable $e) {
-                Log::error('Invio mail annullamento fallito', [
-                    'booking' => $booking->booking_number,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::error('Invio mail annullamento fallito', ['booking' => $booking->booking_number, 'error' => $e->getMessage()]);
             }
 
             try {
-                \App\Support\AdminMailer::send(new AdminBookingCancelled($booking->fresh(), $reason));
+                \App\Support\AdminMailer::send(new AdminBookingCancelled($booking->fresh(), $reason, $emailCalc, $refund));
             } catch (\Throwable $e) {
-                Log::error('Notifica admin annullamento fallita', [
-                    'booking' => $booking->booking_number,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::error('Notifica admin annullamento fallita', ['booking' => $booking->booking_number, 'error' => $e->getMessage()]);
             }
 
-            return back()->with('success', 'Prenotazione annullata. Email inviata al cliente.');
+            $msg = 'Prenotazione annullata. Email inviata al cliente.';
+            if ($refund && ($refund['amount'] ?? 0) > 0) {
+                $msg .= ($refund['manual'] ?? false)
+                    ? ' Rimborso bonifico di €' . number_format($refund['amount'], 2, ',', '.') . ' da effettuare manualmente.'
+                    : ' Rimborso di €' . number_format($refund['amount'], 2, ',', '.') . ' eseguito su Stripe.';
+            }
+
+            return back()->with('success', $msg);
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }

@@ -128,6 +128,29 @@ SESSION_SECURE_COOKIE=true
 APP_URL=https://www.solaryatravel.com
 ```
 
+### 1.8 Cron dello scheduler (reminder email)
+
+I reminder (24h/48h, saldo acconto, bonifico) dipendono dallo scheduler Laravel.
+Su OVH va impostato un cron che esegue ogni minuto:
+
+```
+* * * * * cd ~/www && php artisan schedule:run >> /dev/null 2>&1
+```
+
+(da pannello OVH → Hosting → Cron job; usare la versione PHP del sito, es. `php8.4`).
+Senza questo cron, i reminder non partono.
+
+### 1.9 Pagamenti: acconto, bonifico, penali
+
+Configurabili da **Admin → Impostazioni → Prenotazioni**:
+- **Penali di cancellazione**: % rimborso per fasce di giorni (default 14gg→70%, 7gg→50%, sotto→0%).
+- **Acconto**: toggle + percentuale (default 50%) + ore entro cui pagare il saldo.
+- **Bonifico**: toggle + dati IBAN. Le prenotazioni con bonifico restano in *Attesa bonifico*
+  finché un admin non clicca "Conferma incasso bonifico" nella scheda prenotazione.
+
+Default: acconto e bonifico **disattivi** → comportamento invariato finché non si attivano.
+⚠️ I rimborsi su carta sono **reali** su Stripe: testare con chiavi di test prima del live.
+
 ---
 
 ## 2. Aggiornamenti successivi (deploy di nuove versioni)

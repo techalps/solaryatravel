@@ -47,9 +47,26 @@
                             </div>
                         @endif
 
+                        @if(!empty($refundCalc) && ($refundCalc['paid'] ?? 0) > 0)
+                            <div style="background:#f0f9ff;border:1px solid #bae6fd;padding:16px;border-radius:8px;margin-top:14px;">
+                                <p style="margin:0 0 10px 0;font-size:12px;color:#075985;text-transform:uppercase;letter-spacing:.08em;font-weight:700;">Dettaglio rimborso</p>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                    <tr><td style="padding:3px 0;font-size:14px;color:#475569;">Importo versato</td><td style="padding:3px 0;font-size:14px;text-align:right;">€ {{ number_format((float) $refundCalc['paid'], 2, ',', '.') }}</td></tr>
+                                    <tr><td style="padding:3px 0;font-size:14px;color:#475569;">Rimborso ({{ $refundCalc['percentage'] }}%)</td><td style="padding:3px 0;font-size:14px;text-align:right;font-weight:700;color:#059669;">€ {{ number_format((float) $refundCalc['amount'], 2, ',', '.') }}</td></tr>
+                                    @if(($refundCalc['penalty'] ?? 0) > 0)
+                                    <tr><td style="padding:3px 0;font-size:14px;color:#475569;">Penale trattenuta</td><td style="padding:3px 0;font-size:14px;text-align:right;color:#b91c1c;">€ {{ number_format((float) $refundCalc['penalty'], 2, ',', '.') }}</td></tr>
+                                    @endif
+                                </table>
+                                @if(($refundCalc['amount'] ?? 0) > 0)
+                                    <p style="margin:10px 0 0 0;font-size:13px;color:#64748b;">Il rimborso verrà accreditato sul metodo di pagamento originale entro 5–10 giorni lavorativi.</p>
+                                @else
+                                    <p style="margin:10px 0 0 0;font-size:13px;color:#64748b;">Secondo le condizioni di cancellazione, per questa data non è previsto alcun rimborso.</p>
+                                @endif
+                            </div>
+                        @endif
+
                         <p style="margin:18px 0 0 0;line-height:1.6;">
                             Se hai dubbi o ritieni che ci sia stato un errore, rispondi a questa email o contattaci.
-                            Per eventuali rimborsi ti aggiorneremo con una mail dedicata.
                         </p>
                     </td>
                 </tr>

@@ -40,6 +40,9 @@ Route::redirect('/catamarani', '/tour');
 // Booking flow
 Route::get('/prenota', [BookingController::class, 'start'])->name('booking.start');
 Route::post('/prenota', [BookingController::class, 'store'])->name('booking.store');
+Route::get('/prenotazione/{booking:uuid}/bonifico', [BookingController::class, 'bankTransfer'])->name('booking.bank-transfer');
+Route::get('/prenotazione/{booking:uuid}/saldo', [BookingController::class, 'balance'])->name('booking.balance');
+Route::post('/prenotazione/{booking:uuid}/saldo', [BookingController::class, 'payBalance'])->name('booking.balance.pay');
 
 // Booking show / confirmation
 Route::get('/prenotazione/{booking:uuid}', [BookingController::class, 'show'])->name('booking.show');
@@ -102,6 +105,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::resource('bookings', AdminBookingController::class);
     Route::get('/bookings-api/tours/{tour}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');
     Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
+    Route::post('/bookings/{booking}/confirm-transfer', [AdminBookingController::class, 'confirmTransfer'])->name('bookings.confirm-transfer');
     Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
     Route::post('/bookings/{booking}/refund', [AdminBookingController::class, 'refund'])->name('bookings.refund');
     Route::post('/bookings/{booking}/resend-confirmation', [AdminBookingController::class, 'resendConfirmation'])->name('bookings.resend');

@@ -25,13 +25,25 @@
                 <div class="col-xl-8 col-lg-9">
 
                     {{-- Confirmation card --}}
-                    <div class="text-center mb-4 p-4 rounded-4" style="background:#f0fdf4;border:1px solid #bbf7d0">
-                        <h3 class="mb-2" style="color:#0E1B33">Prenotazione <strong>#{{ $booking->booking_number }}</strong></h3>
-                        <p class="mb-0 text-muted">
-                            <i class="fa-regular fa-envelope me-1"></i>
-                            Abbiamo inviato i biglietti e la ricevuta a <strong>{{ $booking->customer_email }}</strong>
-                        </p>
-                    </div>
+                    @if($booking->hasBalanceDue())
+                        <div class="text-center mb-4 p-4 rounded-4" style="background:#eff6ff;border:1px solid #bfdbfe">
+                            <h3 class="mb-2" style="color:#0E1B33">Acconto ricevuto · <strong>#{{ $booking->booking_number }}</strong></h3>
+                            <p class="mb-2 text-muted">Grazie! Abbiamo registrato l'acconto. Il tuo posto è confermato.</p>
+                            <p class="mb-3 fw-semibold" style="color:#0E1B33">Saldo residuo: € {{ number_format((float) $booking->balance_amount, 2, ',', '.') }}@if($booking->balance_due_at) · entro il {{ \Carbon\Carbon::parse($booking->balance_due_at)->format('d/m/Y H:i') }}@endif</p>
+                            <a href="{{ route('booking.balance', $booking->uuid) }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                                <i class="fa-solid fa-wallet me-2"></i>Paga il saldo
+                            </a>
+                            <p class="mb-0 mt-2 text-muted small">Riceverai i biglietti via email una volta completato il saldo.</p>
+                        </div>
+                    @else
+                        <div class="text-center mb-4 p-4 rounded-4" style="background:#f0fdf4;border:1px solid #bbf7d0">
+                            <h3 class="mb-2" style="color:#0E1B33">Prenotazione <strong>#{{ $booking->booking_number }}</strong></h3>
+                            <p class="mb-0 text-muted">
+                                <i class="fa-regular fa-envelope me-1"></i>
+                                Abbiamo inviato i biglietti e la ricevuta a <strong>{{ $booking->customer_email }}</strong>
+                            </p>
+                        </div>
+                    @endif
 
                     <div class="tg-tour-about-wrap">
                         <div class="tg-tour-about-content">

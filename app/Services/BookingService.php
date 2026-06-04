@@ -103,6 +103,27 @@ class BookingService
                 throw new \Exception('Posti insufficienti per questa partenza.');
             }
 
+            // Modalità di pagamento: acconto e/o bonifico.
+            $total = (float) $pricing['total_amount'];
+            $paymentType = $data['payment_type'] ?? 'full';
+            $useDeposit = ! empty($data['use_deposit']) || $paymentType === 'deposit';
+
+            $depositAmount = null;
+            $balanceAmount = null;
+            $balanceDueAt = null;
+            if ($useDeposit) {
+                $depositAmount = round($total * \App\Support\Settings::depositPercentage() / 100, 2);
+                $balanceAmount = round($total - $depositAmount, 2);
+                $balanceDueAt = \Illuminate\Support\Carbon::parse($departure->departure_date)
+                    ->setTimeFromTimeString((string) ($departure->start_time ?? '00:00'))
+                    ->subHours(\App\Support\Settings::balanceDueHours());
+            }
+
+            // Stato iniziale: il bonifico parte in attesa incasso; gli altri in pending pagamento.
+            $initialStatus = $paymentType === 'bank_transfer'
+                ? BookingStatus::AWAITING_TRANSFER
+                : BookingStatus::PENDING;
+
             $booking = Booking::create([
                 'user_id' => $data['user_id'] ?? auth()->id(),
                 'tour_id' => $tour->id,
@@ -115,8 +136,13 @@ class BookingService
                 'discount_code_id' => $pricing['discount_code_id'],
                 'tax_amount' => $pricing['tax_amount'],
                 'total_amount' => $pricing['total_amount'],
+                'payment_type' => $paymentType,
+                'deposit_amount' => $depositAmount,
+                'balance_amount' => $balanceAmount,
+                'balance_due_at' => $balanceDueAt,
+                'amount_paid' => 0,
                 'currency' => 'EUR',
-                'status' => BookingStatus::PENDING,
+                'status' => $initialStatus,
                 'customer_first_name' => $data['customer_first_name'],
                 'customer_last_name' => $data['customer_last_name'],
                 'customer_email' => $data['customer_email'],

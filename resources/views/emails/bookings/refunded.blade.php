@@ -29,6 +29,12 @@
                                 <td style="padding:4px 0;font-size:13px;color:#0c4a6e;width:160px;">Importo rimborsato</td>
                                 <td style="padding:4px 0;font-size:18px;font-weight:700;color:#0c4a6e;">€{{ number_format((float) $amount, 2, ',', '.') }}</td>
                             </tr>
+                            @if((float) $booking->penalty_amount > 0)
+                            <tr>
+                                <td style="padding:4px 0;font-size:13px;color:#0c4a6e;">Penale di storno</td>
+                                <td style="padding:4px 0;font-size:14px;color:#b91c1c;">€{{ number_format((float) $booking->penalty_amount, 2, ',', '.') }}</td>
+                            </tr>
+                            @endif
                             <tr>
                                 <td style="padding:4px 0;font-size:13px;color:#0c4a6e;">Tour</td>
                                 <td style="padding:4px 0;font-size:14px;">{{ $booking->tour->name ?? '' }}</td>

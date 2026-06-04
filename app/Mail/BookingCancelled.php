@@ -16,6 +16,7 @@ class BookingCancelled extends Mailable
     public function __construct(
         public Booking $booking,
         public ?string $reason = null,
+        public ?array $refundCalc = null,
     ) {}
 
     public function envelope(): Envelope
@@ -34,6 +35,7 @@ class BookingCancelled extends Mailable
             with: [
                 'booking' => $this->booking,
                 'reason' => $this->reason ?: $this->booking->cancellation_reason,
+                'refundCalc' => $this->refundCalc,
             ],
         );
     }

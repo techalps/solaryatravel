@@ -78,6 +78,11 @@ class BookingForm extends Component
     public string $accountPassword = '';
     public string $accountPassword_confirmation = '';
 
+    /** Metodo di pagamento scelto: 'card' | 'bank_transfer'. */
+    public string $paymentMethod = 'card';
+    /** Importo: 'full' (intero) | 'deposit' (acconto), se l'acconto è abilitato. */
+    public string $paymentChoice = 'full';
+
     public ?string $errorMessage = null;
 
     public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = []): void
@@ -549,6 +554,11 @@ class BookingForm extends Component
             ];
         }
 
+        // Risolvi metodo/tipo di pagamento secondo le impostazioni attive.
+        $useBankTransfer = \App\Support\Settings::bankTransferEnabled() && $this->paymentMethod === 'bank_transfer';
+        $useDeposit = \App\Support\Settings::depositEnabled() && $this->paymentChoice === 'deposit';
+        $paymentType = $useBankTransfer ? 'bank_transfer' : ($useDeposit ? 'deposit' : 'full');
+
         try {
             $booking = $bookingService->create([
                 'tour_id' => $this->tour->id,
@@ -564,6 +574,8 @@ class BookingForm extends Component
                 'customer_tax_code' => strtoupper(trim($this->customer_tax_code)),
                 'special_requests' => $this->special_requests,
                 'guests' => $guests,
+                'payment_type' => $paymentType,
+                'use_deposit' => $useDeposit,
             ], 'website');
 
             // Creazione account opzionale dell'ospite: dopo il booking, così
@@ -586,6 +598,11 @@ class BookingForm extends Component
 
                 event(new Registered($user));
                 Auth::login($user);
+            }
+
+            // Bonifico: niente Stripe, mostra le istruzioni di pagamento.
+            if ($useBankTransfer) {
+                return redirect()->route('booking.bank-transfer', $booking->uuid);
             }
 
             return redirect()->route('payment.show', $booking->uuid);

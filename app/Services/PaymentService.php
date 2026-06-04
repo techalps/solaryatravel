@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Support\Settings;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
 use Stripe\Refund;
@@ -21,11 +22,19 @@ class PaymentService
     /**
      * Create a Stripe checkout session for a booking.
      */
-    public function createCheckoutSession(Booking $booking): array
+    /**
+     * Crea una sessione di checkout Stripe.
+     *
+     * @param  string  $intent  'full' (intero) | 'deposit' (acconto) | 'balance' (saldo)
+     */
+    public function createCheckoutSession(Booking $booking, string $intent = 'full'): array
     {
+        // Determina importo, line item e label in base all'intento.
+        [$amount, $lineItems] = $this->checkoutAmountAndItems($booking, $intent);
+
         $session = StripeSession::create([
             'payment_method_types' => ['card'],
-            'line_items' => $this->buildLineItems($booking),
+            'line_items' => $lineItems,
             'mode' => 'payment',
             'success_url' => route('payment.success', $booking->uuid) . '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('payment.cancel', $booking->uuid),
@@ -33,27 +42,65 @@ class PaymentService
             'metadata' => [
                 'booking_number' => $booking->booking_number,
                 'booking_id' => $booking->id,
+                'intent' => $intent,
             ],
             'expires_at' => now()->addMinutes(30)->timestamp,
             'locale' => $booking->locale ?? 'it',
         ]);
 
-        // Create payment record
+        // Create payment record (importo = quanto richiesto in questo step)
         Payment::create([
             'booking_id' => $booking->id,
-            'amount' => $booking->total_amount,
+            'amount' => $amount,
             'currency' => 'EUR',
             'gateway' => 'stripe',
             'gateway_payment_id' => $session->id,
             'payment_method_type' => 'card',
             'status' => PaymentStatus::PENDING,
-            'gateway_response' => ['session_id' => $session->id],
+            'gateway_response' => ['session_id' => $session->id, 'intent' => $intent],
         ]);
 
         return [
             'session_id' => $session->id,
             'url' => $session->url,
         ];
+    }
+
+    /**
+     * Importo e line items per l'intento di pagamento.
+     *
+     * @return array{0: float, 1: array}
+     */
+    protected function checkoutAmountAndItems(Booking $booking, string $intent): array
+    {
+        $tourName = $booking->tour?->name ?? 'Tour';
+
+        if ($intent === 'deposit') {
+            $amount = (float) ($booking->deposit_amount ?: 0);
+            return [$amount, [[
+                'price_data' => [
+                    'currency' => 'eur',
+                    'product_data' => ['name' => "Acconto · {$tourName}", 'description' => '#' . $booking->booking_number],
+                    'unit_amount' => (int) round($amount * 100),
+                ],
+                'quantity' => 1,
+            ]]];
+        }
+
+        if ($intent === 'balance') {
+            $amount = (float) ($booking->balance_amount ?: 0);
+            return [$amount, [[
+                'price_data' => [
+                    'currency' => 'eur',
+                    'product_data' => ['name' => "Saldo · {$tourName}", 'description' => '#' . $booking->booking_number],
+                    'unit_amount' => (int) round($amount * 100),
+                ],
+                'quantity' => 1,
+            ]]];
+        }
+
+        // full: importo intero, line items dettagliati (tour + addon)
+        return [(float) $booking->total_amount, $this->buildLineItems($booking)];
     }
 
     /**
@@ -230,56 +277,126 @@ class PaymentService
     }
 
     /**
-     * Calculate refund amount based on cancellation policy.
+     * Calcola l'importo rimborsabile in base alla politica di storno configurata
+     * nelle Impostazioni (fasce in giorni). La percentuale si applica all'importo
+     * EFFETTIVAMENTE VERSATO dal cliente (amount_paid), non al totale.
+     *
+     * Ritorna: refundable, percentage, amount (rimborso), penalty (trattenuto),
+     * paid (versato), days_until (giorni alla partenza), reason.
      */
     public function calculateRefundAmount(Booking $booking): array
     {
-        $payment = $booking->payments()
-            ->where('status', PaymentStatus::SUCCEEDED)
-            ->latest('paid_at')
-            ->first();
+        $paid = $this->amountPaid($booking);
 
-        if (!$payment) {
+        if ($paid <= 0) {
             return [
                 'refundable' => false,
-                'amount' => 0,
+                'amount' => 0.0,
+                'penalty' => 0.0,
+                'paid' => 0.0,
                 'percentage' => 0,
-                'reason' => 'Nessun pagamento trovato.',
+                'days_until' => null,
+                'reason' => 'Nessun importo versato da rimborsare.',
             ];
         }
 
-        $hoursUntilBooking = now()->diffInHours($booking->booking_date, false);
+        // Giorni interi mancanti alla partenza (negativo se già passata).
+        $daysUntil = (int) floor(now()->startOfDay()->diffInDays(
+            \Illuminate\Support\Carbon::parse($booking->booking_date)->startOfDay(),
+            false
+        ));
 
-        // Get cancellation policy from config
-        $policies = config('booking.cancellation_policies', [
-            ['hours' => 48, 'refund_percentage' => 100],
-            ['hours' => 24, 'refund_percentage' => 50],
-            ['hours' => 0, 'refund_percentage' => 0],
-        ]);
-
+        $policy = Settings::cancellationPolicy(); // fasce ordinate desc per giorni
         $refundPercentage = 0;
-        $reason = '';
-
-        foreach ($policies as $policy) {
-            if ($hoursUntilBooking >= $policy['hours']) {
-                $refundPercentage = $policy['refund_percentage'];
-                if ($policy['hours'] > 0) {
-                    $reason = "Cancellazione con più di {$policy['hours']} ore di anticipo";
-                } else {
-                    $reason = 'Cancellazione tardiva';
-                }
+        foreach ($policy as $tier) {
+            if ($daysUntil >= $tier['days']) {
+                $refundPercentage = (int) $tier['refund'];
                 break;
             }
         }
 
-        $refundAmount = ($payment->amount * $refundPercentage) / 100;
+        $refundAmount = round($paid * $refundPercentage / 100, 2);
+        $penalty = round($paid - $refundAmount, 2);
 
         return [
             'refundable' => $refundPercentage > 0,
-            'amount' => round($refundAmount, 2),
+            'amount' => $refundAmount,
+            'penalty' => $penalty,
+            'paid' => round($paid, 2),
             'percentage' => $refundPercentage,
-            'reason' => $reason,
-            'original_amount' => $payment->amount,
+            'days_until' => $daysUntil,
+            'reason' => "Cancellazione a {$daysUntil} giorni dalla partenza · rimborso {$refundPercentage}%",
+        ];
+    }
+
+    /**
+     * Importo effettivamente incassato per la prenotazione.
+     * Usa booking.amount_paid se valorizzato, altrimenti somma i pagamenti riusciti
+     * al netto di quanto già rimborsato.
+     */
+    public function amountPaid(Booking $booking): float
+    {
+        $tracked = (float) ($booking->amount_paid ?? 0);
+        if ($tracked > 0) {
+            return $tracked;
+        }
+
+        return (float) $booking->payments()
+            ->whereIn('status', [PaymentStatus::SUCCEEDED, PaymentStatus::PARTIALLY_REFUNDED])
+            ->get()
+            ->sum(fn ($p) => (float) $p->amount - (float) $p->refunded_amount);
+    }
+
+    /**
+     * Esegue un rimborso di un dato importo per una prenotazione e registra la
+     * penale trattenuta sul booking. Se il pagamento è via carta (Stripe) esegue
+     * il refund reale; se è bonifico, registra solo lo stato (l'accredito è manuale).
+     *
+     * @return array{executed:bool, manual:bool, amount:float, penalty:float, message?:string}
+     */
+    public function applyCancellationRefund(Booking $booking, float $refundAmount, ?string $note = null): array
+    {
+        $paid = $this->amountPaid($booking);
+        $refundAmount = max(0, min($refundAmount, $paid));
+        $penalty = round(max(0, $paid - $refundAmount), 2);
+
+        // Registra la penale trattenuta (audit) a prescindere dall'esito.
+        $booking->update(['penalty_amount' => $penalty]);
+
+        if ($refundAmount <= 0) {
+            return ['executed' => false, 'manual' => false, 'amount' => 0.0, 'penalty' => $penalty,
+                    'message' => 'Nessun importo da rimborsare (penale 100%).'];
+        }
+
+        // Bonifico (o nessun pagamento Stripe): rimborso manuale.
+        $stripePayment = $booking->payments()
+            ->where('gateway', 'stripe')
+            ->whereIn('status', [PaymentStatus::SUCCEEDED, PaymentStatus::PARTIALLY_REFUNDED])
+            ->latest('paid_at')
+            ->first();
+
+        if (! $stripePayment) {
+            // Marca i pagamenti non-Stripe come (parzialmente) rimborsati per traccia.
+            foreach ($booking->payments()->whereIn('status', [PaymentStatus::SUCCEEDED, PaymentStatus::PARTIALLY_REFUNDED])->get() as $p) {
+                $isFull = $refundAmount >= (float) $p->amount - 0.005;
+                $p->update([
+                    'status' => $isFull ? PaymentStatus::REFUNDED : PaymentStatus::PARTIALLY_REFUNDED,
+                    'refunded_amount' => round(min($refundAmount, (float) $p->amount), 2),
+                    'refunded_at' => now(),
+                ]);
+            }
+            return ['executed' => true, 'manual' => true, 'amount' => $refundAmount, 'penalty' => $penalty,
+                    'message' => 'Rimborso da effettuare manualmente (bonifico).'];
+        }
+
+        // Carta: refund reale su Stripe.
+        $result = $this->refund($booking, $refundAmount);
+        return [
+            'executed' => (bool) ($result['success'] ?? false),
+            'manual' => false,
+            'amount' => $refundAmount,
+            'penalty' => $penalty,
+            'message' => $result['message'] ?? null,
         ];
     }
 

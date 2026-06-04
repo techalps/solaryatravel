@@ -199,6 +199,8 @@
 
         const statusBadges = {
             pending:    { cls: 's-pending',    label: 'In attesa',  icon: 'bi-hourglass-split' },
+            deposit_paid:      { cls: 's-confirmed', label: 'Acconto versato', icon: 'bi-wallet2' },
+            awaiting_transfer: { cls: 's-pending',   label: 'Attesa bonifico', icon: 'bi-bank' },
             confirmed:  { cls: 's-confirmed',  label: 'Confermata', icon: 'bi-check-circle' },
             checked_in: { cls: 's-checked_in', label: 'Check-in',   icon: 'bi-qr-code-scan' },
             completed:  { cls: 's-completed',  label: 'Completata', icon: 'bi-flag-fill' },

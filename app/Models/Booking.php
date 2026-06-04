@@ -32,6 +32,12 @@ class Booking extends Model
         'discount_code_id',
         'tax_amount',
         'total_amount',
+        'payment_type',
+        'deposit_amount',
+        'balance_amount',
+        'amount_paid',
+        'balance_due_at',
+        'penalty_amount',
         'currency',
         'status',
         'customer_first_name',
@@ -55,6 +61,8 @@ class Booking extends Model
         'tickets_sent_at',
         'reminder_48h_sent_at',
         'reminder_24h_sent_at',
+        'balance_reminder_sent_at',
+        'bank_transfer_reminder_sent_at',
         'checkout_url',
         'locale',
         'ip_address',
@@ -69,6 +77,11 @@ class Booking extends Model
         'discount_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'deposit_amount' => 'decimal:2',
+        'balance_amount' => 'decimal:2',
+        'amount_paid' => 'decimal:2',
+        'penalty_amount' => 'decimal:2',
+        'balance_due_at' => 'datetime',
         'metadata' => 'array',
         'payment_deadline' => 'datetime',
         'confirmed_at' => 'datetime',
@@ -79,6 +92,8 @@ class Booking extends Model
         'tickets_sent_at' => 'datetime',
         'reminder_48h_sent_at' => 'datetime',
         'reminder_24h_sent_at' => 'datetime',
+        'balance_reminder_sent_at' => 'datetime',
+        'bank_transfer_reminder_sent_at' => 'datetime',
     ];
 
     public function uniqueIds(): array
@@ -182,13 +197,26 @@ class Booking extends Model
 
     public function canBeCheckedIn(): bool
     {
-        return $this->isConfirmed()
+        // Il posto è garantito anche col solo acconto versato.
+        return in_array($this->status, [BookingStatus::CONFIRMED, BookingStatus::DEPOSIT_PAID])
             && $this->booking_date->isToday();
     }
 
     public function canBeCancelled(): bool
     {
-        return in_array($this->status, [BookingStatus::PENDING, BookingStatus::CONFIRMED]);
+        return in_array($this->status, [
+            BookingStatus::PENDING,
+            BookingStatus::DEPOSIT_PAID,
+            BookingStatus::AWAITING_TRANSFER,
+            BookingStatus::CONFIRMED,
+        ]);
+    }
+
+    /** Acconto versato con saldo ancora da pagare. */
+    public function hasBalanceDue(): bool
+    {
+        return $this->status === BookingStatus::DEPOSIT_PAID
+            && (float) $this->balance_amount > 0;
     }
 
     public function getCustomerFullNameAttribute(): string

@@ -40,6 +40,19 @@ class SettingsController extends Controller
             'tax_rate' => 'required|numeric|min:0|max:100',
             'booking_advance_days' => 'required|integer|min:0|max:365',
             'cancellation_hours' => 'required|integer|min:0|max:168',
+            // Penali di storno (fasce in giorni + % rimborso)
+            'cancel_penalty_days_1' => 'required|integer|min:0|max:365',
+            'cancel_penalty_refund_1' => 'required|integer|min:0|max:100',
+            'cancel_penalty_days_2' => 'required|integer|min:0|max:365',
+            'cancel_penalty_refund_2' => 'required|integer|min:0|max:100',
+            'cancel_penalty_refund_under' => 'required|integer|min:0|max:100',
+            // Acconto
+            'deposit_enabled' => 'boolean',
+            'deposit_percentage' => 'required|integer|min:1|max:99',
+            'balance_due_hours' => 'required|integer|min:1|max:720',
+            // Bonifico bancario
+            'bank_transfer_enabled' => 'boolean',
+            'bank_transfer_details' => 'nullable|string|max:1000',
             'default_seats' => 'required|integer|min:1|max:50',
             'payment_deadline_minutes' => 'required|integer|min:5|max:1440',
             'stripe_public_key' => 'nullable|string|max:255',
@@ -67,6 +80,8 @@ class SettingsController extends Controller
         // Convert checkboxes
         $validated['enable_notifications'] = $request->boolean('enable_notifications');
         $validated['maintenance_mode'] = $request->boolean('maintenance_mode');
+        $validated['deposit_enabled'] = $request->boolean('deposit_enabled');
+        $validated['bank_transfer_enabled'] = $request->boolean('bank_transfer_enabled');
 
         $this->saveSettings($validated);
 
@@ -154,6 +169,19 @@ class SettingsController extends Controller
             'cancellation_hours' => 24,
             'default_seats' => 1,
             'payment_deadline_minutes' => 30,
+            // Penali di storno
+            'cancel_penalty_days_1' => 14,
+            'cancel_penalty_refund_1' => 70,
+            'cancel_penalty_days_2' => 7,
+            'cancel_penalty_refund_2' => 50,
+            'cancel_penalty_refund_under' => 0,
+            // Acconto
+            'deposit_enabled' => false,
+            'deposit_percentage' => 50,
+            'balance_due_hours' => 12,
+            // Bonifico
+            'bank_transfer_enabled' => false,
+            'bank_transfer_details' => '',
             'stripe_public_key' => config('services.stripe.key', ''),
             'stripe_secret_key' => '',
             'stripe_webhook_secret' => '',

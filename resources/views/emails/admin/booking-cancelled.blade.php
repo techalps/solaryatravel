@@ -22,6 +22,22 @@
                             @if($reason)<br>Motivo: <strong>{{ $reason }}</strong>@endif
                         </p>
                         @include('emails.admin._booking-details', ['booking' => $booking])
+
+                        @if(!empty($refundCalc) && ($refundCalc['paid'] ?? 0) > 0)
+                            <div style="margin-top:18px;padding:14px 16px;background:#f8fafc;border-radius:8px;">
+                                <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#0E1B33;">Rimborso secondo policy</p>
+                                <p style="margin:0;font-size:14px;color:#475569;">
+                                    Versato € {{ number_format((float) $refundCalc['paid'], 2, ',', '.') }} ·
+                                    Rimborso {{ $refundCalc['percentage'] }}% = <strong>€ {{ number_format((float) $refundCalc['amount'], 2, ',', '.') }}</strong>
+                                    @if(($refundCalc['penalty'] ?? 0) > 0) · Penale € {{ number_format((float) $refundCalc['penalty'], 2, ',', '.') }}@endif
+                                </p>
+                                @if(!empty($refundResult) && ($refundResult['manual'] ?? false) && ($refundResult['amount'] ?? 0) > 0)
+                                    <p style="margin:10px 0 0;padding:10px 12px;background:#fffbeb;border-left:4px solid #f59e0b;font-size:13px;color:#92400e;">
+                                        ⚠️ Pagamento via bonifico: il rimborso di € {{ number_format((float) $refundResult['amount'], 2, ',', '.') }} va effettuato <strong>manualmente</strong>.
+                                    </p>
+                                @endif
+                            </div>
+                        @endif
                     </td>
                 </tr>
                 <tr>

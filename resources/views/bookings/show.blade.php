@@ -6,6 +6,8 @@
     use Carbon\Carbon;
     $statusMap = [
         'pending' => ['label' => 'In attesa di pagamento', 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fef3c7'],
+        'deposit_paid' => ['label' => 'Acconto versato', 'icon' => 'fa-wallet', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
+        'awaiting_transfer' => ['label' => 'In attesa di bonifico', 'icon' => 'fa-building-columns', 'color' => '#d97706', 'bg' => '#fef3c7'],
         'confirmed' => ['label' => 'Confermata', 'icon' => 'fa-circle-check', 'color' => '#059669', 'bg' => '#ecfdf5'],
         'checked_in' => ['label' => 'Check-in effettuato', 'icon' => 'fa-user-check', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
         'completed' => ['label' => 'Completata', 'icon' => 'fa-flag-checkered', 'color' => '#1d4ed8', 'bg' => '#dbeafe'],
@@ -222,6 +224,16 @@
                         @if($key === 'pending')
                             <a href="{{ route('payment.show', $booking->uuid) }}" class="btn btn-warning rounded-pill fw-semibold">
                                 <i class="fa-solid fa-credit-card me-2"></i>Paga ora
+                            </a>
+                        @endif
+                        @if($booking->hasBalanceDue())
+                            <a href="{{ route('booking.balance', $booking->uuid) }}" class="btn btn-primary rounded-pill fw-semibold">
+                                <i class="fa-solid fa-wallet me-2"></i>Paga il saldo (€ {{ number_format((float) $booking->balance_amount, 2, ',', '.') }})
+                            </a>
+                        @endif
+                        @if($key === 'awaiting_transfer')
+                            <a href="{{ route('booking.bank-transfer', $booking->uuid) }}" class="btn btn-outline-primary rounded-pill fw-semibold">
+                                <i class="fa-solid fa-building-columns me-2"></i>Dati per il bonifico
                             </a>
                         @endif
                         @if($booking->canBeCancelled() && $booking->booking_date && $booking->booking_date->isFuture())
