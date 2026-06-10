@@ -122,7 +122,6 @@
             </p>
 
             <div class="cs-contacts">
-                <a class="cs-contact" href="tel:+393450884743"><i class="fa-solid fa-phone"></i> +39 345 088 4743</a>
                 <a class="cs-contact" href="mailto:info@solaryatravel.com"><i class="fa-solid fa-envelope"></i> info@solaryatravel.com</a>
                 <a class="cs-contact" href="https://wa.me/393450884743" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Scrivici su WhatsApp</a>
             </div>

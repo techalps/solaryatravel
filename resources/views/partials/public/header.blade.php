@@ -31,16 +31,15 @@
                 <div class="col-xxl-3 col-xl-4 col-lg-4 col-7">
                     <div class="tg-menu-right-action d-flex align-items-center justify-content-end">
                         <div class="tg-header-contact-info d-flex align-items-center">
-                            <span class="tg-header-contact-icon mr-10 d-none d-xl-block">
-                                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect width="40" height="40" rx="20" fill="{{ $isHome ? '#fff' : 'var(--tg-theme-primary)' }}" fill-opacity="0.12" />
-                                    <path d="M26.6663 23.36V25.36C26.6671 25.5457 26.6291 25.7294 26.5546 25.8995C26.4801 26.0696 26.3709 26.2223 26.2338 26.3478C26.0968 26.4733 25.9349 26.5689 25.7588 26.6283C25.5826 26.6878 25.396 26.7099 25.2108 26.6933C23.1592 26.4704 21.1884 25.7693 19.4575 24.6467C17.8471 23.6231 16.4819 22.2579 15.4583 20.6475C14.3319 18.9087 13.6307 16.9285 13.4117 14.8675C13.395 14.6829 13.417 14.4968 13.476 14.3211C13.5351 14.1453 13.6301 13.9838 13.755 13.8468C13.8798 13.7098 14.0319 13.6006 14.2014 13.5258C14.3709 13.4511 14.5541 13.4124 14.7392 13.4133H16.7392C17.0628 13.4101 17.3765 13.5247 17.6218 13.7357C17.8672 13.9467 18.0275 14.2399 18.0728 14.5603C18.1573 15.2003 18.314 15.8287 18.5398 16.4333C18.6296 16.6722 18.649 16.9319 18.5958 17.1815C18.5426 17.4312 18.419 17.6603 18.2398 17.8417L17.3932 18.6883C18.3423 20.3578 19.7252 21.7407 21.3947 22.6898L22.2413 21.8432C22.4227 21.664 22.6518 21.5404 22.9015 21.4872C23.1511 21.434 23.4108 21.4534 23.6497 21.5432C24.2543 21.769 24.8827 21.9257 25.5227 22.0102C25.8466 22.0559 26.1425 22.219 26.354 22.4686C26.5654 22.7181 26.6779 23.037 26.6663 23.36Z" stroke="{{ $isHome ? '#fff' : 'var(--tg-theme-primary)' }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-                                </svg>
-                            </span>
-                            <div class="tg-header-contact-number d-none d-xl-block">
-                                <span>Chiamaci:</span>
-                                <a href="tel:+393450884743">+39 345 088 4743</a>
-                            </div>
+                            <a href="https://wa.me/393450884743" target="_blank" rel="noopener"
+                               class="tg-header-contact-number d-none d-xl-flex align-items-center text-decoration-none"
+                               aria-label="Scrivici su WhatsApp">
+                                <i class="fa-brands fa-whatsapp me-2" style="font-size:1.4rem;color:{{ $isHome ? '#fff' : '#25D366' }}"></i>
+                                <span>
+                                    <span style="display:block;font-size:.72rem;opacity:.8">Scrivici su</span>
+                                    <strong>WhatsApp</strong>
+                                </span>
+                            </a>
                         </div>
                         <div class="tg-header-btn ml-20 d-none d-sm-block">
                             @auth
@@ -147,7 +146,7 @@
         </div>
         <hr class="border-secondary border-opacity-25 my-4">
         <div class="small text-white-50">
-            <div class="mb-2"><i class="fa-solid fa-phone me-2"></i><a href="tel:+393450884743" class="text-white-50 text-decoration-none">+39 345 088 4743</a></div>
+            <div class="mb-2"><i class="fa-brands fa-whatsapp me-2"></i><a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="text-white-50 text-decoration-none">Scrivici su WhatsApp</a></div>
             <div><i class="fa-solid fa-envelope me-2"></i><a href="mailto:info@solaryatravel.com" class="text-white-50 text-decoration-none">info@solaryatravel.com</a></div>
         </div>
     </div>

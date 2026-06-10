@@ -50,9 +50,13 @@ class SettingsController extends Controller
             'deposit_enabled' => 'boolean',
             'deposit_percentage' => 'required|integer|min:1|max:99',
             'balance_due_hours' => 'required|integer|min:1|max:720',
-            // Bonifico bancario
+            // Bonifico istantaneo
             'bank_transfer_enabled' => 'boolean',
             'bank_transfer_details' => 'nullable|string|max:1000',
+            'bank_transfer_expiry_hours' => 'required|integer|min:1|max:168',
+            // Minimo partecipanti per confermare la partenza
+            'min_participants' => 'required|integer|min:1|max:50',
+            'min_participants_deadline_label' => 'nullable|string|max:120',
             'default_seats' => 'required|integer|min:1|max:50',
             'payment_deadline_minutes' => 'required|integer|min:5|max:1440',
             'stripe_public_key' => 'nullable|string|max:255',
@@ -179,9 +183,13 @@ class SettingsController extends Controller
             'deposit_enabled' => false,
             'deposit_percentage' => 50,
             'balance_due_hours' => 12,
-            // Bonifico
+            // Bonifico istantaneo
             'bank_transfer_enabled' => false,
             'bank_transfer_details' => '',
+            'bank_transfer_expiry_hours' => 24,
+            // Minimo partecipanti
+            'min_participants' => 6,
+            'min_participants_deadline_label' => '48 ore prima della partenza',
             'stripe_public_key' => config('services.stripe.key', ''),
             'stripe_secret_key' => '',
             'stripe_webhook_secret' => '',

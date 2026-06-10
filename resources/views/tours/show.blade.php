@@ -47,8 +47,8 @@
             <div class="row justify-content-center">
                 <div class="col-xl-12 col-lg-12">
 
-                    {{-- Quick meta strip --}}
-                    @if($tour->departure_point)
+                    {{-- Quick meta strip (nascosto per i tour su richiesta) --}}
+                    @if($tour->departure_point && ! $tour->booking_on_request)
                     <div class="tg-tour-details-video-location d-flex flex-wrap align-items-center mb-25 justify-content-center">
                         <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ $tour->departure_point }}</span>
                     </div>
@@ -81,7 +81,8 @@
                         </div>
                     @endif
 
-                    {{-- Feature list strip --}}
+                    {{-- Feature list strip (durata, prezzo, partenza) — nascosto per i tour su richiesta --}}
+                    @unless($tour->booking_on_request)
                     <div class="tg-tour-details-feature-list-wrap mb-35 pb-20" style="border-bottom:1px solid #e4e4e4">
                         <div class="tg-tour-details-video-feature-list">
                             <ul class="list-unstyled mb-0">
@@ -94,16 +95,14 @@
                                         </div>
                                     </li>
                                 @endif
-                                @php $adultBasePrice = $tour->periods->min('base_price'); @endphp
-                                @if($adultBasePrice)
-                                    <li>
-                                        <span class="icon"><i class="fa-solid fa-tag"></i></span>
-                                        <div>
-                                            <span class="title">A partire da</span>
-                                            <span class="duration">€{{ number_format($adultBasePrice, 0, ',', '.') }}/pers</span>
-                                        </div>
-                                    </li>
-                                @endif
+                                @php $adultBasePrice = $tour->price_from; @endphp
+                                <li>
+                                    <span class="icon"><i class="fa-solid fa-tag"></i></span>
+                                    <div>
+                                        <span class="title">A partire da</span>
+                                        <span class="duration"><x-tour-price :price="$adultBasePrice" suffix="/pers" /></span>
+                                    </div>
+                                </li>
                                 @if($tour->departure_point)
                                     <li>
                                         <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
@@ -116,6 +115,15 @@
                             </ul>
                         </div>
                     </div>
+                    @endunless
+
+                    {{-- Avviso minimo partecipanti (solo tour prenotabili online) --}}
+                    @unless($tour->booking_on_request)
+                        <div class="tg-min-participants-notice mb-25">
+                            <i class="fa-solid fa-circle-info me-2"></i>
+                            {{ \App\Support\Settings::minParticipantsNotice() }}
+                        </div>
+                    @endunless
 
                     {{-- About --}}
                     @if($tour->description)
@@ -124,6 +132,9 @@
                             <p class="lh-28 mb-0">{!! nl2br(e($tour->description)) !!}</p>
                         </div>
                     @endif
+
+                    {{-- Itinerario, incluso/escluso e tariffe — nascosti per i tour su richiesta --}}
+                    @unless($tour->booking_on_request)
 
                     {{-- Itinerary --}}
                     @if($tour->itinerary)
@@ -233,6 +244,8 @@
                         </div>
                     @endif
 
+                    @endunless {{-- /booking_on_request --}}
+
                 </div>
             </div>
         </div>
@@ -249,9 +262,9 @@
                     <strong style="font-size:.95rem;color:#0E1B33">Contattaci per disponibilità e tariffe</strong>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    <a href="tel:+393450884743"
-                       style="background:var(--tg-theme-primary);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
-                        <i class="fa-solid fa-phone"></i><span class="d-none d-sm-inline">Chiama</span>
+                    <a href="https://wa.me/393450884743?text={{ rawurlencode('Ciao Solarya Travel, vorrei informazioni sulla crociera "' . $tour->name . '".') }}" target="_blank" rel="noopener"
+                       style="background:#25D366;color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+                        <i class="fa-brands fa-whatsapp"></i><span class="d-none d-sm-inline">WhatsApp</span>
                     </a>
                     <a href="mailto:info@solaryatravel.com"
                        style="background:var(--tg-theme-secondary);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
@@ -311,11 +324,11 @@
             <div class="row align-items-center">
                 <div class="col">
                     <span style="font-size:.72rem;color:#888;display:block;line-height:1.2">A partire da</span>
-                    @php $barPrice = $tour->periods->min('base_price'); @endphp
+                    @php $barPrice = $tour->price_from; @endphp
                     @if($barPrice)
                         <strong style="font-size:1.15rem;color:#0E1B33">€{{ number_format($barPrice, 0, ',', '.') }}<span style="font-size:.75rem;font-weight:400;color:#888"> /pers</span></strong>
                     @else
-                        <strong style="font-size:1rem;color:#0E1B33">Scopri il prezzo</strong>
+                        <strong style="font-size:1rem;color:#0E1B33">Su richiesta</strong>
                     @endif
                 </div>
                 <div class="col-auto">
@@ -349,7 +362,7 @@
                                         <h6 class="text-dark mb-1">{{ $st->name }}</h6>
                                         <div class="d-flex justify-content-between text-muted small">
                                             <span>@if($st->duration_hours) <i class="fa-regular fa-clock me-1"></i>{{ $st->duration_hours }}h @endif</span>
-                                            <strong class="text-primary">da €{{ number_format($st->price_from ?? 0, 0, ',', '.') }}</strong>
+                                            <strong class="text-primary">@if($st->price_from && ! $st->booking_on_request)da €{{ number_format($st->price_from, 0, ',', '.') }}@else Su richiesta @endif</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -421,6 +434,18 @@
     /* Breadcrumb on dark hero */
     .breadcrumb-item.active { color: #fff !important; }
     .breadcrumb-item + .breadcrumb-item::before { color: rgba(255,255,255,.6); }
+
+    /* Avviso minimo partecipanti */
+    .tg-min-participants-notice {
+        background: #fff8e6;
+        border: 1px solid #ffe39a;
+        border-radius: 14px;
+        padding: 14px 18px;
+        color: #6b4e00;
+        font-size: .92rem;
+        line-height: 1.5;
+    }
+    .tg-min-participants-notice i { color: #d39e00; }
 
     /* Smooth scroll */
     html { scroll-behavior: smooth; }

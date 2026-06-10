@@ -339,6 +339,43 @@ class BookingForm extends Component
         return $this->adultsCount + count($this->children);
     }
 
+    /**
+     * Posti totali ancora disponibili per la partenza selezionata (somma su
+     * tutti i catamarani disponibili). Limita quanti partecipanti si possono
+     * selezionare nello stepper. Senza partenza, nessun limite noto.
+     */
+    #[Computed]
+    public function maxSeats(): ?int
+    {
+        if (!$this->departure) {
+            return null;
+        }
+        return app(BookingService::class)->remainingCapacity($this->departure);
+    }
+
+    /**
+     * True quando sono stati selezionati tutti i posti disponibili: blocca i "+".
+     */
+    #[Computed]
+    public function capacityReached(): bool
+    {
+        $max = $this->maxSeats;
+        return $max !== null && $this->totalSelected >= $max;
+    }
+
+    /**
+     * Posti liberi sul singolo catamarano più capiente: se il gruppo selezionato
+     * supera questo valore ma resta entro maxSeats, verrà diviso su più barche.
+     */
+    #[Computed]
+    public function largestSingleFree(): ?int
+    {
+        if (!$this->departure) {
+            return null;
+        }
+        return app(BookingService::class)->largestSingleCatamaranFree($this->departure);
+    }
+
     #[Computed]
     public function hasChildrenWithErrors(): bool
     {
@@ -354,6 +391,11 @@ class BookingForm extends Component
 
     public function incrementAdults(): void
     {
+        // Non superare la capienza residua della partenza (somma di tutti i catamarani).
+        $max = $this->maxSeats;
+        if ($max !== null && $this->totalSelected >= $max) {
+            return;
+        }
         $this->adultsCount++;
         $this->syncAdults();
     }
@@ -404,6 +446,11 @@ class BookingForm extends Component
     public function addChild(): void
     {
         if ($this->childBrackets->isEmpty()) {
+            return;
+        }
+        // Non superare la capienza residua della partenza.
+        $max = $this->maxSeats;
+        if ($max !== null && $this->totalSelected >= $max) {
             return;
         }
         $this->children[] = ['dob' => '', 'first_name' => '', 'last_name' => ''];

@@ -21,17 +21,8 @@ return [
         'webhook_tolerance' => env('STRIPE_WEBHOOK_TOLERANCE', 300),
     ],
 
-    'paypal' => [
-        'mode' => env('PAYPAL_MODE', 'sandbox'),
-        'sandbox' => [
-            'client_id' => env('PAYPAL_SANDBOX_CLIENT_ID'),
-            'client_secret' => env('PAYPAL_SANDBOX_CLIENT_SECRET'),
-        ],
-        'live' => [
-            'client_id' => env('PAYPAL_LIVE_CLIENT_ID'),
-            'client_secret' => env('PAYPAL_LIVE_CLIENT_SECRET'),
-        ],
-    ],
+    // Metodi di pagamento attivi: Stripe (carta) + bonifico istantaneo
+    // (gestione manuale). Nessun altro gateway è supportato.
 
     // Impostazioni generali
     'currency' => env('PAYMENT_CURRENCY', 'EUR'),

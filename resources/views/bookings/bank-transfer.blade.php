@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Bonifico bancario · ' . $booking->booking_number)
+@section('title', 'Bonifico istantaneo · ' . $booking->booking_number)
 
 @section('content')
     <div class="tg-breadcrumb-area pt-150 pb-90 p-relative" style="background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)), url('{{ asset('images/heroes/hero-bookings.jpg') }}') center/cover; background-color: var(--tg-theme-primary);">
@@ -25,8 +25,14 @@
                     <div style="width:64px;height:64px;border-radius:50%;background:#fff7ed;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
                         <i class="fa-solid fa-building-columns" style="font-size:26px;color:#d97706"></i>
                     </div>
-                    <h2 class="fw-bold mb-2" style="color:#0E1B33">Completa il pagamento con bonifico</h2>
-                    <p class="text-muted mb-0">La prenotazione <strong>#{{ $booking->booking_number }}</strong> è in attesa del bonifico. Una volta ricevuto, la confermeremo e riceverai i biglietti via email.</p>
+                    <h2 class="fw-bold mb-2" style="color:#0E1B33">Completa il pagamento con bonifico istantaneo</h2>
+                    <p class="text-muted mb-0">La prenotazione <strong>#{{ $booking->booking_number }}</strong> è in attesa di pagamento e i posti sono riservati. Una volta ricevuto il bonifico, la confermeremo e riceverai i biglietti via email.</p>
+                    @if($booking->payment_deadline)
+                        <p class="mt-2 mb-0 small fw-semibold" style="color:#b45309">
+                            <i class="fa-regular fa-clock me-1"></i>
+                            Conferma entro il {{ $booking->payment_deadline->format('d/m/Y \a\l\l\e H:i') }}, altrimenti la prenotazione scade e i posti tornano disponibili.
+                        </p>
+                    @endif
                 </div>
 
                 <div class="p-4 p-md-5 rounded-4" style="background:#f8fafc;border:1px solid #e9eef5">

@@ -92,4 +92,47 @@ class Settings
     {
         return trim((string) self::get('bank_transfer_details', ''));
     }
+
+    /**
+     * Ore entro cui un bonifico istantaneo va confermato prima che la
+     * prenotazione scada e i posti tornino disponibili.
+     */
+    public static function bankTransferExpiryHours(): int
+    {
+        return max(1, (int) self::get('bank_transfer_expiry_hours', 24));
+    }
+
+    /**
+     * Numero minimo di partecipanti per confermare la partenza.
+     */
+    public static function minParticipants(): int
+    {
+        return max(1, (int) self::get('min_participants', 6));
+    }
+
+    /**
+     * Etichetta del termine entro cui si verifica il raggiungimento del minimo
+     * (es. "48 ore prima della partenza"). Usata nell'avviso al cliente.
+     */
+    public static function minParticipantsDeadlineLabel(): string
+    {
+        $label = trim((string) self::get('min_participants_deadline_label', ''));
+        return $label !== '' ? $label : '48 ore prima della partenza';
+    }
+
+    /**
+     * Testo completo dell'avviso sul minimo partecipanti, costruito dai valori
+     * impostabili in admin. Centralizzato così da mostrarlo identico in pagina
+     * escursione, checkout ed email di conferma.
+     */
+    public static function minParticipantsNotice(): string
+    {
+        return sprintf(
+            'La partenza è confermata al raggiungimento di un minimo di %d partecipanti. '
+            . 'In caso di mancato raggiungimento entro %s, la crociera non verrà effettuata '
+            . 'e l\'importo sarà interamente rimborsato.',
+            self::minParticipants(),
+            self::minParticipantsDeadlineLabel()
+        );
+    }
 }

@@ -287,7 +287,7 @@
                                     </div>
                                 </div>
 
-                                {{-- Toggle bonifico --}}
+                                {{-- Toggle bonifico istantaneo --}}
                                 <label class="d-flex align-items-start gap-3 p-3 border rounded-3 mb-3"
                                        style="background: rgba(16,185,129,.04); border-color: rgba(16,185,129,.2)!important">
                                     <div class="form-check form-switch m-0 pt-1">
@@ -296,15 +296,53 @@
                                                {{ old('bank_transfer_enabled', $settings['bank_transfer_enabled'] ?? false) ? 'checked' : '' }}>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="fw-semibold text-dark"><i class="bi bi-bank me-1 text-success"></i>Consenti pagamento con bonifico bancario</div>
-                                        <div class="small text-muted">La prenotazione resta in attesa di bonifico finché un amministratore non conferma l'incasso.</div>
+                                        <div class="fw-semibold text-dark"><i class="bi bi-bank me-1 text-success"></i>Consenti pagamento con bonifico istantaneo</div>
+                                        <div class="small text-muted">La prenotazione resta in attesa di pagamento (posti riservati) finché un amministratore non conferma l'incasso. Se non viene confermata entro la scadenza, scade automaticamente e i posti tornano disponibili.</div>
                                     </div>
                                 </label>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-hourglass-split me-1"></i>Scadenza prenotazione</label>
+                                        <div class="input-group">
+                                            <input type="number" name="bank_transfer_expiry_hours" min="1" max="168"
+                                                   value="{{ old('bank_transfer_expiry_hours', $settings['bank_transfer_expiry_hours'] ?? 24) }}" class="form-control" required>
+                                            <span class="input-group-text">ore</span>
+                                        </div>
+                                        <small class="text-muted">Tempo per confermare l'incasso prima che i posti tornino disponibili.</small>
+                                    </div>
+                                </div>
                                 <div>
-                                    <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-card-text me-1"></i>Dati per il bonifico (IBAN, intestatario)</label>
+                                    <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-card-text me-1"></i>Coordinate bancarie (IBAN, intestatario)</label>
                                     <textarea name="bank_transfer_details" rows="3" class="form-control"
                                               placeholder="Intestatario: Solarya Travel S.r.l.&#10;IBAN: IT00 X000 0000 0000 0000 0000 000&#10;Causale: numero prenotazione">{{ old('bank_transfer_details', $settings['bank_transfer_details'] ?? '') }}</textarea>
-                                    <small class="text-muted">Mostrato al cliente che sceglie il bonifico e incluso nell'email. La causale consigliata è il numero di prenotazione.</small>
+                                    <small class="text-muted">Mostrate al cliente che sceglie il bonifico istantaneo e incluse nell'email. La causale consigliata è il numero di prenotazione.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Minimo partecipanti --}}
+                        <div class="dash-card mb-3">
+                            <div class="dash-card-header">
+                                <h3><i class="bi bi-people me-2 text-primary"></i>Minimo partecipanti</h3>
+                            </div>
+                            <div class="dash-card-body">
+                                <p class="small text-muted">Avviso mostrato al cliente in pagina escursione, al checkout e nelle email di conferma.</p>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-person-check me-1"></i>Minimo partecipanti</label>
+                                        <input type="number" name="min_participants" min="1" max="50"
+                                               value="{{ old('min_participants', $settings['min_participants'] ?? 6) }}" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-clock-history me-1"></i>Termine di verifica</label>
+                                        <input type="text" name="min_participants_deadline_label" maxlength="120"
+                                               value="{{ old('min_participants_deadline_label', $settings['min_participants_deadline_label'] ?? '48 ore prima della partenza') }}"
+                                               class="form-control" placeholder="48 ore prima della partenza">
+                                    </div>
+                                </div>
+                                <div class="alert border-0 rounded-3 small mb-0" style="background:rgba(2,132,199,.08); color:#0369a1">
+                                    <i class="bi bi-eye me-1"></i>Anteprima:
+                                    <em>{{ \App\Support\Settings::minParticipantsNotice() }}</em>
                                 </div>
                             </div>
                         </div>

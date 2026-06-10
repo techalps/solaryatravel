@@ -66,10 +66,14 @@
                             </div>
                             <div class="tg-listing-card-price d-flex align-items-center justify-content-between">
                                 <div class="tg-listing-card-price-wrap price-bg d-flex align-items-center">
-                                    <span class="tg-listing-card-currency-amount mr-5">
-                                        <span class="currency-symbol">€</span>{{ number_format($tour->price_from ?? 0, 0, ',', '.') }}
-                                    </span>
-                                    <span class="tg-listing-card-activity-person">/Persona</span>
+                                    @if($tour->price_from && ! $tour->booking_on_request)
+                                        <span class="tg-listing-card-currency-amount mr-5">
+                                            <span class="currency-symbol">€</span>{{ number_format($tour->price_from, 0, ',', '.') }}
+                                        </span>
+                                        <span class="tg-listing-card-activity-person">/Persona</span>
+                                    @else
+                                        <span class="tg-listing-card-currency-amount mr-5">Su richiesta</span>
+                                    @endif
                                 </div>
                                 <a href="{{ route('tours.show', $tour->slug) }}" class="tg-card-tour-link" style="margin-right:24px">
                                     Scopri <i class="fa-solid fa-arrow-right ms-1"></i>

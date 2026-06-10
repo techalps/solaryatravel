@@ -40,6 +40,12 @@ class BookingService
         return DB::transaction(function () use ($data, $source) {
             /** @var Tour $tour */
             $tour = Tour::findOrFail($data['tour_id']);
+
+            // I tour "su richiesta" non sono prenotabili online (nessun prezzo / checkout).
+            if ($tour->booking_on_request) {
+                throw new \Exception('Questa crociera è su richiesta: contattaci via email o WhatsApp.');
+            }
+
             /** @var TourDeparture $departure */
             $departure = TourDeparture::where('tour_id', $tour->id)
                 ->lockForUpdate()
@@ -100,7 +106,7 @@ class BookingService
             // Auto-distribuzione
             $assignment = $this->distributeSeats($tour, $departure, $countingSeats);
             if ($assignment === null) {
-                throw new \Exception('Posti insufficienti per questa partenza.');
+                throw new \Exception('Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.');
             }
 
             // Modalità di pagamento: acconto e/o bonifico.
@@ -123,6 +129,12 @@ class BookingService
             $initialStatus = $paymentType === 'bank_transfer'
                 ? BookingStatus::AWAITING_TRANSFER
                 : BookingStatus::PENDING;
+
+            // Scadenza: il bonifico istantaneo riserva i posti per N ore (default 24);
+            // il pagamento con carta scade dopo i minuti di "pending" configurati.
+            $paymentDeadline = $paymentType === 'bank_transfer'
+                ? now()->addHours(\App\Support\Settings::bankTransferExpiryHours())
+                : now()->addMinutes((int) config('booking.payment_expiry_minutes', 30));
 
             $booking = Booking::create([
                 'user_id' => $data['user_id'] ?? auth()->id(),
@@ -149,7 +161,7 @@ class BookingService
                 'customer_phone' => $data['customer_phone'] ?? null,
                 'customer_country' => $data['customer_country'] ?? 'IT',
                 'special_requests' => $data['special_requests'] ?? null,
-                'payment_deadline' => now()->addMinutes(config('booking.payment_expiry_minutes', 30)),
+                'payment_deadline' => $paymentDeadline,
                 'source' => $source,
                 'locale' => app()->getLocale(),
                 'ip_address' => request()?->ip(),
@@ -232,7 +244,7 @@ class BookingService
 
         $assignment = $this->distributeSeats($tour, $departure, $countingSeats);
         if ($assignment === null) {
-            throw new \Exception('Posti insufficienti per questa partenza.');
+            throw new \Exception('Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.');
         }
 
         $booking = Booking::create([
@@ -348,10 +360,95 @@ class BookingService
 
         $assignment = $this->distributeSeats($tour, $departure, $seats);
         if ($assignment === null) {
-            return ['available' => false, 'message' => 'Posti insufficienti per questa partenza.'];
+            return ['available' => false, 'message' => 'Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.'];
         }
 
         return ['available' => true, 'distribution' => $assignment];
+    }
+
+    /**
+     * Capacità residua totale per una partenza: somma dei posti liberi su tutti
+     * i catamarani operativi e disponibili nella data (esclusi quelli bloccati),
+     * tenendo conto dell'eventuale capacity_override della partenza.
+     *
+     * Stessa base di calcolo di distributeSeats(), così il limite mostrato in UI
+     * coincide con ciò che il backend accetterà davvero.
+     */
+    public function remainingCapacity(TourDeparture $departure): int
+    {
+        $departure->loadMissing('tour');
+        $tour = $departure->tour;
+        if (!$tour) {
+            return 0;
+        }
+
+        $departureDate = is_string($departure->departure_date)
+            ? $departure->departure_date
+            : $departure->departure_date->format('Y-m-d');
+
+        $blockedIds = TourCatamaranBlock::where('tour_id', $tour->id)
+            ->whereDate('start_date', '<=', $departureDate)
+            ->whereDate('end_date', '>=', $departureDate)
+            ->pluck('catamaran_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $totalFree = 0;
+        foreach ($tour->operatingCatamarans() as $cat) {
+            if (in_array((int) $cat->id, $blockedIds, true)) {
+                continue;
+            }
+            if (!$cat->isAvailableOn($departure->departure_date)) {
+                continue;
+            }
+            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            $totalFree += max(0, $cat->capacity - $booked);
+        }
+
+        if (!is_null($departure->capacity_override)) {
+            $allowedRemaining = max(0, $departure->capacity_override - $departure->seats_booked);
+            $totalFree = min($totalFree, $allowedRemaining);
+        }
+
+        return (int) $totalFree;
+    }
+
+    /**
+     * Posti liberi sul catamarano singolo più capiente disponibile per la
+     * partenza. Serve a capire se un gruppo "entra unito" da qualche parte.
+     */
+    public function largestSingleCatamaranFree(TourDeparture $departure): int
+    {
+        $departure->loadMissing('tour');
+        $tour = $departure->tour;
+        if (!$tour) {
+            return 0;
+        }
+
+        $departureDate = is_string($departure->departure_date)
+            ? $departure->departure_date
+            : $departure->departure_date->format('Y-m-d');
+
+        $blockedIds = TourCatamaranBlock::where('tour_id', $tour->id)
+            ->whereDate('start_date', '<=', $departureDate)
+            ->whereDate('end_date', '>=', $departureDate)
+            ->pluck('catamaran_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $maxFree = 0;
+        foreach ($tour->operatingCatamarans() as $cat) {
+            if (in_array((int) $cat->id, $blockedIds, true)) {
+                continue;
+            }
+            if (!$cat->isAvailableOn($departure->departure_date)) {
+                continue;
+            }
+            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            $maxFree = max($maxFree, max(0, $cat->capacity - $booked));
+        }
+
+        return (int) $maxFree;
     }
 
     /**

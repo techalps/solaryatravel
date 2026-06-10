@@ -42,6 +42,13 @@ class BookingController extends Controller
             ->with(['ageBrackets', 'images'])
             ->firstOrFail();
 
+        // Tour "su richiesta" (SOLARYA PRIVATE CRUISE): nessun checkout online.
+        // Si prenotano solo contattando lo staff via email/WhatsApp.
+        if ($tour->booking_on_request) {
+            return redirect()->route('tours.show', $tour->slug)
+                ->with('error', 'Questa crociera è su richiesta: contattaci via email o WhatsApp per disponibilità e tariffe.');
+        }
+
         $departureId = $request->input('departure');
         $departure = null;
 

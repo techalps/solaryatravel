@@ -36,10 +36,16 @@
                             </p>
                         </div>
 
-                        <p style="margin:0;line-height:1.6;color:#475569;font-size:14px;">
+                        <p style="margin:0 0 18px 0;line-height:1.6;color:#475569;font-size:14px;">
                             Appena riceveremo il bonifico, confermeremo la prenotazione e ti invieremo i biglietti via email.
                             Indica sempre il numero di prenotazione nella causale per velocizzare la verifica.
                         </p>
+
+                        <div style="background:#fff8e6;border-left:4px solid #f59e0b;padding:14px;border-radius:6px;">
+                            <p style="margin:0;font-size:13px;color:#78350f;line-height:1.6;">
+                                {{ \App\Support\Settings::minParticipantsNotice() }}
+                            </p>
+                        </div>
                     </td>
                 </tr>
                 <tr>

@@ -58,6 +58,7 @@
                 </form>
             @endif
             @if ($statusValue === 'awaiting_transfer')
+                @php $isExpired = $booking->payment_deadline && $booking->payment_deadline->isPast(); @endphp
                 <form action="{{ route('admin.bookings.confirm-transfer', $booking) }}" method="POST" class="d-inline"
                       onsubmit="return confirm('Confermi di aver ricevuto il bonifico per questa prenotazione?');">
                     @csrf
@@ -65,6 +66,16 @@
                         <i class="bi bi-bank me-2"></i>Conferma incasso bonifico
                     </button>
                 </form>
+                @if ($booking->payment_deadline)
+                    <span class="badge rounded-pill {{ $isExpired ? 'text-bg-danger' : 'text-bg-warning' }} align-self-center">
+                        <i class="bi bi-clock-history me-1"></i>
+                        @if($isExpired)
+                            Scaduta il {{ $booking->payment_deadline->format('d/m/Y H:i') }} — annullamento automatico in corso
+                        @else
+                            Scade il {{ $booking->payment_deadline->format('d/m/Y H:i') }}
+                        @endif
+                    </span>
+                @endif
             @endif
             @if (!in_array($statusValue, ['cancelled', 'refunded', 'completed']))
                 <button type="button" class="btn btn-outline-danger rounded-pill px-3 fw-semibold"

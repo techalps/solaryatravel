@@ -67,6 +67,25 @@
             <div class="tg-tour-about-tickets-wrap mb-15">
                 <span class="tg-tour-about-sidebar-title d-inline-block mb-10">Partecipanti:</span>
 
+                @php $maxSeats = $this->maxSeats; @endphp
+
+                {{-- Disponibilità posti per questa partenza --}}
+                @if($maxSeats !== null)
+                    @if($maxSeats <= 0)
+                        <div class="alert alert-danger small py-2 mb-10">
+                            <i class="fa-solid fa-circle-exclamation me-1"></i>
+                            Posti esauriti per questa data. Scrivici su
+                            <a href="https://wa.me/393450884743" target="_blank" rel="noopener">WhatsApp</a> o via
+                            <a href="mailto:info@solaryatravel.com">email</a> per le alternative.
+                        </div>
+                    @else
+                        <div class="bk-seats-left small text-muted mb-10">
+                            <i class="fa-regular fa-chair me-1"></i>
+                            Posti disponibili per questa data: <strong>{{ $maxSeats }}</strong>
+                        </div>
+                    @endif
+                @endif
+
                 {{-- Adulti --}}
                 <div class="tg-tour-about-tickets mb-15">
                     <div class="tg-tour-about-tickets-adult">
@@ -76,7 +95,7 @@
                     <div class="bk-stepper">
                         <button type="button" wire:click="decrementAdults" @disabled($adultsCount <= 1) aria-label="Diminuisci">−</button>
                         <span class="qty">{{ $adultsCount }}</span>
-                        <button type="button" class="plus" wire:click="incrementAdults" aria-label="Aumenta">+</button>
+                        <button type="button" class="plus" wire:click="incrementAdults" @disabled($this->capacityReached) aria-label="Aumenta">+</button>
                     </div>
                 </div>
 
@@ -113,7 +132,7 @@
                         <div class="bk-stepper">
                             <button type="button" wire:click="removeChild" @disabled(count($children) <= 0) aria-label="Diminuisci">−</button>
                             <span class="qty">{{ count($children) }}</span>
-                            <button type="button" class="plus" wire:click="addChild" aria-label="Aumenta">+</button>
+                            <button type="button" class="plus" wire:click="addChild" @disabled($this->capacityReached) aria-label="Aumenta">+</button>
                         </div>
                     </div>
 
@@ -195,6 +214,15 @@
                             @endforeach
                         </ul>
                     </div>
+                </div>
+            @endif
+
+            {{-- Avviso: gruppo distribuito su più catamarani --}}
+            @php $largestFree = $this->largestSingleFree; @endphp
+            @if($largestFree !== null && $this->totalSelected > $largestFree && (!$this->maxSeats || $this->totalSelected <= $this->maxSeats))
+                <div class="alert alert-info small py-2 mb-15">
+                    <i class="fa-solid fa-people-group me-1"></i>
+                    Il gruppo verrà sistemato su più catamarani per la stessa partenza (non c'è un'unica imbarcazione con {{ $this->totalSelected }} posti liberi).
                 </div>
             @endif
 
@@ -325,8 +353,9 @@
                 </div>
             @endif
 
-            {{-- Scelta metodo: carta / bonifico --}}
+            {{-- Scelta metodo: carta / bonifico istantaneo --}}
             @if($bankOn)
+                @php $bankExpiryHours = \App\Support\Settings::bankTransferExpiryHours(); @endphp
                 <div class="bk-pay-box mb-15">
                     <div class="small fw-semibold mb-2"><i class="fa-solid fa-credit-card text-primary me-1"></i>Metodo di pagamento</div>
                     <label class="bk-pay-opt">
@@ -335,10 +364,17 @@
                     </label>
                     <label class="bk-pay-opt">
                         <input type="radio" wire:model="paymentMethod" value="bank_transfer">
-                        <span>Bonifico bancario <span class="text-muted">(conferma dopo l'incasso)</span></span>
+                        <span>Bonifico istantaneo
+                            <span class="text-muted d-block" style="font-size:.76rem">Posti riservati per {{ $bankExpiryHours }}h; confermiamo manualmente alla ricezione del bonifico.</span></span>
                     </label>
                 </div>
             @endif
+
+            {{-- Avviso minimo partecipanti --}}
+            <div class="bk-min-notice mb-15">
+                <i class="fa-solid fa-circle-info me-1"></i>
+                {{ \App\Support\Settings::minParticipantsNotice() }}
+            </div>
 
             {{-- Terms --}}
             <div class="form-check mb-15">
@@ -353,7 +389,7 @@
                 <div class="alert alert-danger small mb-15">{{ $errorMessage }}</div>
             @endif
 
-            <button type="button" class="tg-btn tg-btn-switch-animation w-100" wire:click="submit" wire:loading.attr="disabled" @disabled($this->hasChildrenWithErrors || $adultsCount < 1)>
+            <button type="button" class="tg-btn tg-btn-switch-animation w-100" wire:click="submit" wire:loading.attr="disabled" @disabled($this->hasChildrenWithErrors || $adultsCount < 1 || ($this->maxSeats !== null && ($this->maxSeats <= 0 || $this->totalSelected > $this->maxSeats)))>
                 <span wire:loading.remove wire:target="submit">
                     <i class="fa-solid fa-lock me-2"></i>Prenota ora
                 </span>
@@ -379,6 +415,7 @@
         .booking-widget .bk-pay-opt { display: flex; align-items: flex-start; gap: .55rem; padding: .4rem 0; font-size: .88rem; cursor: pointer; }
         .booking-widget .bk-pay-opt input { margin-top: .2rem; }
         .booking-widget .bk-label { font-size: .78rem; font-weight: 600; color: #0E1B33; margin-bottom: .35rem; display: block; }
+        .booking-widget .bk-min-notice { background: #fff8e6; border: 1px solid #ffe39a; border-radius: 12px; padding: .6rem .8rem; font-size: .8rem; color: #6b4e00; line-height: 1.45; }
 
         .booking-widget .bk-stepper { display: inline-flex; align-items: center; background: #f4f4f4; border-radius: 50px; padding: 3px; gap: 4px; }
         .booking-widget .bk-stepper button { width: 26px; height: 26px; border-radius: 50%; border: 0; background: #fff; color: #0E1B33; font-weight: 700; font-size: 1rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }

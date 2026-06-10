@@ -13,3 +13,10 @@ Schedule::command('bookings:send-reminders')
     ->hourly()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Scadenza bonifico istantaneo: annulla le prenotazioni non confermate entro il
+// termine e libera i posti riservati.
+Schedule::command('bookings:expire-unpaid')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground();

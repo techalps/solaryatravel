@@ -65,10 +65,16 @@
 
                         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
 
-                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">
+                        <p style="margin:0 0 16px 0;font-size:13px;color:#64748b;line-height:1.6;">
                             Una volta completato il pagamento, riceverai una seconda email con i tuoi biglietti
                             e i QR code da mostrare al momento dell'imbarco (uno per ogni passeggero).
                         </p>
+
+                        <div style="background:#fff8e6;border-left:4px solid #f59e0b;padding:14px;border-radius:6px;">
+                            <p style="margin:0;font-size:13px;color:#78350f;line-height:1.6;">
+                                {{ \App\Support\Settings::minParticipantsNotice() }}
+                            </p>
+                        </div>
 
                         @if($booking->payment_deadline)
                             <p style="margin:14px 0 0 0;font-size:13px;color:#dc2626;">
