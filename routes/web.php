@@ -103,7 +103,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/assegnazione/{departure}', [AdminDepartureAssignmentController::class, 'show'])->name('assignments.show');
 
     Route::resource('bookings', AdminBookingController::class);
-    Route::get('/bookings-api/tours/{tour}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');
+    // Binding per id: il <select> tour invia l'id numerico, non lo slug (route key di default del Tour).
+    Route::get('/bookings-api/tours/{tour:id}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');
     Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/{booking}/confirm-transfer', [AdminBookingController::class, 'confirmTransfer'])->name('bookings.confirm-transfer');
     Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');

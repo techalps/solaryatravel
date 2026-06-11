@@ -194,7 +194,10 @@
 @push('scripts')
 <script>
 (function () {
-    const departuresUrlTpl = @json(route('admin.bookings.departures.json', ['tour' => '__TOUR__']));
+    // URL relativo (senza host): la fetch deve sempre puntare all'host corrente,
+    // altrimenti se APP_URL non coincide con il dominio di navigazione la richiesta
+    // diventa cross-origin e fallisce ("Errore nel caricamento").
+    const departuresUrlTpl = @json(route('admin.bookings.departures.json', ['tour' => '__TOUR__'], false));
     const tourSelect = document.getElementById('tour_id');
     const depSelect = document.getElementById('tour_departure_id');
     const depStatus = document.getElementById('departure-status');
@@ -219,8 +222,11 @@
         depSelect.disabled = true;
         depStatus.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Caricamento partenze…</span>';
 
-        fetch(url, { headers: { 'Accept': 'application/json' } })
-            .then(r => r.json())
+        fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
             .then(data => {
                 currentDepartures = data.departures;
                 currentBrackets = data.brackets;
@@ -261,8 +267,9 @@
                 }
                 renderSummary();
             })
-            .catch(() => {
-                depStatus.innerHTML = '<span class="text-danger">Errore nel caricamento.</span>';
+            .catch((err) => {
+                console.error('Caricamento partenze fallito:', err);
+                depStatus.innerHTML = '<span class="text-danger">Errore nel caricamento delle partenze. Ricarica la pagina e riprova.</span>';
             });
     }
 
