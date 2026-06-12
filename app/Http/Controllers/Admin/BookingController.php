@@ -80,51 +80,68 @@ class BookingController extends Controller
         if ($request->filled('tour_id')) {
             $selectedTour = $tours->firstWhere('id', (int) $request->tour_id);
             if ($selectedTour) {
+                // Admin: tutte le partenze (anche passate) per consentire
+                // l'inserimento retroattivo. Più recenti in cima.
                 $departures = $selectedTour->departures()
-                    ->whereDate('departure_date', '>=', now()->startOfDay())
-                    ->where('status', 'scheduled')
-                    ->orderBy('departure_date')
+                    ->orderByDesc('departure_date')
                     ->orderBy('start_time')
                     ->get();
             }
         }
 
-        return view('admin.bookings.create', compact('tours', 'selectedTour', 'departures'));
+        $statuses = BookingStatus::cases();
+
+        return view('admin.bookings.create', compact('tours', 'selectedTour', 'departures', 'statuses'));
     }
 
     /**
      * JSON: partenze future di un tour (per popolamento dinamico del form).
      */
-    public function departuresJson(Tour $tour)
+    public function departuresJson(Tour $tour, \App\Services\PricingService $pricing)
     {
+        // Admin: tutte le partenze (anche passate) per l'inserimento retroattivo.
         $departures = $tour->departures()
-            ->whereDate('departure_date', '>=', now()->startOfDay())
-            ->where('status', 'scheduled')
-            ->orderBy('departure_date')
+            ->orderByDesc('departure_date')
             ->orderBy('start_time')
             ->get()
-            ->map(fn ($d) => [
-                'id' => $d->id,
-                'date' => \Carbon\Carbon::parse($d->departure_date)->format('d/m/Y'),
-                'time' => \Carbon\Carbon::parse($d->start_time)->format('H:i'),
-                'end_time' => $d->end_time ? \Carbon\Carbon::parse($d->end_time)->format('H:i') : null,
-                'available' => $d->seats_available,
-                'capacity' => $d->capacity,
-                'price_modifier' => (float) $d->price_modifier,
-            ]);
+            ->map(function ($d) use ($tour, $pricing) {
+                $period = $pricing->resolvePeriod($tour, $d->departure_date);
+                $modifier = (float) $d->price_modifier;
 
-        $brackets = $tour->ageBrackets()->orderBy('sort_order')->get()->map(fn ($b) => [
-            'id' => $b->id,
-            'label' => $b->label,
-            'price' => (float) $b->price,
-            'counts_as_seat' => (bool) $b->counts_as_seat,
-            'range_label' => $b->range_label,
-        ]);
+                // Fasce d'età valide per QUESTA data (i bracket sono per-periodo),
+                // con prezzo già modulato dal price_modifier della partenza.
+                $brackets = $pricing->resolveBrackets($tour, $d->departure_date)
+                    ->map(fn ($b) => [
+                        'id' => $b->id,
+                        'label' => $b->label,
+                        'price' => round((float) $b->price * $modifier, 2),
+                        'counts_as_seat' => (bool) $b->counts_as_seat,
+                        'range_label' => $b->range_label,
+                        'min_age' => (int) ($b->min_age ?? 0),
+                        'max_age' => $b->max_age !== null ? (int) $b->max_age : null,
+                    ])->values();
+
+                return [
+                    'id' => $d->id,
+                    'iso_date' => \Carbon\Carbon::parse($d->departure_date)->format('Y-m-d'),
+                    'date' => \Carbon\Carbon::parse($d->departure_date)->format('d/m/Y'),
+                    'time' => \Carbon\Carbon::parse($d->start_time)->format('H:i'),
+                    'end_time' => $d->end_time ? \Carbon\Carbon::parse($d->end_time)->format('H:i') : null,
+                    'available' => $d->seats_available,
+                    'capacity' => $d->capacity,
+                    'price_modifier' => $modifier,
+                    'adult_price' => $period
+                        ? round((float) $period->base_price * $modifier, 2)
+                        : null,
+                    'is_past' => \Carbon\Carbon::parse($d->departure_date)->lt(now()->startOfDay()),
+                    'status' => $d->status,
+                    'brackets' => $brackets,
+                ];
+            });
 
         return response()->json([
             'tour' => ['id' => $tour->id, 'name' => $tour->name],
             'departures' => $departures,
-            'brackets' => $brackets,
         ]);
     }
 
@@ -133,11 +150,19 @@ class BookingController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $statusValues = array_column(BookingStatus::cases(), 'value');
+
         $validated = $request->validate([
             'tour_id' => 'required|exists:tours,id',
             'tour_departure_id' => 'required|exists:tour_departures,id',
-            'bracket_counts' => 'required|array',
-            'bracket_counts.*' => 'nullable|integer|min:0',
+            // Partecipanti (come nel frontend): adulti con nome/cognome, bambini con DOB.
+            'adults' => 'required|array|min:1',
+            'adults.*.first_name' => 'required|string|max:100',
+            'adults.*.last_name' => 'required|string|max:100',
+            'children' => 'nullable|array',
+            'children.*.dob' => 'required_with:children|date|before:today',
+            'children.*.first_name' => 'required_with:children|string|max:100',
+            'children.*.last_name' => 'required_with:children|string|max:100',
             'addons' => 'nullable|array',
             'addons.*' => 'integer|exists:addons,id',
             'discount_code' => 'nullable|string|max:50',
@@ -146,37 +171,93 @@ class BookingController extends Controller
             'customer_email' => 'required|email|max:255',
             'customer_phone' => 'nullable|string|max:30',
             'customer_country' => 'nullable|string|max:5',
+            'customer_tax_code' => 'nullable|string|max:16',
             'special_requests' => 'nullable|string|max:1000',
-            'auto_confirm' => 'nullable|boolean',
+            'status' => 'required|in:' . implode(',', $statusValues),
         ]);
 
-        // Filtra bracket con quantità > 0
-        $validated['bracket_counts'] = array_filter(
-            array_map('intval', $validated['bracket_counts']),
-            fn ($n) => $n > 0
-        );
+        $status = BookingStatus::from($validated['status']);
 
-        if (empty($validated['bracket_counts'])) {
-            return back()->withInput()->with('error', 'Devi indicare almeno un partecipante.');
+        // Risolvi ogni bambino sul bracket della data (in base al DOB) e prepara
+        // la lista guests nell'ordine atteso dal service: adulti, poi bambini.
+        $adults = array_values($validated['adults']);
+        $children = array_values($validated['children'] ?? []);
+
+        $resolvedChildren = [];
+        $guests = [];
+        foreach ($adults as $i => $a) {
+            $guests[] = [
+                'first_name' => trim($a['first_name']),
+                'last_name' => trim($a['last_name']),
+                'tax_code' => $i === 0 && !empty($validated['customer_tax_code'])
+                    ? strtoupper(trim($validated['customer_tax_code']))
+                    : null,
+            ];
+        }
+        foreach ($children as $c) {
+            // Il bracket viene risolto dal service in base al DOB; qui passiamo solo DOB.
+            $resolvedChildren[] = ['dob' => $c['dob']];
+            $guests[] = [
+                'first_name' => trim($c['first_name']),
+                'last_name' => trim($c['last_name']),
+            ];
         }
 
-        try {
-            $booking = $this->bookingService->create($validated, 'admin');
+        $payload = [
+            'tour_id' => $validated['tour_id'],
+            'tour_departure_id' => $validated['tour_departure_id'],
+            'adults_count' => count($adults),
+            'children' => $resolvedChildren,
+            'addons' => $validated['addons'] ?? [],
+            'discount_code' => $validated['discount_code'] ?? null,
+            'customer_first_name' => $validated['customer_first_name'],
+            'customer_last_name' => $validated['customer_last_name'],
+            'customer_email' => $validated['customer_email'],
+            'customer_phone' => $validated['customer_phone'] ?? null,
+            'customer_country' => $validated['customer_country'] ?? 'IT',
+            'special_requests' => $validated['special_requests'] ?? null,
+            'guests' => $guests,
+            'status' => $status,           // stato scelto dall'admin
+            'admin_override' => true,      // consente partenze passate (retroattive)
+        ];
 
-            if ($request->boolean('auto_confirm')) {
-                $booking->update([
-                    'status' => BookingStatus::CONFIRMED,
-                    'confirmed_at' => now(),
-                ]);
-                // Pagamento già incassato off-platform → invia direttamente i biglietti
-                $this->sendTicketsEmail($booking);
-                $message = 'Prenotazione creata e confermata. Biglietti inviati al cliente.';
-            } else {
-                // Genera link Stripe e invia email al cliente
+        try {
+            $booking = $this->bookingService->create($payload, 'admin');
+
+            // Timestamp coerenti con lo stato scelto (utile per report e dettaglio).
+            // Per le retroattive usa la data della partenza se è già passata.
+            $eventTime = $booking->booking_date && $booking->booking_date->isPast()
+                ? $booking->booking_date
+                : now();
+            $stamps = match ($status) {
+                BookingStatus::CONFIRMED, BookingStatus::DEPOSIT_PAID, BookingStatus::AWAITING_TRANSFER
+                    => ['confirmed_at' => $booking->confirmed_at ?? $eventTime],
+                BookingStatus::CHECKED_IN
+                    => ['confirmed_at' => $booking->confirmed_at ?? $eventTime, 'checked_in_at' => $eventTime],
+                BookingStatus::COMPLETED
+                    => ['confirmed_at' => $booking->confirmed_at ?? $eventTime, 'completed_at' => $eventTime],
+                BookingStatus::CANCELLED, BookingStatus::REFUNDED
+                    => ['cancelled_at' => now()],
+                default => [],
+            };
+            if ($stamps) {
+                $booking->update($stamps);
+            }
+
+            // Email in base allo stato scelto:
+            //  - PENDING → invia il link di pagamento Stripe al cliente;
+            //  - CONFIRMED → pagamento già incassato off-platform: invia i biglietti;
+            //  - altri stati (deposito/bonifico/completata/...) → nessuna email automatica.
+            if ($status === BookingStatus::PENDING) {
                 $emailSent = $this->sendPaymentLinkEmail($booking);
                 $message = $emailSent
                     ? 'Prenotazione creata. Email con link di pagamento inviata al cliente.'
                     : 'Prenotazione creata, ma l\'invio dell\'email è fallito (controlla il log).';
+            } elseif ($status === BookingStatus::CONFIRMED) {
+                $this->sendTicketsEmail($booking);
+                $message = 'Prenotazione creata e confermata. Biglietti inviati al cliente.';
+            } else {
+                $message = 'Prenotazione creata con stato "' . $status->label() . '".';
             }
 
             return redirect()

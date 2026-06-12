@@ -6,10 +6,13 @@
     use Carbon\Carbon;
     $statusMap = [
         'pending' => ['label' => 'In attesa', 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fef3c7', 'border' => '#fcd34d'],
+        'deposit_paid' => ['label' => 'Acconto versato', 'icon' => 'fa-wallet', 'color' => '#0d9488', 'bg' => '#f0fdfa', 'border' => '#5eead4'],
+        'awaiting_transfer' => ['label' => 'Attesa bonifico', 'icon' => 'fa-building-columns', 'color' => '#ea580c', 'bg' => '#fff7ed', 'border' => '#fdba74'],
         'confirmed' => ['label' => 'Confermata', 'icon' => 'fa-circle-check', 'color' => '#059669', 'bg' => '#ecfdf5', 'border' => '#6ee7b7'],
         'checked_in' => ['label' => 'Check-in effettuato', 'icon' => 'fa-user-check', 'color' => '#0284c7', 'bg' => '#e0f2fe', 'border' => '#7dd3fc'],
         'completed' => ['label' => 'Completata', 'icon' => 'fa-flag-checkered', 'color' => '#1d4ed8', 'bg' => '#dbeafe', 'border' => '#93c5fd'],
         'cancelled' => ['label' => 'Annullata', 'icon' => 'fa-circle-xmark', 'color' => '#dc2626', 'bg' => '#fee2e2', 'border' => '#fca5a5'],
+        'refunded' => ['label' => 'Rimborsata', 'icon' => 'fa-rotate-left', 'color' => '#7c3aed', 'bg' => '#f5f3ff', 'border' => '#c4b5fd'],
         'no_show' => ['label' => 'No show', 'icon' => 'fa-user-slash', 'color' => '#64748b', 'bg' => '#f1f5f9', 'border' => '#cbd5e1'],
     ];
 @endphp

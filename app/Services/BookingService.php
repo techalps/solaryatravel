@@ -51,7 +51,12 @@ class BookingService
                 ->lockForUpdate()
                 ->findOrFail($data['tour_departure_id']);
 
-            if ($departure->status !== 'scheduled') {
+            // Inserimento manuale da admin: consente partenze passate / non più
+            // "scheduled" (registrazione retroattiva). I controlli di capacità
+            // restano attivi (distributeSeats blocca l'overbooking più sotto).
+            $adminOverride = ! empty($data['admin_override']);
+
+            if (! $adminOverride && $departure->status !== 'scheduled') {
                 throw new \Exception('Questa partenza non è disponibile.');
             }
 
@@ -125,16 +130,31 @@ class BookingService
                     ->subHours(\App\Support\Settings::balanceDueHours());
             }
 
-            // Stato iniziale: il bonifico parte in attesa incasso; gli altri in pending pagamento.
-            $initialStatus = $paymentType === 'bank_transfer'
-                ? BookingStatus::AWAITING_TRANSFER
-                : BookingStatus::PENDING;
+            // Stato iniziale: in admin lo stato è scelto esplicitamente (es. una
+            // prenotazione retroattiva nasce già Confermata/Completata). Altrimenti
+            // il bonifico parte in attesa incasso e gli altri in pending pagamento.
+            $explicitStatus = $data['status'] ?? null;
+            if ($explicitStatus instanceof BookingStatus) {
+                $initialStatus = $explicitStatus;
+            } elseif (is_string($explicitStatus) && $explicitStatus !== '') {
+                $initialStatus = BookingStatus::from($explicitStatus);
+            } else {
+                $initialStatus = $paymentType === 'bank_transfer'
+                    ? BookingStatus::AWAITING_TRANSFER
+                    : BookingStatus::PENDING;
+            }
 
-            // Scadenza: il bonifico istantaneo riserva i posti per N ore (default 24);
-            // il pagamento con carta scade dopo i minuti di "pending" configurati.
-            $paymentDeadline = $paymentType === 'bank_transfer'
-                ? now()->addHours(\App\Support\Settings::bankTransferExpiryHours())
-                : now()->addMinutes((int) config('booking.payment_expiry_minutes', 30));
+            // Scadenza pagamento: rilevante solo finché la prenotazione resta in
+            // attesa di pagamento. Se nasce già confermata (admin), nessuna scadenza.
+            $paymentDeadline = match (true) {
+                $initialStatus === BookingStatus::PENDING && $paymentType === 'bank_transfer'
+                    => now()->addHours(\App\Support\Settings::bankTransferExpiryHours()),
+                $initialStatus === BookingStatus::AWAITING_TRANSFER
+                    => now()->addHours(\App\Support\Settings::bankTransferExpiryHours()),
+                $initialStatus === BookingStatus::PENDING
+                    => now()->addMinutes((int) config('booking.payment_expiry_minutes', 30)),
+                default => null,
+            };
 
             $booking = Booking::create([
                 'user_id' => $data['user_id'] ?? auth()->id(),

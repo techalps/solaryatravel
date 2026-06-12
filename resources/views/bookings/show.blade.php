@@ -12,6 +12,7 @@
         'checked_in' => ['label' => 'Check-in effettuato', 'icon' => 'fa-user-check', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
         'completed' => ['label' => 'Completata', 'icon' => 'fa-flag-checkered', 'color' => '#1d4ed8', 'bg' => '#dbeafe'],
         'cancelled' => ['label' => 'Annullata', 'icon' => 'fa-circle-xmark', 'color' => '#dc2626', 'bg' => '#fee2e2'],
+        'refunded' => ['label' => 'Rimborsata', 'icon' => 'fa-rotate-left', 'color' => '#7c3aed', 'bg' => '#f5f3ff'],
         'no_show' => ['label' => 'No show', 'icon' => 'fa-user-slash', 'color' => '#64748b', 'bg' => '#f1f5f9'],
     ];
     $key = $booking->status?->value ?? (string) $booking->status;
