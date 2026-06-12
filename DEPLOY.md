@@ -3,8 +3,9 @@
 Procedura per pubblicare/aggiornare **solaryatravel** sull'hosting condiviso OVH.
 
 - **Dominio:** www.solaryatravel.com (registrato su Aruba, DNS → OVH)
-- **Hosting:** OVH condiviso, cluster `ssh02.cluster100.gra.hosting.ovh.net`, utente `solarys`
-- **PHP server:** 8.4 (il progetto richiede `^8.3`)
+- **Hosting:** OVH condiviso, host SSH `ssh.cluster100.hosting.ovh.net`, utente `solarys`
+- **PHP server:** 8.4 (il progetto richiede `^8.3`). Binario: `/usr/local/php8.4/bin/php`
+  (in shell non interattiva `php`/`php8.4` **non** sono nel PATH → usa il path assoluto).
 - **Laravel:** 13
 - **Root del progetto sul server:** `~/www`
 - **Il dominio serve da:** `www/public`
@@ -12,8 +13,8 @@ Procedura per pubblicare/aggiornare **solaryatravel** sull'hosting condiviso OVH
 Accesso SSH:
 
 ```bash
-ssh solarys@ssh02.cluster100.gra.hosting.ovh.net
-# autenticazione con password
+ssh solarys@ssh.cluster100.hosting.ovh.net
+# autenticazione con password (oppure chiave in ~/.ssh/authorized_keys)
 ```
 
 ---
@@ -177,6 +178,7 @@ Se hai rilanciato `storage:link` per errore, ripristina il link relativo (vedi 1
 |---|---|---|
 | Pagina bianca / 500 | manca `vendor/` | `php composer.phar install --no-dev --optimize-autoloader` |
 | 500 dopo aver copiato i file | config cache vecchia | `php artisan config:clear` + `rm -f bootstrap/cache/config.php` |
+| **500 su TUTTO il sito dopo `config:clear`** (anche da Admin → Deploy) + log `Failed to parse dotenv file` | `.env` **malformato** (es. una riga di comando shell incollata dentro il file). Finché la config era cachata l'errore restava nascosto; `config:clear` torna a leggere il `.env` e lo smaschera. | Controlla righe non conformi: `grep -nvE '^\s*#\|^\s*$\|^[A-Za-z_][A-Za-z0-9_]*=' .env` → correggile (backup prima: `cp -p .env .env.bak`), poi `php artisan config:clear`. ⚠️ Non rilanciare `config:cache`/`optimize` finché il `.env` non è pulito. |
 | Immagini 403 | symlink storage **assoluto** (vedi 1.4) | ricreare il symlink **relativo** |
 | Immagini 404 | file non caricati o `APP_URL` errato | verificare `storage/app/public` e `APP_URL` |
 | `ERR_HTTP2_PROTOCOL_ERROR` su `livewire.min.js` + funzioni JS "is not defined" | asset Livewire serviti via PHP sotto HTTP/2 | `php artisan livewire:publish --assets` (vedi 1.5) |
