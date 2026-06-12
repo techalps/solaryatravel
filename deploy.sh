@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+#
+# Deploy di produzione per Solarya Travel su OVH condiviso.
+# Eseguito da GitHub Actions (workflow .github/workflows/deploy.yml) via SSH,
+# oppure manualmente:  cd ~/www && ./deploy.sh
+#
+# Idempotente: composer e migrate girano SOLO se serve (lock cambiato /
+# migration pendenti). Sempre: pull + clear cache + asset Livewire + symlink.
+#
+set -euo pipefail
+
+# --- Config ---------------------------------------------------------------
+APP_DIR="$HOME/www"
+BRANCH="production"
+PHP="/usr/local/php8.4/bin/php"          # su OVH php/php8.4 non sono nel PATH non-interattivo
+COMPOSER="$PHP composer.phar"
+
+cd "$APP_DIR"
+
+echo "▶ Deploy avviato $(date '+%Y-%m-%d %H:%M:%S')"
+echo "▶ Branch: $BRANCH"
+
+# --- 1. Aggiorna il codice ------------------------------------------------
+# Hash del lock PRIMA del pull, per capire se le dipendenze sono cambiate.
+LOCK_BEFORE="$(md5sum composer.lock 2>/dev/null | awk '{print $1}' || true)"
+
+git fetch --prune origin
+git checkout "$BRANCH"
+git reset --hard "origin/$BRANCH"        # allinea esattamente al remote (niente conflitti su file locali)
+
+echo "▶ Ora su commit: $(git log -1 --oneline)"
+
+# --- 2. Dipendenze (solo se composer.lock è cambiato) ---------------------
+LOCK_AFTER="$(md5sum composer.lock 2>/dev/null | awk '{print $1}' || true)"
+if [ "$LOCK_BEFORE" != "$LOCK_AFTER" ] || [ ! -d vendor ]; then
+    echo "▶ composer.lock cambiato → composer install"
+    $COMPOSER install --no-dev --optimize-autoloader --no-interaction
+else
+    echo "▷ composer.lock invariato → salto composer install"
+fi
+
+# --- 3. Migration (solo se ce ne sono di pendenti) ------------------------
+if $PHP artisan migrate:status 2>/dev/null | grep -q "Pending"; then
+    echo "▶ Migration pendenti → migrate --force"
+    $PHP artisan migrate --force
+else
+    echo "▷ Nessuna migration pendente"
+fi
+
+# --- 4. Asset Livewire statici (fix HTTP/2 OVH) ---------------------------
+$PHP artisan livewire:publish --assets >/dev/null
+
+# --- 5. Symlink storage RELATIVO (OVH non attraversa /home in assoluto) ----
+if [ ! -L public/storage ] || [ "$(readlink public/storage)" != "../storage/app/public" ]; then
+    echo "▶ Ricreo symlink storage relativo"
+    rm -f public/storage
+    ln -s ../storage/app/public public/storage
+fi
+
+# --- 6. Cache: clear poi rebuild ------------------------------------------
+# NB: niente config:cache automatico (un .env malformato causerebbe 500 a tappeto).
+$PHP artisan config:clear
+$PHP artisan route:clear
+$PHP artisan view:clear
+$PHP artisan event:clear || true
+
+echo "✓ Deploy completato $(date '+%Y-%m-%d %H:%M:%S')"
