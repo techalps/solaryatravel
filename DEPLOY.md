@@ -21,6 +21,9 @@ ssh solarys@ssh.cluster100.hosting.ovh.net
 
 ## 1. Primo deploy (installazione iniziale)
 
+> Questa sezione serve **solo al setup iniziale** di un nuovo server. Per i rilasci
+> di tutti i giorni si usa l'**autodeploy** descritto nella sezione 2.
+
 I file vanno caricati in `~/www` (via Git o FTP). **Non** si copiano da locale: `vendor/` e `storage/app/public/`.
 
 ### 1.1 Dipendenze Composer
@@ -154,21 +157,59 @@ Default: acconto e bonifico **disattivi** → comportamento invariato finché no
 
 ---
 
-## 2. Aggiornamenti successivi (deploy di nuove versioni)
+## 2. Aggiornamenti successivi (deploy automatico)
+
+Il deploy è **automatico** via GitHub Actions: ogni push sul branch **`production`**
+si connette in SSH al server ed esegue `deploy.sh`. Lo sviluppo avviene su `main`.
+
+### Flusso di rilascio
+
+```bash
+# sviluppi su main come sempre, poi quando vuoi rilasciare in produzione:
+git checkout production
+git merge main
+git push origin production      # ← fa partire l'autodeploy (~10s)
+git checkout main               # torni a sviluppare
+```
+
+Avvio manuale alternativo: tab **Actions → "Deploy in produzione (OVH)" → Run workflow**,
+oppure direttamente sul server `cd ~/www && ./deploy.sh`.
+
+### Cosa fa `deploy.sh` (versionato nel repo)
+
+1. `git fetch` + `git reset --hard origin/production` (allinea ESATTAMENTE al remote)
+2. `composer install` **solo se** `composer.lock` è cambiato
+3. `migrate --force` **solo se** ci sono migration pendenti
+4. `livewire:publish --assets` (asset Livewire statici, vedi 1.5)
+5. Ricrea il symlink storage **relativo** se manca (vedi 1.4)
+6. `config:clear` + `route:clear` + `view:clear` + `event:clear`
+
+⚠️ `deploy.sh` **non** lancia `config:cache`/`optimize` di proposito: con un `.env`
+malformato causerebbe un 500 a tappeto (vedi Troubleshooting).
+
+⚠️ `git reset --hard` sovrascrive le modifiche locali ai file tracciati: **non editare
+codice direttamente sul server**, passa sempre dal repo. `.env`, `vendor/` e `storage/`
+sono gitignored e non vengono toccati.
+
+### Componenti dell'infrastruttura di deploy
+
+- **`.github/workflows/deploy.yml`** — trigger su push a `production`, usa `appleboy/ssh-action`.
+- **GitHub → Settings → Secrets and variables → Actions**: `OVH_SSH_HOST`,
+  `OVH_SSH_USER`, `OVH_SSH_KEY` (chiave privata dedicata Actions→OVH).
+- **GitHub → Settings → Deploy keys**: "OVH produzione (solarys)" — chiave pubblica
+  del server (`~/.ssh/github_deploy.pub`), read-only, per il `git pull` dal server.
+- **Server** `~/.ssh/config`: blocco `Host github.com` con `IdentityFile ~/.ssh/github_deploy`.
+- **Server** `git config core.fileMode false` (evita diff spuri sui permessi).
+
+### Primo deploy / ripristino auth git (se il fetch dà "Permission denied (publickey)")
 
 ```bash
 cd ~/www
-# 1. aggiorna i file (git pull / FTP)
-php composer.phar install --no-dev --optimize-autoloader   # se cambiate dipendenze
-php artisan livewire:publish --assets                      # ripubblica asset Livewire statici
-php artisan migrate --force                                # se ci sono nuove migration
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
-php artisan route:clear
+# rimuovi eventuali sshCommand residui che puntano a chiavi in /tmp:
+git config --local --unset core.sshCommand 2>/dev/null || true
+# verifica che il pull funzioni:
+git ls-remote --heads origin
 ```
-
-Se hai rilanciato `storage:link` per errore, ripristina il link relativo (vedi 1.4).
 
 ---
 
