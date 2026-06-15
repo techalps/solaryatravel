@@ -13,7 +13,7 @@
                                 </a>
                             </div>
                             <p class="mb-20">Esperienze esclusive in catamarano lungo
-                                la Costiera. Comfort, eleganza e servizio
+                                le coste della Sardegna. Comfort, eleganza e servizio
                                 impeccabile per momenti indimenticabili in mare.</p>
                             <div class="tg-footer-social">
                                 <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
