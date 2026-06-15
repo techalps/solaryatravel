@@ -97,47 +97,88 @@ class BookingController extends Controller
     /**
      * JSON: partenze future di un tour (per popolamento dinamico del form).
      */
-    public function departuresJson(Tour $tour, \App\Services\PricingService $pricing)
-    {
-        // Admin: tutte le partenze (anche passate) per l'inserimento retroattivo.
-        $departures = $tour->departures()
-            ->orderByDesc('departure_date')
-            ->orderBy('start_time')
-            ->get()
-            ->map(function ($d) use ($tour, $pricing) {
-                $period = $pricing->resolvePeriod($tour, $d->departure_date);
-                $modifier = (float) $d->price_modifier;
+    public function departuresJson(
+        Tour $tour,
+        \App\Services\PricingService $pricing,
+        \App\Services\DepartureGeneratorService $generator
+    ) {
+        // Stesse date prenotabili del frontend: vengono generate dai PERIODI del tour
+        // (giorni operativi + orari), non solo dalle righe già materializzate.
+        // In più, per l'admin includiamo il passato (retroattivo) e uniamo le
+        // tour_departures già esistenti (anche fuori dai periodi, es. partenze ad hoc).
+        $from = now()->subMonths(12)->startOfDay();
+        $to = now()->addDays(60)->endOfDay();
 
-                // Fasce d'età valide per QUESTA data (i bracket sono per-periodo),
-                // con prezzo già modulato dal price_modifier della partenza.
-                $brackets = $pricing->resolveBrackets($tour, $d->departure_date)
-                    ->map(fn ($b) => [
-                        'id' => $b->id,
-                        'label' => $b->label,
-                        'price' => round((float) $b->price * $modifier, 2),
-                        'counts_as_seat' => (bool) $b->counts_as_seat,
-                        'range_label' => $b->range_label,
-                        'min_age' => (int) ($b->min_age ?? 0),
-                        'max_age' => $b->max_age !== null ? (int) $b->max_age : null,
-                    ])->values();
+        // 1) Partenze virtuali dai periodi (incl. passato).
+        $virtual = $generator->generate($tour, $from->copy(), $to->copy(), includePast: true);
 
-                return [
-                    'id' => $d->id,
-                    'iso_date' => \Carbon\Carbon::parse($d->departure_date)->format('Y-m-d'),
-                    'date' => \Carbon\Carbon::parse($d->departure_date)->format('d/m/Y'),
-                    'time' => \Carbon\Carbon::parse($d->start_time)->format('H:i'),
-                    'end_time' => $d->end_time ? \Carbon\Carbon::parse($d->end_time)->format('H:i') : null,
-                    'available' => $d->seats_available,
-                    'capacity' => $d->capacity,
-                    'price_modifier' => $modifier,
-                    'adult_price' => $period
-                        ? round((float) $period->base_price * $modifier, 2)
-                        : null,
-                    'is_past' => \Carbon\Carbon::parse($d->departure_date)->lt(now()->startOfDay()),
-                    'status' => $d->status,
-                    'brackets' => $brackets,
-                ];
-            });
+        // Indicizza per (data, orario) per evitare duplicati con quelle materializzate.
+        $byKey = [];
+        $durationMin = (int) round(($tour->duration_hours ?? 1) * 60);
+
+        foreach ($virtual as $v) {
+            $start = strlen($v['time']) === 5 ? $v['time'] . ':00' : $v['time'];
+            $key = $v['date'] . ' ' . substr($start, 0, 5);
+            $byKey[$key] = [
+                'departure_date' => $v['date'],
+                'start_time' => $start,
+            ];
+        }
+
+        // 2) Unisci le partenze già presenti a DB (sovrascrivono la virtuale di pari chiave).
+        foreach ($tour->departures()->whereDate('departure_date', '>=', $from->toDateString())->get() as $d) {
+            $key = \Carbon\Carbon::parse($d->departure_date)->format('Y-m-d')
+                . ' ' . \Carbon\Carbon::parse($d->start_time)->format('H:i');
+            $byKey[$key] = ['model' => $d];
+        }
+
+        // 3) Costruisci il payload SENZA creare righe: le virtuali restano tali
+        //    (id sintetico "virt:Y-m-d:H:i") e verranno materializzate solo al
+        //    salvataggio (vedi store()). Le già esistenti usano il loro id reale.
+        $departures = collect($byKey)->map(function ($entry, $key) use ($tour, $pricing) {
+            $d = $entry['model'] ?? null;
+
+            // Data/orario della partenza (dal modello reale o dalla virtuale).
+            $isoDate = $d
+                ? \Carbon\Carbon::parse($d->departure_date)->format('Y-m-d')
+                : $entry['departure_date'];
+            $time = $d
+                ? \Carbon\Carbon::parse($d->start_time)->format('H:i')
+                : substr($entry['start_time'], 0, 5);
+
+            $period = $pricing->resolvePeriod($tour, $isoDate);
+            $modifier = $d ? (float) $d->price_modifier : 1.0;
+
+            $brackets = $pricing->resolveBrackets($tour, $isoDate)
+                ->map(fn ($b) => [
+                    'id' => $b->id,
+                    'label' => $b->label,
+                    'price' => round((float) $b->price * $modifier, 2),
+                    'counts_as_seat' => (bool) $b->counts_as_seat,
+                    'range_label' => $b->range_label,
+                    'min_age' => (int) ($b->min_age ?? 0),
+                    'max_age' => $b->max_age !== null ? (int) $b->max_age : null,
+                ])->values();
+
+            return [
+                // id reale (numerico) se la partenza esiste, altrimenti id sintetico.
+                'id' => $d ? (string) $d->id : ('virt:' . $isoDate . ':' . $time),
+                'iso_date' => $isoDate,
+                'date' => \Carbon\Carbon::parse($isoDate)->format('d/m/Y'),
+                'time' => $time,
+                'available' => $d ? $d->seats_available : null,
+                'capacity' => $d ? $d->capacity : $tour->total_capacity,
+                'price_modifier' => $modifier,
+                'adult_price' => $period
+                    ? round((float) $period->base_price * $modifier, 2)
+                    : null,
+                'is_past' => \Carbon\Carbon::parse($isoDate)->lt(now()->startOfDay()),
+                'status' => $d ? $d->status : 'scheduled',
+                'brackets' => $brackets,
+            ];
+        })
+        ->sortByDesc('iso_date')
+        ->values();
 
         return response()->json([
             'tour' => ['id' => $tour->id, 'name' => $tour->name],
@@ -154,7 +195,9 @@ class BookingController extends Controller
 
         $validated = $request->validate([
             'tour_id' => 'required|exists:tours,id',
-            'tour_departure_id' => 'required|exists:tour_departures,id',
+            // Può essere un id reale (numerico) di tour_departures oppure un id
+            // sintetico "virt:Y-m-d:H:i" per una partenza virtuale da materializzare.
+            'tour_departure_id' => 'required|string',
             // Partecipanti (come nel frontend): adulti con nome/cognome, bambini con DOB.
             'adults' => 'required|array|min:1',
             'adults.*.first_name' => 'required|string|max:100',
@@ -177,6 +220,19 @@ class BookingController extends Controller
         ]);
 
         $status = BookingStatus::from($validated['status']);
+
+        // Risolvi l'id partenza: reale (numerico) o virtuale ("virt:Y-m-d:H:i").
+        // La virtuale viene materializzata ora con firstOrCreate (stessa logica
+        // del flusso pubblico), così la prenotazione referenzia una riga vera.
+        try {
+            $departureId = $this->resolveDepartureId(
+                (int) $validated['tour_id'],
+                (string) $validated['tour_departure_id']
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+        $validated['tour_departure_id'] = $departureId;
 
         // Risolvi ogni bambino sul bracket della data (in base al DOB) e prepara
         // la lista guests nell'ordine atteso dal service: adulti, poi bambini.
@@ -266,6 +322,78 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * Risolve l'id partenza inviato dal form admin in un id REALE di tour_departures.
+     *
+     * Accetta:
+     *  - un id numerico esistente (partenza già materializzata);
+     *  - un id sintetico "virt:Y-m-d:H:i" (partenza virtuale da periodo): viene
+     *    verificata contro i periodi del tour e materializzata con firstOrCreate.
+     *
+     * @throws \RuntimeException se la partenza non è valida per il tour.
+     */
+    protected function resolveDepartureId(int $tourId, string $rawId): int
+    {
+        // Id reale già esistente.
+        if (ctype_digit($rawId)) {
+            $dep = \App\Models\TourDeparture::where('tour_id', $tourId)->find((int) $rawId);
+            if (!$dep) {
+                throw new \RuntimeException('Partenza non valida per questo tour.');
+            }
+            return $dep->id;
+        }
+
+        // Id virtuale "virt:Y-m-d:H:i".
+        if (!preg_match('/^virt:(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2})$/', $rawId, $m)) {
+            throw new \RuntimeException('Partenza non valida.');
+        }
+        [$date, $time] = [$m[1], $m[2]];
+
+        $tour = Tour::with('periods')->findOrFail($tourId);
+
+        // Verifica che data+orario siano coperti da un periodo del tour
+        // (stessa regola di BookingController::start e BookingForm::resolveDeparture).
+        $period = $tour->periods
+            ->first(function ($p) use ($date, $time) {
+                $within = \Carbon\Carbon::parse($date)->betweenIncluded(
+                    \Carbon\Carbon::parse($p->start_date),
+                    \Carbon\Carbon::parse($p->end_date)
+                );
+                if (!$within) {
+                    return false;
+                }
+                $weekdays = is_array($p->weekdays) && !empty($p->weekdays) ? $p->weekdays : [1, 2, 3, 4, 5, 6, 7];
+                $times = is_array($p->times) && !empty($p->times) ? $p->times : ['10:00'];
+                $iso = \Carbon\Carbon::parse($date)->isoWeekday();
+                return in_array($iso, array_map('intval', $weekdays), true)
+                    && in_array($time, array_map(fn ($t) => substr($t, 0, 5), $times), true);
+            });
+
+        if (!$period) {
+            throw new \RuntimeException('La data o l\'orario selezionato non è disponibile per questo tour.');
+        }
+
+        $startTime = $time . ':00';
+        $endTime = \Carbon\Carbon::parse($startTime)
+            ->addMinutes((int) round(($tour->duration_hours ?? 1) * 60))
+            ->format('H:i:s');
+
+        $dep = \App\Models\TourDeparture::firstOrCreate(
+            [
+                'tour_id' => $tour->id,
+                'departure_date' => $date,
+                'start_time' => $startTime,
+            ],
+            [
+                'end_time' => $endTime,
+                'status' => 'scheduled',
+                'price_modifier' => 1.0,
+            ]
+        );
+
+        return $dep->id;
     }
 
     /**

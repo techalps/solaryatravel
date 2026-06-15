@@ -29,7 +29,7 @@ class DepartureGeneratorService
      *
      * @return Collection<int, array>
      */
-    public function generate(Tour $tour, Carbon $from, Carbon $to): Collection
+    public function generate(Tour $tour, Carbon $from, Carbon $to, bool $includePast = false): Collection
     {
         $tour->loadMissing(['periods', 'catamarans']);
 
@@ -91,8 +91,8 @@ class DepartureGeneratorService
 
                 foreach ($times as $time) {
                     $depAt = $date->copy()->setTimeFromTimeString($time);
-                    if ($depAt->lt($now)) {
-                        continue; // skip nel passato
+                    if (!$includePast && $depAt->lt($now)) {
+                        continue; // skip nel passato (salvo richiesta esplicita, es. admin retroattivo)
                     }
                     $results->push([
                         'tour_id' => $tour->id,

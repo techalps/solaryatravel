@@ -390,19 +390,27 @@
         return { age, bracket: b };
     }
 
+    function childBadgeHtml(c) {
+        if (!c.dob) return '';
+        const res = resolveBracket(c.dob);
+        return res.bracket
+            ? `<div class="ab-child-resolved ok mt-1"><i class="bi bi-check-circle me-1"></i>${escapeHtml(res.bracket.label)} (${res.age} anni) · ${eur(res.bracket.price)}</div>`
+            : `<div class="ab-child-resolved err mt-1"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(res.error || '')}</div>`;
+    }
+
+    // Aggiorna SOLO il badge della riga (senza ridisegnare gli input): così
+    // il campo data non viene ricreato a ogni cifra digitata e mantiene il focus.
+    function updateChildBadge(i) {
+        const slot = childrenList.querySelector(`[data-child-badge="${i}"]`);
+        if (slot) slot.innerHTML = childBadgeHtml(children[i]);
+    }
+
     function renderChildren() {
         const hasBrackets = currentDeparture && (currentDeparture.brackets || []).length > 0;
         document.getElementById('add-child').disabled = !hasBrackets;
         childrenEmpty.classList.toggle('d-none', children.length > 0);
 
         childrenList.innerHTML = children.map((c, i) => {
-            const res = resolveBracket(c.dob);
-            let info = '';
-            if (c.dob) {
-                info = res.bracket
-                    ? `<div class="ab-child-resolved ok mt-1"><i class="bi bi-check-circle me-1"></i>${escapeHtml(res.bracket.label)} (${res.age} anni) · ${eur(res.bracket.price)}</div>`
-                    : `<div class="ab-child-resolved err mt-1"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(res.error || '')}</div>`;
-            }
             return `
             <div class="ab-participant-row">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -420,7 +428,7 @@
                         <input type="text" class="form-control form-control-sm" placeholder="Cognome" name="children[${i}][last_name]" value="${escapeHtml(c.last_name)}" data-child="${i}" data-field="last_name">
                     </div>
                 </div>
-                ${info}
+                <div data-child-badge="${i}">${childBadgeHtml(c)}</div>
             </div>`;
         }).join('');
     }
@@ -480,8 +488,14 @@
         if (t.dataset.adult != null) {
             adults[+t.dataset.adult][t.dataset.field] = t.value;
         } else if (t.dataset.child != null) {
-            children[+t.dataset.child][t.dataset.field] = t.value;
-            if (t.dataset.field === 'dob') { renderChildren(); renderSummary(); }
+            const i = +t.dataset.child;
+            children[i][t.dataset.field] = t.value;
+            if (t.dataset.field === 'dob') {
+                // Aggiorna solo il badge della riga (non ricreare l'input data,
+                // altrimenti si perde il focus mentre si digita l'anno) + riepilogo.
+                updateChildBadge(i);
+                renderSummary();
+            }
         }
     });
     document.addEventListener('click', e => {
