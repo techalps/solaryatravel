@@ -23,13 +23,17 @@ class ReportController extends Controller
         $startDate = $this->getStartDate($period);
         $endDate = now();
 
-        $revenue = Payment::where('status', PaymentStatus::SUCCEEDED)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('amount');
+        // Ricavi = prenotazioni in stato incassato/confermato (qualsiasi canale,
+        // incluse le retroattive/manuali senza pagamento Stripe), per data partenza.
+        $revenueStatuses = BookingStatus::revenueStatusValues();
 
-        $previousRevenue = Payment::where('status', PaymentStatus::SUCCEEDED)
-            ->whereBetween('created_at', [$startDate->copy()->subDays($startDate->diffInDays($endDate)), $startDate])
-            ->sum('amount');
+        $revenue = Booking::whereIn('status', $revenueStatuses)
+            ->whereBetween('booking_date', [$startDate, $endDate])
+            ->sum('total_amount');
+
+        $previousRevenue = Booking::whereIn('status', $revenueStatuses)
+            ->whereBetween('booking_date', [$startDate->copy()->subDays($startDate->diffInDays($endDate)), $startDate])
+            ->sum('total_amount');
 
         $totalBookings = Booking::whereBetween('created_at', [$startDate, $endDate])->count();
         $confirmedBookings = Booking::where('status', BookingStatus::CONFIRMED)
@@ -46,9 +50,9 @@ class ReportController extends Controller
             ->limit(5)
             ->get();
 
-        $revenueByDay = Payment::where('status', PaymentStatus::SUCCEEDED)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(amount) as total')
+        $revenueByDay = Booking::whereIn('status', $revenueStatuses)
+            ->whereBetween('booking_date', [$startDate, $endDate])
+            ->selectRaw('DATE(booking_date) as date, SUM(total_amount) as total')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -75,42 +79,65 @@ class ReportController extends Controller
         $startDate = $this->getStartDate($period);
         $endDate = now();
 
-        $dailyRevenue = Payment::where('status', PaymentStatus::SUCCEEDED)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(amount) as total, COUNT(*) as transactions')
+        // Ricavi = prenotazioni in stato incassato/confermato (qualsiasi canale,
+        // incluse le retroattive/manuali), aggregati per data partenza.
+        $revenueStatuses = BookingStatus::revenueStatusValues();
+
+        // "transactions" qui = numero di prenotazioni che fanno ricavo nel giorno.
+        $dailyRevenue = Booking::whereIn('status', $revenueStatuses)
+            ->whereBetween('booking_date', [$startDate, $endDate])
+            ->selectRaw('DATE(booking_date) as date, SUM(total_amount) as total, COUNT(*) as transactions')
             ->groupBy('date')
             ->orderBy('date', 'desc')
             ->get();
 
         $revenueByTour = Booking::with('tour')
-            ->whereHas('payments', fn($q) => $q->where('status', PaymentStatus::SUCCEEDED))
+            ->whereIn('status', $revenueStatuses)
             ->whereBetween('booking_date', [$startDate, $endDate])
             ->selectRaw('tour_id, SUM(total_amount) as total')
             ->groupBy('tour_id')
             ->orderByDesc('total')
             ->get();
 
+        // La ripartizione per canale di incasso resta basata sui pagamenti reali
+        // (Stripe/bonifico/ecc.). Le prenotazioni manuali senza pagamento confluiscono
+        // in una voce "manuale/registrato" così il dato resta leggibile.
         $revenueByGateway = Payment::where('status', PaymentStatus::SUCCEEDED)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('gateway, SUM(amount) as total, COUNT(*) as count')
             ->groupBy('gateway')
             ->get();
 
-        $monthlyRevenue = Payment::where('status', PaymentStatus::SUCCEEDED)
-            ->whereYear('created_at', now()->year)
-            ->selectRaw('MONTH(created_at) as month, SUM(amount) as total')
+        $manualRevenue = Booking::whereIn('status', $revenueStatuses)
+            ->whereDoesntHave('payments', fn ($q) => $q->where('status', PaymentStatus::SUCCEEDED))
+            ->whereBetween('booking_date', [$startDate, $endDate])
+            ->selectRaw('SUM(total_amount) as total, COUNT(*) as count')
+            ->first();
+        if ($manualRevenue && (float) $manualRevenue->total > 0) {
+            $revenueByGateway->push((object) [
+                'gateway' => 'manuale',
+                'total' => (float) $manualRevenue->total,
+                'count' => (int) $manualRevenue->count,
+            ]);
+            $revenueByGateway = $revenueByGateway->sortByDesc('total')->values();
+        }
+
+        $monthlyRevenue = Booking::whereIn('status', $revenueStatuses)
+            ->whereYear('booking_date', now()->year)
+            ->selectRaw('MONTH(booking_date) as month, SUM(total_amount) as total')
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('total', 'month')
             ->toArray();
 
         $stats = [
-            'total' => Payment::where('status', PaymentStatus::SUCCEEDED)
-                ->whereBetween('created_at', [$startDate, $endDate])->sum('amount'),
-            'transactions' => Payment::where('status', PaymentStatus::SUCCEEDED)
-                ->whereBetween('created_at', [$startDate, $endDate])->count(),
-            'avg_transaction' => Payment::where('status', PaymentStatus::SUCCEEDED)
-                ->whereBetween('created_at', [$startDate, $endDate])->avg('amount') ?? 0,
+            'total' => Booking::whereIn('status', $revenueStatuses)
+                ->whereBetween('booking_date', [$startDate, $endDate])->sum('total_amount'),
+            'transactions' => Booking::whereIn('status', $revenueStatuses)
+                ->whereBetween('booking_date', [$startDate, $endDate])->count(),
+            'avg_transaction' => Booking::whereIn('status', $revenueStatuses)
+                ->whereBetween('booking_date', [$startDate, $endDate])->avg('total_amount') ?? 0,
+            // I rimborsi restano un dato di cassa reale (pagamenti rimborsati).
             'refunds' => Payment::where('status', PaymentStatus::REFUNDED)
                 ->whereBetween('created_at', [$startDate, $endDate])->sum('amount'),
         ];

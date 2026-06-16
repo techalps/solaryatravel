@@ -249,6 +249,94 @@ class PricingService
     }
 
     /**
+     * Pricing con prezzo TOTALE inserito a mano dall'admin (tour "su richiesta",
+     * es. catamarano riservato: prezzo unico per l'intera prenotazione).
+     * Adulti e bambini servono solo a contare i posti; ognuno occupa un posto.
+     * Il totale viene attribuito al primo posto (intestatario), gli altri a 0.
+     *
+     * @param  float  $totalPrice  prezzo totale della prenotazione
+     * @param  int  $childrenCount  numero di bambini (ognuno = un posto)
+     * @param  array<int, int>  $addonIds
+     */
+    public function calculateManual(
+        Tour $tour,
+        int $adultsCount,
+        int $childrenCount,
+        float $totalPrice,
+        array $addonIds = [],
+        ?string $discountCode = null
+    ): array {
+        $adultsCount = max(0, $adultsCount);
+        $childrenCount = max(0, $childrenCount);
+        $totalPrice = max(0.0, $totalPrice);
+
+        // Ogni partecipante (adulto o bambino) occupa un posto.
+        $countingSeats = $adultsCount + $childrenCount;
+        $totalSeats = $countingSeats;
+
+        // Il prezzo è il totale "secco" della prenotazione.
+        $basePrice = $totalPrice;
+
+        $addonsTotal = $this->calculateAddonsTotal($addonIds, $countingSeats, $tour->duration_hours ?? 0);
+
+        $discountAmount = 0.0;
+        $discountCodeId = null;
+        if ($discountCode) {
+            $applied = $this->validateAndApplyDiscount($discountCode, $basePrice + $addonsTotal);
+            if ($applied) {
+                $discountAmount = $applied['amount'];
+                $discountCodeId = $applied['id'];
+            }
+        }
+
+        $subtotal = max(0, $basePrice + $addonsTotal - $discountAmount);
+        $taxRate = (float) config('booking.tax_rate', 0) / 100;
+        $taxAmount = $subtotal * $taxRate;
+        $totalAmount = $subtotal + $taxAmount;
+
+        $bracketDetails = [];
+        if ($adultsCount > 0) {
+            $bracketDetails[] = [
+                'bracket_id' => null,
+                'label' => 'Adulto',
+                'unit_price' => 0,
+                'count' => $adultsCount,
+                'line_total' => round($basePrice, 2), // il totale è attribuito qui
+                'counts_as_seat' => true,
+            ];
+        }
+        if ($childrenCount > 0) {
+            $bracketDetails[] = [
+                'bracket_id' => null,
+                'label' => 'Bambini',
+                'unit_price' => 0,
+                'count' => $childrenCount,
+                'line_total' => 0,
+                'counts_as_seat' => true,
+            ];
+        }
+
+        return [
+            'base_price' => round($basePrice, 2),
+            'addons_total' => round($addonsTotal, 2),
+            'discount_amount' => round($discountAmount, 2),
+            'discount_code_id' => $discountCodeId,
+            'subtotal' => round($subtotal, 2),
+            'tax_rate' => $taxRate * 100,
+            'tax_amount' => round($taxAmount, 2),
+            'total_amount' => round($totalAmount, 2),
+            'total_seats' => $totalSeats,
+            'counting_seats' => $countingSeats,
+            'brackets' => $bracketDetails,
+            'adults_count' => $adultsCount,
+            // Tutto il prezzo sul primo posto (intestatario); gli altri a 0.
+            'adult_unit_price' => $adultsCount > 0 ? round($basePrice, 2) : 0,
+            'manual_total_on_first_seat' => round($basePrice, 2),
+            'unresolved_children' => 0,
+        ];
+    }
+
+    /**
      * Trova la fascia bambini che copre l'età alla data di partenza.
      */
     public function resolveBracketForDob(

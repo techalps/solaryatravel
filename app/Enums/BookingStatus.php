@@ -59,6 +59,33 @@ enum BookingStatus: string
         };
     }
 
+    /**
+     * Stati che concorrono al ricavo (pagamento incassato o comunque dovuto),
+     * indipendentemente dal canale di pagamento (Stripe, bonifico, manuale/retroattivo).
+     *
+     * @return array<int, self>
+     */
+    public static function revenueStatuses(): array
+    {
+        return [
+            self::DEPOSIT_PAID,
+            self::AWAITING_TRANSFER,
+            self::CONFIRMED,
+            self::CHECKED_IN,
+            self::COMPLETED,
+        ];
+    }
+
+    /**
+     * Valori stringa degli stati che concorrono al ricavo (per le query DB).
+     *
+     * @return array<int, string>
+     */
+    public static function revenueStatusValues(): array
+    {
+        return array_map(fn (self $s) => $s->value, self::revenueStatuses());
+    }
+
     public function canTransitionTo(BookingStatus $status): bool
     {
         return match($this) {

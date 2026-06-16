@@ -28,14 +28,14 @@
                 <span class="rpt-kpi-sub">netto del periodo</span>
             </div>
             <div class="rpt-kpi">
-                <span class="rpt-kpi-label"><i class="bi bi-receipt"></i>Transazioni</span>
+                <span class="rpt-kpi-label"><i class="bi bi-receipt"></i>Prenotazioni</span>
                 <span class="rpt-kpi-value">{{ $stats['transactions'] }}</span>
-                <span class="rpt-kpi-sub">pagamenti riusciti</span>
+                <span class="rpt-kpi-sub">confermate/incassate</span>
             </div>
             <div class="rpt-kpi">
-                <span class="rpt-kpi-label"><i class="bi bi-graph-up-arrow"></i>Media transazione</span>
+                <span class="rpt-kpi-label"><i class="bi bi-graph-up-arrow"></i>Valore medio</span>
                 <span class="rpt-kpi-value">€{{ number_format($stats['avg_transaction'], 0, ',', '.') }}</span>
-                <span class="rpt-kpi-sub">per pagamento</span>
+                <span class="rpt-kpi-sub">per prenotazione</span>
             </div>
             <div class="rpt-kpi is-accent-danger">
                 <span class="rpt-kpi-label"><i class="bi bi-arrow-counterclockwise"></i>Rimborsi</span>
@@ -55,7 +55,7 @@
             <section class="rpt-section">
                 <div class="rpt-section-head">
                     <h2 class="rpt-section-title"><i class="bi bi-compass"></i>Ricavi per tour</h2>
-                    <span class="rpt-section-sub">solo prenotazioni pagate</span>
+                    <span class="rpt-section-sub">prenotazioni confermate/incassate</span>
                 </div>
                 @php $maxRevenue = $revenueByTour->max('total') ?? 0; @endphp
                 <div class="rpt-rank">
@@ -127,7 +127,7 @@
                     <thead>
                         <tr>
                             <th>Data</th>
-                            <th class="text-end">Transazioni</th>
+                            <th class="text-end">Prenotazioni</th>
                             <th class="text-end">Totale</th>
                             <th class="text-end">Media</th>
                         </tr>

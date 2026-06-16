@@ -160,6 +160,29 @@ class BookingController extends Controller
                     'max_age' => $b->max_age !== null ? (int) $b->max_age : null,
                 ])->values();
 
+            // Catamarani selezionabili per questa data: operativi, non bloccati,
+            // disponibili, con i posti liberi (se la partenza esiste già).
+            $blockedIds = \App\Models\TourCatamaranBlock::where('tour_id', $tour->id)
+                ->whereDate('start_date', '<=', $isoDate)
+                ->whereDate('end_date', '>=', $isoDate)
+                ->pluck('catamaran_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $catamarans = $tour->operatingCatamarans()
+                ->filter(fn ($cat) => !in_array((int) $cat->id, $blockedIds, true) && $cat->isAvailableOn($isoDate))
+                ->map(function ($cat) use ($d) {
+                    $booked = $d ? $cat->seatsBookedOnDeparture($d->id) : 0;
+                    $free = max(0, (int) $cat->capacity - $booked);
+                    return [
+                        'id' => $cat->id,
+                        'name' => $cat->name,
+                        'capacity' => (int) $cat->capacity,
+                        'free' => $free,
+                    ];
+                })
+                ->values();
+
             return [
                 // id reale (numerico) se la partenza esiste, altrimenti id sintetico.
                 'id' => $d ? (string) $d->id : ('virt:' . $isoDate . ':' . $time),
@@ -175,13 +198,19 @@ class BookingController extends Controller
                 'is_past' => \Carbon\Carbon::parse($isoDate)->lt(now()->startOfDay()),
                 'status' => $d ? $d->status : 'scheduled',
                 'brackets' => $brackets,
+                'catamarans' => $catamarans,
             ];
         })
         ->sortByDesc('iso_date')
         ->values();
 
         return response()->json([
-            'tour' => ['id' => $tour->id, 'name' => $tour->name],
+            'tour' => [
+                'id' => $tour->id,
+                'name' => $tour->name,
+                // Tour su richiesta: il form mostra i campi prezzo manuali.
+                'on_request' => (bool) $tour->booking_on_request,
+            ],
             'departures' => $departures,
         ]);
     }
@@ -206,6 +235,8 @@ class BookingController extends Controller
             'children.*.dob' => 'required_with:children|date|before:today',
             'children.*.first_name' => 'required_with:children|string|max:100',
             'children.*.last_name' => 'required_with:children|string|max:100',
+            // Prezzo TOTALE manuale (solo tour "su richiesta", es. catamarano riservato).
+            'total_price' => 'nullable|numeric|min:0',
             'addons' => 'nullable|array',
             'addons.*' => 'integer|exists:addons,id',
             'discount_code' => 'nullable|string|max:50',
@@ -217,9 +248,20 @@ class BookingController extends Controller
             'customer_tax_code' => 'nullable|string|max:16',
             'special_requests' => 'nullable|string|max:1000',
             'status' => 'required|in:' . implode(',', $statusValues),
+            // Catamarano: opzionale (vuoto = distribuzione automatica).
+            'catamaran_id' => 'nullable|integer|exists:catamarans,id',
+            // Bloccare il catamarano per l'intera giornata della partenza.
+            'block_catamaran_day' => 'nullable|boolean',
         ]);
 
         $status = BookingStatus::from($validated['status']);
+
+        // Tour "su richiesta": prezzi inseriti a mano dall'admin (niente listino).
+        $tour = Tour::findOrFail($validated['tour_id']);
+        $isOnRequest = (bool) $tour->booking_on_request;
+        if ($isOnRequest && ($validated['total_price'] ?? null) === null) {
+            return back()->withInput()->with('error', 'Per un tour su richiesta devi indicare il prezzo totale.');
+        }
 
         // Risolvi l'id partenza: reale (numerico) o virtuale ("virt:Y-m-d:H:i").
         // La virtuale viene materializzata ora con firstOrCreate (stessa logica
@@ -251,7 +293,7 @@ class BookingController extends Controller
             ];
         }
         foreach ($children as $c) {
-            // Il bracket viene risolto dal service in base al DOB; qui passiamo solo DOB.
+            // Su richiesta i bambini contano solo come posti (nessun prezzo per riga).
             $resolvedChildren[] = ['dob' => $c['dob']];
             $guests[] = [
                 'first_name' => trim($c['first_name']),
@@ -275,10 +317,36 @@ class BookingController extends Controller
             'guests' => $guests,
             'status' => $status,           // stato scelto dall'admin
             'admin_override' => true,      // consente partenze passate (retroattive)
+            // Prezzo TOTALE manuale (usato solo per i tour su richiesta).
+            'total_price' => $isOnRequest ? (float) ($validated['total_price'] ?? 0) : null,
+            // Catamarano forzato (vuoto = distribuzione automatica del service).
+            'forced_catamaran_id' => $validated['catamaran_id'] ?? null,
         ];
 
         try {
             $booking = $this->bookingService->create($payload, 'admin');
+
+            // Blocco catamarano per l'intera giornata, se richiesto: blocca i
+            // catamarani effettivamente assegnati a questa prenotazione (quello
+            // forzato dall'admin oppure quelli scelti dalla distribuzione automatica).
+            if ($request->boolean('block_catamaran_day')) {
+                $date = $booking->booking_date->toDateString();
+                $catamaranIds = $booking->seatRecords()
+                    ->whereNotNull('catamaran_id')
+                    ->pluck('catamaran_id')
+                    ->unique();
+                foreach ($catamaranIds as $catId) {
+                    \App\Models\TourCatamaranBlock::firstOrCreate(
+                        [
+                            'tour_id' => $booking->tour_id,
+                            'catamaran_id' => $catId,
+                            'start_date' => $date,
+                            'end_date' => $date,
+                        ],
+                        ['reason' => 'Bloccato da prenotazione admin #' . $booking->booking_number]
+                    );
+                }
+            }
 
             // Timestamp coerenti con lo stato scelto (utile per report e dettaglio).
             // Per le retroattive usa la data della partenza se è già passata.

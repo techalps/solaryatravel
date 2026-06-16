@@ -41,8 +41,11 @@ class BookingService
             /** @var Tour $tour */
             $tour = Tour::findOrFail($data['tour_id']);
 
+            $adminOverride = ! empty($data['admin_override']);
+
             // I tour "su richiesta" non sono prenotabili online (nessun prezzo / checkout).
-            if ($tour->booking_on_request) {
+            // L'admin però può registrarli manualmente indicando i prezzi a mano.
+            if ($tour->booking_on_request && ! $adminOverride) {
                 throw new \Exception('Questa crociera è su richiesta: contattaci via email o WhatsApp.');
             }
 
@@ -54,8 +57,6 @@ class BookingService
             // Inserimento manuale da admin: consente partenze passate / non più
             // "scheduled" (registrazione retroattiva). I controlli di capacità
             // restano attivi (distributeSeats blocca l'overbooking più sotto).
-            $adminOverride = ! empty($data['admin_override']);
-
             if (! $adminOverride && $departure->status !== 'scheduled') {
                 throw new \Exception('Questa partenza non è disponibile.');
             }
@@ -72,46 +73,75 @@ class BookingService
                 throw new \Exception('Serve almeno un adulto per prenotare.');
             }
 
-            // Risolvi bracket per ogni bambino (in base al DOB e alla data di partenza)
-            $brackets = $this->pricingService
-                ->resolveBrackets($tour, $departure->departure_date)
-                ->keyBy('id');
-            $resolvedChildren = [];
-            foreach ($children as $child) {
-                $dob = $child['dob'] ?? null;
-                if (!$dob) {
-                    throw new \Exception('Manca la data di nascita di un bambino.');
-                }
-                $bracket = $this->pricingService->resolveBracketForDob(
-                    $brackets->values(),
-                    $dob,
-                    $departure->departure_date
-                );
-                if (!$bracket) {
-                    throw new \Exception("Per la data di nascita {$dob} non è disponibile alcuna riduzione: aggiungilo come adulto.");
-                }
-                $resolvedChildren[] = ['dob' => $dob, 'bracket_id' => $bracket->id];
-            }
+            // Tour "su richiesta": nessun listino/fascia. L'admin inserisce un unico
+            // prezzo TOTALE (es. catamarano riservato); adulti/bambini contano solo i
+            // posti. Il totale è attribuito al primo posto (intestatario), gli altri a 0.
+            $manualPricing = $tour->booking_on_request && $adminOverride;
 
-            // Pricing
-            $pricing = $this->pricingService->calculateForParticipants(
-                $tour,
-                $departure,
-                $adultsCount,
-                $resolvedChildren,
-                $data['addons'] ?? [],
-                $data['discount_code'] ?? null
-            );
+            if ($manualPricing) {
+                // I bambini servono solo come conteggio posti (DOB facoltativa, niente prezzo).
+                $resolvedChildren = [];
+                foreach ($children as $child) {
+                    $resolvedChildren[] = ['dob' => $child['dob'] ?? null, 'price' => 0];
+                }
+
+                $pricing = $this->pricingService->calculateManual(
+                    $tour,
+                    $adultsCount,
+                    count($children),
+                    (float) ($data['total_price'] ?? 0),
+                    $data['addons'] ?? [],
+                    $data['discount_code'] ?? null
+                );
+                $brackets = collect(); // nessun bracket per i tour su richiesta
+            } else {
+                // Risolvi bracket per ogni bambino (in base al DOB e alla data di partenza)
+                $brackets = $this->pricingService
+                    ->resolveBrackets($tour, $departure->departure_date)
+                    ->keyBy('id');
+                $resolvedChildren = [];
+                foreach ($children as $child) {
+                    $dob = $child['dob'] ?? null;
+                    if (!$dob) {
+                        throw new \Exception('Manca la data di nascita di un bambino.');
+                    }
+                    $bracket = $this->pricingService->resolveBracketForDob(
+                        $brackets->values(),
+                        $dob,
+                        $departure->departure_date
+                    );
+                    if (!$bracket) {
+                        throw new \Exception("Per la data di nascita {$dob} non è disponibile alcuna riduzione: aggiungilo come adulto.");
+                    }
+                    $resolvedChildren[] = ['dob' => $dob, 'bracket_id' => $bracket->id];
+                }
+
+                // Pricing
+                $pricing = $this->pricingService->calculateForParticipants(
+                    $tour,
+                    $departure,
+                    $adultsCount,
+                    $resolvedChildren,
+                    $data['addons'] ?? [],
+                    $data['discount_code'] ?? null
+                );
+            }
 
             $countingSeats = $pricing['counting_seats'];
             if ($countingSeats <= 0) {
                 throw new \Exception('Numero posti non valido.');
             }
 
-            // Auto-distribuzione
-            $assignment = $this->distributeSeats($tour, $departure, $countingSeats);
+            // Distribuzione posti: automatica, oppure forzata su un catamarano
+            // specifico se l'admin l'ha scelto.
+            $forcedCatamaranId = !empty($data['forced_catamaran_id'])
+                ? (int) $data['forced_catamaran_id']
+                : null;
+            $assignment = $this->distributeSeats($tour, $departure, $countingSeats, $forcedCatamaranId);
             if ($assignment === null) {
-                throw new \Exception('Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.');
+                throw new \Exception($forcedCatamaranId !== null
+                    ? 'Il catamarano selezionato non ha posti sufficienti (o non è disponibile) per questa partenza.'
+                    : 'Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.');
             }
 
             // Modalità di pagamento: acconto e/o bonifico.
@@ -202,15 +232,20 @@ class BookingService
                 ]];
             }
 
-            // Crea booking_seats per ogni partecipante (adulti + bambini risolti)
+            // Crea booking_seats per ogni partecipante (adulti + bambini risolti).
+            // Su richiesta: il prezzo totale finisce sul primo posto, gli altri a 0.
+            $manualTotalOnFirstSeat = $manualPricing
+                ? (float) ($pricing['manual_total_on_first_seat'] ?? 0)
+                : null;
             $this->createParticipantSeats(
                 $booking,
                 $adultsCount,
-                (float) $pricing['adult_unit_price'],
+                $manualPricing ? 0.0 : (float) $pricing['adult_unit_price'],
                 $resolvedChildren,
                 $brackets,
                 $assignment,
-                $guests
+                $guests,
+                $manualTotalOnFirstSeat
             );
 
             // Addons
@@ -483,7 +518,7 @@ class BookingService
      *
      * @return array<int, array{catamaran_id:int, seats:int}>|null
      */
-    public function distributeSeats(Tour $tour, TourDeparture $departure, int $seats): ?array
+    public function distributeSeats(Tour $tour, TourDeparture $departure, int $seats, ?int $forcedCatamaranId = null): ?array
     {
         $catamarans = $tour->operatingCatamarans();
 
@@ -499,6 +534,10 @@ class BookingService
 
         $candidates = [];
         foreach ($catamarans as $cat) {
+            // Catamarano forzato dall'admin: considera SOLO quello.
+            if ($forcedCatamaranId !== null && (int) $cat->id !== $forcedCatamaranId) {
+                continue;
+            }
             // Salta catamarani bloccati per questo tour nella data
             if (in_array((int) $cat->id, array_map('intval', $blockedIds), true)) {
                 continue;
@@ -517,6 +556,12 @@ class BookingService
                 'free' => $free,
                 'priority' => $cat->pivot->priority ?? $cat->sort_order ?? 0,
             ];
+        }
+
+        // Catamarano forzato ma non idoneo (inesistente per il tour, bloccato,
+        // non disponibile o pieno): nessuna distribuzione possibile.
+        if ($forcedCatamaranId !== null && empty($candidates)) {
+            return null;
         }
 
         // Eventuale capacity_override sulla partenza
@@ -590,7 +635,8 @@ class BookingService
         array $children,
         \Illuminate\Support\Collection $brackets,
         array $distribution,
-        array $guests = []
+        array $guests = [],
+        ?float $manualTotalOnFirstSeat = null
     ): void {
         // Espandi la distribuzione in una queue di catamaran_id (uno per posto contante)
         $catamaranQueue = [];
@@ -607,12 +653,16 @@ class BookingService
         // Adulti
         for ($a = 0; $a < $adultsCount; $a++) {
             $guest = $guests[$guestIdx] ?? [];
+            // Su richiesta: tutto il totale sul primo posto, gli altri a 0.
+            $seatPrice = $manualTotalOnFirstSeat !== null
+                ? ($a === 0 ? $manualTotalOnFirstSeat : 0.0)
+                : $adultUnitPrice;
             BookingSeat::create([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $catamaranQueue[$countingIdx] ?? null,
                 'tour_age_bracket_id' => null,
-                'price_paid' => $adultUnitPrice,
+                'price_paid' => $seatPrice,
                 'guest_first_name' => $guest['first_name'] ?? null,
                 'guest_last_name' => $guest['last_name'] ?? null,
                 'guest_date_of_birth' => $guest['date_of_birth'] ?? null,
@@ -629,13 +679,16 @@ class BookingService
         $countingChildren = [];
         $nonCountingChildren = [];
         foreach ($children as $childIdx => $child) {
-            $bracket = $brackets->get($child['bracket_id']);
-            if (!$bracket) {
+            // Tour con listino: bracket risolto. Tour "su richiesta": nessun bracket,
+            // prezzo manuale dal campo 'price' e il bambino occupa sempre un posto.
+            $bracket = isset($child['bracket_id']) ? $brackets->get($child['bracket_id']) : null;
+            $manual = $bracket === null && array_key_exists('price', $child);
+            if (!$bracket && !$manual) {
                 continue;
             }
             $guest = $guests[$adultsCount + $childIdx] ?? [];
             $entry = ['child' => $child, 'bracket' => $bracket, 'guest' => $guest];
-            if ($bracket->counts_as_seat) {
+            if (!$bracket || $bracket->counts_as_seat) {
                 $countingChildren[] = $entry;
             } else {
                 $nonCountingChildren[] = $entry;
@@ -644,15 +697,18 @@ class BookingService
 
         foreach ($countingChildren as $entry) {
             $bracket = $entry['bracket'];
+            $price = $bracket
+                ? (float) $bracket->price * (float) $booking->departure->price_modifier
+                : (float) ($entry['child']['price'] ?? 0); // prezzo manuale (su richiesta)
             BookingSeat::create([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $catamaranQueue[$countingIdx] ?? null,
-                'tour_age_bracket_id' => $bracket->id,
-                'price_paid' => (float) $bracket->price * (float) $booking->departure->price_modifier,
+                'tour_age_bracket_id' => $bracket?->id,
+                'price_paid' => $price,
                 'guest_first_name' => $entry['guest']['first_name'] ?? ($entry['child']['first_name'] ?? null),
                 'guest_last_name' => $entry['guest']['last_name'] ?? ($entry['child']['last_name'] ?? null),
-                'guest_date_of_birth' => $entry['child']['dob'],
+                'guest_date_of_birth' => $entry['child']['dob'] ?? null,
                 'is_primary' => false,
             ]);
             $countingIdx++;

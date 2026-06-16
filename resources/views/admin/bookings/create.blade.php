@@ -78,6 +78,26 @@
                         </div>
                         {{-- Partenza effettivamente scelta (id reale di tour_departures) --}}
                         <input type="hidden" name="tour_departure_id" id="tour_departure_id" value="{{ old('tour_departure_id') }}">
+
+                        {{-- Catamarano (opzionale) --}}
+                        <div class="row g-3 mt-1" id="catamaran-area" style="display:none">
+                            <div class="col-md-6">
+                                <label for="catamaran_id" class="form-label fw-semibold">Catamarano</label>
+                                <select name="catamaran_id" id="catamaran_id" class="form-select">
+                                    <option value="">Automatico (assegna il sistema)</option>
+                                </select>
+                                <div class="form-text">Lascia "Automatico" per far scegliere al sistema il catamarano con più posti liberi.</div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="block_catamaran_day" id="block_catamaran_day" value="1">
+                                    <label class="form-check-label" for="block_catamaran_day">
+                                        Blocca il catamarano per l'intera giornata
+                                    </label>
+                                    <div class="form-text">Rende il catamarano non prenotabile da altri in questa data (es. uso esclusivo).</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -92,6 +112,21 @@
                         </div>
 
                         <div id="participants-area" class="d-none">
+                            {{-- Prezzo totale manuale (solo tour su richiesta) --}}
+                            <div id="onrequest-price-area" class="alert alert-info py-2 px-3 mb-3" style="display:none">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-cash-coin"></i>
+                                    <span class="fw-semibold small">Tour su richiesta: inserisci il prezzo totale (catamarano riservato).</span>
+                                </div>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-auto"><label for="total_price" class="col-form-label small mb-0">Prezzo totale (€)</label></div>
+                                    <div class="col-sm-4">
+                                        <input type="number" min="0" step="0.01" class="form-control form-control-sm" name="total_price" id="total_price" value="{{ old('total_price') }}" placeholder="0,00">
+                                    </div>
+                                    <div class="col-12"><div class="form-text">Adulti e bambini servono solo a contare i posti. Il prezzo è il totale finale della prenotazione.</div></div>
+                                </div>
+                            </div>
+
                             {{-- Adulti --}}
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <div class="fw-semibold">Adulti <span class="text-muted small">(prezzo pieno)</span></div>
@@ -224,14 +259,22 @@
     const statusHint = document.getElementById('status-hint');
     const custFirst = document.getElementById('customer_first_name');
     const custLast = document.getElementById('customer_last_name');
+    const catamaranArea = document.getElementById('catamaran-area');
+    const catamaranSelect = document.getElementById('catamaran_id');
+    const blockDayCheck = document.getElementById('block_catamaran_day');
+    const onRequestPriceArea = document.getElementById('onrequest-price-area');
+    const totalPriceInput = document.getElementById('total_price');
+    const childrenHeader = document.getElementById('children-header');
 
     let departures = [];       // tutte le partenze del tour
     let byDate = {};           // 'Y-m-d' => [departure,...]
     let currentDeparture = null;
     let adultsCount = 1;
     let adults = [{ first_name: '', last_name: '' }];
-    let children = [];         // [{dob, first_name, last_name}]
+    let children = [];         // [{dob, first_name, last_name, price?}]
     let fp = null;
+    let onRequest = false;     // tour "su richiesta": prezzo totale inserito a mano
+    let totalPrice = 0;        // prezzo totale manuale (solo su richiesta)
 
     function escapeHtml(s) {
         if (s == null) return '';
@@ -249,6 +292,7 @@
     function fetchTour(tourId) {
         resetDeparture();
         departures = []; byDate = {};
+        onRequest = false;
         if (fp) { fp.destroy(); fp = null; }
         dateInput.value = '';
         dateInput.disabled = true;
@@ -267,6 +311,7 @@
         fetch(departuresUrlTpl.replace('__TOUR__', tourId), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
             .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
             .then(data => {
+                onRequest = !!(data.tour && data.tour.on_request);
                 departures = data.departures || [];
                 byDate = {};
                 departures.forEach(d => { (byDate[d.iso_date] = byDate[d.iso_date] || []).push(d); });
@@ -328,14 +373,44 @@
         if (!currentDeparture) {
             participantsArea.classList.add('d-none');
             participantsEmpty.classList.remove('d-none');
+            renderCatamarans();
             renderSummary();
             return;
         }
         participantsEmpty.classList.add('d-none');
         participantsArea.classList.remove('d-none');
+        // Tour su richiesta: mostra i prezzi manuali e abilita sempre i bambini.
+        onRequestPriceArea.style.display = onRequest ? '' : 'none';
+        childrenHeader.querySelector('.text-muted').textContent =
+            onRequest ? '(contano solo come posti)' : '(con riduzione per età)';
+        renderCatamarans();
         renderAdults();
         renderChildren();
         renderSummary();
+    }
+
+    // ===== Catamarano =====
+    function renderCatamarans() {
+        if (!currentDeparture) {
+            catamaranArea.style.display = 'none';
+            catamaranSelect.innerHTML = '<option value="">Automatico (assegna il sistema)</option>';
+            blockDayCheck.checked = false;
+            return;
+        }
+        const cats = currentDeparture.catamarans || [];
+        catamaranArea.style.display = '';
+        const prev = catamaranSelect.value;
+        catamaranSelect.innerHTML =
+            '<option value="">Automatico (assegna il sistema)</option>' +
+            cats.map(c => {
+                // Se la partenza esiste già mostriamo i posti liberi; altrimenti la capienza.
+                const seats = (c.free != null) ? `${c.free} liberi` : `${c.capacity} posti`;
+                return `<option value="${c.id}">${escapeHtml(c.name)} · ${seats}</option>`;
+            }).join('');
+        // Ripristina la selezione se ancora valida
+        if (prev && cats.some(c => String(c.id) === String(prev))) {
+            catamaranSelect.value = prev;
+        }
     }
 
     // ===== Adulti =====
@@ -391,6 +466,8 @@
     }
 
     function childBadgeHtml(c) {
+        // Tour su richiesta: nessuna fascia/prezzo per bambino (conta solo come posto).
+        if (onRequest) return '';
         if (!c.dob) return '';
         const res = resolveBracket(c.dob);
         return res.bracket
@@ -406,8 +483,9 @@
     }
 
     function renderChildren() {
+        // Su richiesta i bambini sono sempre aggiungibili (nessun bracket richiesto).
         const hasBrackets = currentDeparture && (currentDeparture.brackets || []).length > 0;
-        document.getElementById('add-child').disabled = !hasBrackets;
+        document.getElementById('add-child').disabled = !onRequest && !hasBrackets;
         childrenEmpty.classList.toggle('d-none', children.length > 0);
 
         childrenList.innerHTML = children.map((c, i) => {
@@ -439,22 +517,33 @@
             summaryBox.innerHTML = '<div class="text-muted small text-center py-3">Seleziona tour e partenza.</div>';
             return;
         }
-        const adultPrice = currentDeparture.adult_price || 0;
         const lines = [];
         let total = 0, seats = 0, pax = 0;
 
-        if (adultsCount > 0) {
-            const sub = adultsCount * adultPrice;
-            total += sub; seats += adultsCount; pax += adultsCount;
-            lines.push(`<div class="d-flex justify-content-between small mb-1"><span>Adulti × ${adultsCount}</span><span>${eur(sub)}</span></div>`);
+        if (onRequest) {
+            // Su richiesta: il totale è il prezzo unico inserito; adulti+bambini = posti.
+            const childCount = children.length;
+            seats = adultsCount + childCount;
+            pax = seats;
+            total = Number(totalPrice) || 0;
+            if (adultsCount > 0) lines.push(`<div class="d-flex justify-content-between small mb-1"><span>Adulti × ${adultsCount}</span><span class="text-muted">posti</span></div>`);
+            if (childCount > 0) lines.push(`<div class="d-flex justify-content-between small mb-1"><span>Bambini × ${childCount}</span><span class="text-muted">posti</span></div>`);
+            lines.push(`<div class="d-flex justify-content-between small mb-1"><span>Prezzo totale (catamarano riservato)</span><span>${eur(total)}</span></div>`);
+        } else {
+            const unitAdult = currentDeparture.adult_price || 0;
+            if (adultsCount > 0) {
+                const sub = adultsCount * unitAdult;
+                total += sub; seats += adultsCount; pax += adultsCount;
+                lines.push(`<div class="d-flex justify-content-between small mb-1"><span>Adulti × ${adultsCount}</span><span>${eur(sub)}</span></div>`);
+            }
+            children.forEach((c) => {
+                const res = resolveBracket(c.dob);
+                if (!res.bracket) { if (c.dob) pax += 1; return; }
+                total += res.bracket.price; pax += 1;
+                if (res.bracket.counts_as_seat) seats += 1;
+                lines.push(`<div class="d-flex justify-content-between small mb-1"><span>${escapeHtml(res.bracket.label)}</span><span>${eur(res.bracket.price)}</span></div>`);
+            });
         }
-        children.forEach(c => {
-            const res = resolveBracket(c.dob);
-            if (!res.bracket) { if (c.dob) pax += 1; return; }
-            total += res.bracket.price; pax += 1;
-            if (res.bracket.counts_as_seat) seats += 1;
-            lines.push(`<div class="d-flex justify-content-between small mb-1"><span>${escapeHtml(res.bracket.label)}</span><span>${eur(res.bracket.price)}</span></div>`);
-        });
 
         summaryBox.innerHTML = `
             ${lines.join('')}
@@ -498,6 +587,9 @@
             }
         }
     });
+
+    // Prezzo totale manuale (tour su richiesta)
+    totalPriceInput.addEventListener('input', e => { totalPrice = e.target.value; renderSummary(); });
     document.addEventListener('click', e => {
         const btn = e.target.closest('[data-remove-child]');
         if (btn) { children.splice(+btn.dataset.removeChild, 1); renderChildren(); renderSummary(); }
