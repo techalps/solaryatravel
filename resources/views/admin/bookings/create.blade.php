@@ -53,7 +53,7 @@
                     </div>
                     <div class="dash-card-body">
                         <div class="row g-3">
-                            <div class="col-md-5">
+                            <div class="col-md-12">
                                 <label for="tour_id" class="form-label fw-semibold">Tour *</label>
                                 <select name="tour_id" id="tour_id" class="form-select" required>
                                     <option value="">— Seleziona tour —</option>
@@ -64,22 +64,9 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label for="booking-date-input" class="form-label fw-semibold">Data di partenza *</label>
-                                <input type="text" id="booking-date-input" class="form-control" placeholder="Seleziona un tour…" autocomplete="off" disabled>
-                                <div class="form-text" id="departure-status"></div>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="departure-time" class="form-label fw-semibold">Orario *</label>
-                                <select id="departure-time" class="form-select" disabled>
-                                    <option value="">—</option>
-                                </select>
-                            </div>
                         </div>
-                        {{-- Partenza effettivamente scelta (id reale di tour_departures) --}}
-                        <input type="hidden" name="tour_departure_id" id="tour_departure_id" value="{{ old('tour_departure_id') }}">
 
-                        {{-- Catamarano (opzionale) --}}
+                        {{-- Catamarano + uso esclusivo (prima di data/orario) --}}
                         <div class="row g-3 mt-1" id="catamaran-area" style="display:none">
                             <div class="col-md-6">
                                 <label for="catamaran_id" class="form-label fw-semibold">Catamarano</label>
@@ -88,16 +75,46 @@
                                 </select>
                                 <div class="form-text">Lascia "Automatico" per far scegliere al sistema il catamarano con più posti liberi.</div>
                             </div>
-                            <div class="col-md-6 d-flex align-items-end">
+                            <div class="col-md-6 d-flex align-items-center">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="block_catamaran_day" id="block_catamaran_day" value="1">
-                                    <label class="form-check-label" for="block_catamaran_day">
-                                        Blocca il catamarano per l'intera giornata
+                                    <label class="form-check-label fw-semibold" for="block_catamaran_day">
+                                        Blocca il catamarano (uso esclusivo)
                                     </label>
-                                    <div class="form-text">Rende il catamarano non prenotabile da altri in questa data (es. uso esclusivo).</div>
+                                    <div class="form-text">Riserva il catamarano per un periodo: i campi sotto diventano data di partenza e di ritorno.</div>
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Data partenza + (orario | data ritorno) --}}
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label for="booking-date-input" class="form-label fw-semibold">Data di partenza *</label>
+                                <input type="text" id="booking-date-input" class="form-control" placeholder="Seleziona un tour…" autocomplete="off" disabled>
+                                <div class="form-text" id="departure-status"></div>
+                            </div>
+
+                            {{-- Modalità normale: orario --}}
+                            <div class="col-md-6" id="time-col">
+                                <label for="departure-time" class="form-label fw-semibold">Orario *</label>
+                                <select id="departure-time" class="form-select" disabled>
+                                    <option value="">—</option>
+                                </select>
+                            </div>
+
+                            {{-- Modalità uso esclusivo: data di ritorno --}}
+                            <div class="col-md-6" id="return-col" style="display:none">
+                                <label for="return-date-input" class="form-label fw-semibold">Data di ritorno *</label>
+                                <input type="text" id="return-date-input" class="form-control" placeholder="Seleziona la data di ritorno…" autocomplete="off">
+                                <div class="form-text">Il catamarano sarà bloccato dalla partenza al ritorno (inclusi).</div>
+                            </div>
+                        </div>
+
+                        {{-- Partenza effettivamente scelta: id reale, oppure "virt:Y-m-d:H:i" --}}
+                        <input type="hidden" name="tour_departure_id" id="tour_departure_id" value="{{ old('tour_departure_id') }}">
+                        {{-- Periodo di blocco (valorizzato in modalità uso esclusivo) --}}
+                        <input type="hidden" name="block_start_date" id="block_start_date" value="{{ old('block_start_date') }}">
+                        <input type="hidden" name="block_end_date" id="block_end_date" value="{{ old('block_end_date') }}">
                     </div>
                 </div>
 
@@ -262,9 +279,16 @@
     const catamaranArea = document.getElementById('catamaran-area');
     const catamaranSelect = document.getElementById('catamaran_id');
     const blockDayCheck = document.getElementById('block_catamaran_day');
+    const blockStartInput = document.getElementById('block_start_date');
+    const blockEndInput = document.getElementById('block_end_date');
+    const timeCol = document.getElementById('time-col');
+    const returnCol = document.getElementById('return-col');
+    const returnDateInput = document.getElementById('return-date-input');
     const onRequestPriceArea = document.getElementById('onrequest-price-area');
     const totalPriceInput = document.getElementById('total_price');
     const childrenHeader = document.getElementById('children-header');
+
+    const DEFAULT_TIME = '09:00';     // orario di default in modalità uso esclusivo
 
     let departures = [];       // tutte le partenze del tour
     let byDate = {};           // 'Y-m-d' => [departure,...]
@@ -272,9 +296,12 @@
     let adultsCount = 1;
     let adults = [{ first_name: '', last_name: '' }];
     let children = [];         // [{dob, first_name, last_name, price?}]
-    let fp = null;
+    let fp = null;             // flatpickr data di partenza
+    let fpReturn = null;       // flatpickr data di ritorno (uso esclusivo)
     let onRequest = false;     // tour "su richiesta": prezzo totale inserito a mano
     let totalPrice = 0;        // prezzo totale manuale (solo su richiesta)
+    let exclusive = false;     // uso esclusivo: partenza+ritorno con date libere
+    let tourMeta = null;       // dati tour dalla risposta JSON (capienza, ecc.)
 
     function escapeHtml(s) {
         if (s == null) return '';
@@ -292,9 +319,11 @@
     function fetchTour(tourId) {
         resetDeparture();
         departures = []; byDate = {};
-        onRequest = false;
+        onRequest = false; tourMeta = null;
         if (fp) { fp.destroy(); fp = null; }
+        if (fpReturn) { fpReturn.destroy(); fpReturn = null; }
         dateInput.value = '';
+        returnDateInput.value = '';
         dateInput.disabled = true;
         participantsArea.classList.add('d-none');
         participantsEmpty.classList.remove('d-none');
@@ -311,36 +340,60 @@
         fetch(departuresUrlTpl.replace('__TOUR__', tourId), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
             .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
             .then(data => {
-                onRequest = !!(data.tour && data.tour.on_request);
+                tourMeta = data.tour || null;
+                onRequest = !!(tourMeta && tourMeta.on_request);
                 departures = data.departures || [];
                 byDate = {};
                 departures.forEach(d => { (byDate[d.iso_date] = byDate[d.iso_date] || []).push(d); });
 
-                if (departures.length === 0) {
-                    depStatus.innerHTML = '<span class="text-warning">Nessuna partenza per questo tour.</span>';
-                    dateInput.placeholder = 'Nessuna partenza';
-                    return;
-                }
-
-                const enableDates = Object.keys(byDate);
-                dateInput.disabled = false;
-                dateInput.placeholder = 'Seleziona una data…';
                 depStatus.innerHTML = '';
-
-                fp = flatpickr(dateInput, {
-                    enable: enableDates,
-                    dateFormat: 'Y-m-d',
-                    altInput: true,
-                    altFormat: 'd/m/Y',
-                    disableMobile: true,
-                    locale: (flatpickr.l10ns && flatpickr.l10ns.it) ? 'it' : 'default',
-                    onChange: (sel, dateStr) => pickDate(dateStr),
-                });
+                buildDatePickers();   // costruisce i picker in base alla modalità
+                renderCatamarans();   // mostra subito catamarano + spunta uso esclusivo
             })
             .catch(err => {
                 console.error(err);
                 depStatus.innerHTML = '<span class="text-danger">Errore nel caricamento delle partenze.</span>';
             });
+    }
+
+    // (Ri)costruisce i datepicker secondo la modalità (normale vs uso esclusivo).
+    function buildDatePickers() {
+        if (fp) { fp.destroy(); fp = null; }
+        if (fpReturn) { fpReturn.destroy(); fpReturn = null; }
+        dateInput.value = '';
+        returnDateInput.value = '';
+
+        const fpBase = {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            disableMobile: true,
+            locale: (flatpickr.l10ns && flatpickr.l10ns.it) ? 'it' : 'default',
+        };
+
+        if (exclusive) {
+            // Uso esclusivo: date LIBERE per partenza e ritorno.
+            dateInput.disabled = false;
+            dateInput.placeholder = 'Data di partenza…';
+            fp = flatpickr(dateInput, { ...fpBase, onChange: (sel, s) => pickExclusiveStart(s) });
+            fpReturn = flatpickr(returnDateInput, { ...fpBase, onChange: (sel, s) => pickExclusiveEnd(s) });
+            return;
+        }
+
+        // Modalità normale: solo le date prenotabili a calendario.
+        if (departures.length === 0) {
+            depStatus.innerHTML = '<span class="text-warning">Nessuna partenza per questo tour.</span>';
+            dateInput.placeholder = 'Nessuna partenza';
+            dateInput.disabled = true;
+            return;
+        }
+        dateInput.disabled = false;
+        dateInput.placeholder = 'Seleziona una data…';
+        fp = flatpickr(dateInput, {
+            ...fpBase,
+            enable: Object.keys(byDate),
+            onChange: (sel, dateStr) => pickDate(dateStr),
+        });
     }
 
     function pickDate(dateStr) {
@@ -369,6 +422,48 @@
         onDepartureChanged();
     }
 
+    // ===== Uso esclusivo: partenza/ritorno con date libere =====
+    function buildExclusiveDeparture(startDate) {
+        // Partenza "virtuale" su data libera + orario di default. Brackets dal tour
+        // su richiesta non esistono: i partecipanti contano solo i posti.
+        const cap = tourMeta ? (tourMeta.total_capacity || 0) : 0;
+        return {
+            id: 'virt:' + startDate + ':' + DEFAULT_TIME,
+            iso_date: startDate,
+            time: DEFAULT_TIME,
+            available: null,
+            capacity: cap,
+            adult_price: null,
+            is_past: false,
+            status: 'scheduled',
+            brackets: [],
+            // Catamarani dal tour (data libera ⇒ nessun "free" calcolato).
+            catamarans: (tourMeta && tourMeta.catamarans) ? tourMeta.catamarans.map(c => ({
+                id: c.id, name: c.name, capacity: c.capacity, free: null,
+            })) : [],
+        };
+    }
+
+    function pickExclusiveStart(startDate) {
+        if (!startDate) { currentDeparture = null; depIdInput.value = ''; onDepartureChanged(); return; }
+        currentDeparture = buildExclusiveDeparture(startDate);
+        depIdInput.value = currentDeparture.id;
+        blockStartInput.value = startDate;
+        // Il ritorno non può precedere la partenza; default = stessa data.
+        if (fpReturn) { fpReturn.set('minDate', startDate); }
+        if (!returnDateInput.value || returnDateInput.value < startDate) {
+            if (fpReturn) fpReturn.setDate(startDate, true); else returnDateInput.value = startDate;
+            blockEndInput.value = startDate;
+        }
+        onDepartureChanged();
+    }
+
+    function pickExclusiveEnd(endDate) {
+        if (!endDate) { blockEndInput.value = blockStartInput.value || ''; return; }
+        blockEndInput.value = endDate;
+        renderSummary();
+    }
+
     function onDepartureChanged() {
         if (!currentDeparture) {
             participantsArea.classList.add('d-none');
@@ -391,23 +486,25 @@
 
     // ===== Catamarano =====
     function renderCatamarans() {
-        if (!currentDeparture) {
+        // L'area catamarano (con la spunta uso esclusivo) è visibile appena c'è un tour.
+        if (!tourMeta) {
             catamaranArea.style.display = 'none';
-            catamaranSelect.innerHTML = '<option value="">Automatico (assegna il sistema)</option>';
-            blockDayCheck.checked = false;
             return;
         }
-        const cats = currentDeparture.catamarans || [];
         catamaranArea.style.display = '';
+
+        // Opzioni catamarano: dalla partenza scelta, altrimenti dai catamarani del tour.
+        const cats = currentDeparture
+            ? (currentDeparture.catamarans || [])
+            : ((tourMeta.catamarans || []).map(c => ({ id: c.id, name: c.name, capacity: c.capacity, free: null })));
+
         const prev = catamaranSelect.value;
         catamaranSelect.innerHTML =
             '<option value="">Automatico (assegna il sistema)</option>' +
             cats.map(c => {
-                // Se la partenza esiste già mostriamo i posti liberi; altrimenti la capienza.
                 const seats = (c.free != null) ? `${c.free} liberi` : `${c.capacity} posti`;
                 return `<option value="${c.id}">${escapeHtml(c.name)} · ${seats}</option>`;
             }).join('');
-        // Ripristina la selezione se ancora valida
         if (prev && cats.some(c => String(c.id) === String(prev))) {
             catamaranSelect.value = prev;
         }
@@ -566,6 +663,23 @@
     tourSelect.addEventListener('change', e => fetchTour(e.target.value));
     timeSelect.addEventListener('change', onTimeChanged);
     statusSelect.addEventListener('change', updateStatusHint);
+
+    // Uso esclusivo: i campi data/orario diventano data di partenza + data di ritorno.
+    blockDayCheck.addEventListener('change', () => setExclusiveMode(blockDayCheck.checked));
+
+    function setExclusiveMode(on) {
+        exclusive = on;
+        resetDeparture();
+        // Toggle colonne: orario (normale) ↔ data di ritorno (esclusivo).
+        timeCol.style.display = exclusive ? 'none' : '';
+        returnCol.style.display = exclusive ? '' : 'none';
+        // Reset periodo di blocco.
+        blockStartInput.value = '';
+        blockEndInput.value = '';
+        // Ricostruisci i picker e l'area partecipanti.
+        if (tourMeta) buildDatePickers();
+        onDepartureChanged();
+    }
 
     document.getElementById('adults-plus').addEventListener('click', () => { adultsCount++; renderAdults(); renderSummary(); });
     document.getElementById('adults-minus').addEventListener('click', () => { adultsCount = Math.max(1, adultsCount - 1); renderAdults(); renderSummary(); });

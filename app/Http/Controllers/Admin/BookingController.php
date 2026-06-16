@@ -210,6 +210,15 @@ class BookingController extends Controller
                 'name' => $tour->name,
                 // Tour su richiesta: il form mostra i campi prezzo manuali.
                 'on_request' => (bool) $tour->booking_on_request,
+                'total_capacity' => (int) $tour->total_capacity,
+                // Catamarani operativi del tour (per la modalità uso esclusivo,
+                // dove la data è libera e non esiste una partenza a calendario).
+                'catamarans' => $tour->operatingCatamarans()
+                    ->map(fn ($c) => [
+                        'id' => $c->id,
+                        'name' => $c->name,
+                        'capacity' => (int) $c->capacity,
+                    ])->values(),
             ],
             'departures' => $departures,
         ]);
@@ -250,8 +259,10 @@ class BookingController extends Controller
             'status' => 'required|in:' . implode(',', $statusValues),
             // Catamarano: opzionale (vuoto = distribuzione automatica).
             'catamaran_id' => 'nullable|integer|exists:catamarans,id',
-            // Bloccare il catamarano per l'intera giornata della partenza.
+            // Bloccare il catamarano (uso esclusivo) per un periodo.
             'block_catamaran_day' => 'nullable|boolean',
+            'block_start_date' => 'nullable|date',
+            'block_end_date' => 'nullable|date|after_or_equal:block_start_date',
         ]);
 
         $status = BookingStatus::from($validated['status']);
@@ -263,13 +274,18 @@ class BookingController extends Controller
             return back()->withInput()->with('error', 'Per un tour su richiesta devi indicare il prezzo totale.');
         }
 
+        // Uso esclusivo (blocco catamarano): la data di partenza è LIBERA, quindi la
+        // partenza virtuale non deve essere validata contro i periodi del tour.
+        $exclusive = $request->boolean('block_catamaran_day');
+
         // Risolvi l'id partenza: reale (numerico) o virtuale ("virt:Y-m-d:H:i").
         // La virtuale viene materializzata ora con firstOrCreate (stessa logica
         // del flusso pubblico), così la prenotazione referenzia una riga vera.
         try {
             $departureId = $this->resolveDepartureId(
                 (int) $validated['tour_id'],
-                (string) $validated['tour_departure_id']
+                (string) $validated['tour_departure_id'],
+                $exclusive
             );
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -326,11 +342,18 @@ class BookingController extends Controller
         try {
             $booking = $this->bookingService->create($payload, 'admin');
 
-            // Blocco catamarano per l'intera giornata, se richiesto: blocca i
+            // Blocco catamarano (uso esclusivo) per un periodo, se richiesto: blocca i
             // catamarani effettivamente assegnati a questa prenotazione (quello
             // forzato dall'admin oppure quelli scelti dalla distribuzione automatica).
             if ($request->boolean('block_catamaran_day')) {
-                $date = $booking->booking_date->toDateString();
+                // Periodo di blocco: usa le date indicate, altrimenti la sola data partenza.
+                $depDate = $booking->booking_date->toDateString();
+                $startDate = $validated['block_start_date'] ?? $depDate;
+                $endDate = $validated['block_end_date'] ?? $startDate;
+                if ($endDate < $startDate) {
+                    $endDate = $startDate;
+                }
+
                 $catamaranIds = $booking->seatRecords()
                     ->whereNotNull('catamaran_id')
                     ->pluck('catamaran_id')
@@ -340,8 +363,8 @@ class BookingController extends Controller
                         [
                             'tour_id' => $booking->tour_id,
                             'catamaran_id' => $catId,
-                            'start_date' => $date,
-                            'end_date' => $date,
+                            'start_date' => $startDate,
+                            'end_date' => $endDate,
                         ],
                         ['reason' => 'Bloccato da prenotazione admin #' . $booking->booking_number]
                     );
@@ -397,12 +420,14 @@ class BookingController extends Controller
      *
      * Accetta:
      *  - un id numerico esistente (partenza già materializzata);
-     *  - un id sintetico "virt:Y-m-d:H:i" (partenza virtuale da periodo): viene
+     *  - un id sintetico "virt:Y-m-d:H:i" (partenza virtuale): normalmente viene
      *    verificata contro i periodi del tour e materializzata con firstOrCreate.
      *
+     * @param  bool  $allowFreeDate  uso esclusivo: salta la verifica sui periodi
+     *                               (la data di partenza è scelta liberamente).
      * @throws \RuntimeException se la partenza non è valida per il tour.
      */
-    protected function resolveDepartureId(int $tourId, string $rawId): int
+    protected function resolveDepartureId(int $tourId, string $rawId, bool $allowFreeDate = false): int
     {
         // Id reale già esistente.
         if (ctype_digit($rawId)) {
@@ -421,26 +446,29 @@ class BookingController extends Controller
 
         $tour = Tour::with('periods')->findOrFail($tourId);
 
-        // Verifica che data+orario siano coperti da un periodo del tour
-        // (stessa regola di BookingController::start e BookingForm::resolveDeparture).
-        $period = $tour->periods
-            ->first(function ($p) use ($date, $time) {
-                $within = \Carbon\Carbon::parse($date)->betweenIncluded(
-                    \Carbon\Carbon::parse($p->start_date),
-                    \Carbon\Carbon::parse($p->end_date)
-                );
-                if (!$within) {
-                    return false;
-                }
-                $weekdays = is_array($p->weekdays) && !empty($p->weekdays) ? $p->weekdays : [1, 2, 3, 4, 5, 6, 7];
-                $times = is_array($p->times) && !empty($p->times) ? $p->times : ['10:00'];
-                $iso = \Carbon\Carbon::parse($date)->isoWeekday();
-                return in_array($iso, array_map('intval', $weekdays), true)
-                    && in_array($time, array_map(fn ($t) => substr($t, 0, 5), $times), true);
-            });
+        // In modalità uso esclusivo la data è libera: nessuna verifica sui periodi.
+        if (!$allowFreeDate) {
+            // Verifica che data+orario siano coperti da un periodo del tour
+            // (stessa regola di BookingController::start e BookingForm::resolveDeparture).
+            $period = $tour->periods
+                ->first(function ($p) use ($date, $time) {
+                    $within = \Carbon\Carbon::parse($date)->betweenIncluded(
+                        \Carbon\Carbon::parse($p->start_date),
+                        \Carbon\Carbon::parse($p->end_date)
+                    );
+                    if (!$within) {
+                        return false;
+                    }
+                    $weekdays = is_array($p->weekdays) && !empty($p->weekdays) ? $p->weekdays : [1, 2, 3, 4, 5, 6, 7];
+                    $times = is_array($p->times) && !empty($p->times) ? $p->times : ['10:00'];
+                    $iso = \Carbon\Carbon::parse($date)->isoWeekday();
+                    return in_array($iso, array_map('intval', $weekdays), true)
+                        && in_array($time, array_map(fn ($t) => substr($t, 0, 5), $times), true);
+                });
 
-        if (!$period) {
-            throw new \RuntimeException('La data o l\'orario selezionato non è disponibile per questo tour.');
+            if (!$period) {
+                throw new \RuntimeException('La data o l\'orario selezionato non è disponibile per questo tour.');
+            }
         }
 
         $startTime = $time . ':00';

@@ -16,6 +16,12 @@
         ];
         $currentStatus = request('status');
         $hasFilters = request()->hasAny(['search', 'status', 'tour', 'date_from', 'date_to']);
+
+        // Card di riepilogo: includi "Acconto versato" solo se l'acconto è attivo.
+        $miniStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+        if (\App\Support\Settings::depositEnabled()) {
+            array_splice($miniStatuses, 1, 0, ['deposit_paid']);
+        }
     @endphp
 
     {{-- Page header --}}
@@ -47,7 +53,7 @@
                 </div>
             </a>
         </div>
-        @foreach (['pending', 'confirmed', 'completed', 'cancelled'] as $st)
+        @foreach ($miniStatuses as $st)
             @php $m = $statusMeta[$st]; @endphp
             <div class="col-6 col-md-4 col-xl">
                 <a href="{{ route('admin.bookings.index', array_merge(request()->except('status', 'page'), ['status' => $st])) }}"
