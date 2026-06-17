@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\TourController as AdminTourController;
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\GuideController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -105,6 +106,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::resource('bookings', AdminBookingController::class);
     // Binding per id: il <select> tour invia l'id numerico, non lo slug (route key di default del Tour).
     Route::get('/bookings-api/tours/{tour:id}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');
+    // Disponibilità catamarani per uso esclusivo su un periodo (date libere).
+    Route::get('/bookings-api/tours/{tour:id}/catamaran-availability', [AdminBookingController::class, 'catamaranAvailability'])->name('bookings.catamaran-availability');
     Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/{booking}/confirm-transfer', [AdminBookingController::class, 'confirmTransfer'])->name('bookings.confirm-transfer');
     Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
@@ -159,6 +162,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
 
     // Users
     Route::resource('users', AdminUserController::class)->except(['show']);
+
+    // Guida operativa (pagine statiche per gli operatori)
+    Route::get('/guida', [GuideController::class, 'index'])->name('guide.index');
+    Route::get('/guida/{topic}', [GuideController::class, 'show'])->name('guide.show');
 });
 
 require __DIR__.'/auth.php';

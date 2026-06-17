@@ -184,6 +184,45 @@
                 </div>
             </div>
 
+            {{-- Catamarani riservati (uso esclusivo) --}}
+            @if (isset($reservedBlocks) && $reservedBlocks->isNotEmpty())
+                <div class="card border-0 shadow-sm rounded-4 mb-3">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-water me-2 text-primary"></i>Catamarani riservati (uso esclusivo)</h5>
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Catamarano</th>
+                                        <th>Dal</th>
+                                        <th>Al</th>
+                                        <th>Orari</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($reservedBlocks as $blk)
+                                        <tr>
+                                            <td class="fw-semibold">{{ $blk->catamaran?->name ?? ('#' . $blk->catamaran_id) }}</td>
+                                            <td>{{ $blk->start_date->format('d/m/Y') }}</td>
+                                            <td>{{ $blk->end_date->format('d/m/Y') }}</td>
+                                            <td>
+                                                @if ($blk->start_time || $blk->end_time)
+                                                    {{ $blk->start_time ? \Carbon\Carbon::parse($blk->start_time)->format('H:i') : '—' }}
+                                                    →
+                                                    {{ $blk->end_time ? \Carbon\Carbon::parse($blk->end_time)->format('H:i') : '—' }}
+                                                @else
+                                                    <span class="text-muted">Intera giornata</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- Partecipanti / posti --}}
             @if ($booking->seatRecords->isNotEmpty())
                 <div class="card border-0 shadow-sm rounded-4 mb-3">

@@ -52,6 +52,7 @@
                         <h3><i class="bi bi-compass me-2 text-primary"></i>1. Tour e partenza</h3>
                     </div>
                     <div class="dash-card-body">
+                        {{-- 1) Tour --}}
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <label for="tour_id" class="form-label fw-semibold">Tour *</label>
@@ -66,27 +67,20 @@
                             </div>
                         </div>
 
-                        {{-- Catamarano + uso esclusivo (prima di data/orario) --}}
-                        <div class="row g-3 mt-1" id="catamaran-area" style="display:none">
-                            <div class="col-md-6">
-                                <label for="catamaran_id" class="form-label fw-semibold">Catamarano</label>
-                                <select name="catamaran_id" id="catamaran_id" class="form-select">
-                                    <option value="">Automatico (assegna il sistema)</option>
-                                </select>
-                                <div class="form-text">Lascia "Automatico" per far scegliere al sistema il catamarano con più posti liberi.</div>
-                            </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="block_catamaran_day" id="block_catamaran_day" value="1">
+                        {{-- 2) Uso esclusivo (riserva catamarano) --}}
+                        <div class="row g-3 mt-1" id="exclusive-toggle-area" style="display:none">
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="block_catamaran_day" id="block_catamaran_day" value="1" role="switch">
                                     <label class="form-check-label fw-semibold" for="block_catamaran_day">
-                                        Blocca il catamarano (uso esclusivo)
+                                        Riserva il catamarano (uso esclusivo)
                                     </label>
-                                    <div class="form-text">Riserva il catamarano per un periodo: i campi sotto diventano data di partenza e di ritorno.</div>
+                                    <div class="form-text">Blocca uno o più catamarani per un periodo. Le date e gli orari sotto definiscono partenza e ritorno; puoi superare la capienza scegliendo più catamarani.</div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Data partenza + (orario | data ritorno) --}}
+                        {{-- 3) Data/ora partenza + (orario | data/ora ritorno) --}}
                         <div class="row g-3 mt-1">
                             <div class="col-md-6">
                                 <label for="booking-date-input" class="form-label fw-semibold">Data di partenza *</label>
@@ -94,7 +88,7 @@
                                 <div class="form-text" id="departure-status"></div>
                             </div>
 
-                            {{-- Modalità normale: orario --}}
+                            {{-- Modalità normale: orario partenza (dalle partenze a calendario) --}}
                             <div class="col-md-6" id="time-col">
                                 <label for="departure-time" class="form-label fw-semibold">Orario *</label>
                                 <select id="departure-time" class="form-select" disabled>
@@ -102,12 +96,38 @@
                                 </select>
                             </div>
 
-                            {{-- Modalità uso esclusivo: data di ritorno --}}
+                            {{-- Modalità uso esclusivo: ora partenza + data/ora ritorno --}}
+                            <div class="col-md-6" id="start-time-col" style="display:none">
+                                <label for="block_start_time" class="form-label fw-semibold">Ora di partenza *</label>
+                                <input type="time" class="form-control" name="block_start_time" id="block_start_time" value="{{ old('block_start_time', '09:00') }}">
+                            </div>
                             <div class="col-md-6" id="return-col" style="display:none">
                                 <label for="return-date-input" class="form-label fw-semibold">Data di ritorno *</label>
                                 <input type="text" id="return-date-input" class="form-control" placeholder="Seleziona la data di ritorno…" autocomplete="off">
-                                <div class="form-text">Il catamarano sarà bloccato dalla partenza al ritorno (inclusi).</div>
                             </div>
+                            <div class="col-md-6" id="end-time-col" style="display:none">
+                                <label for="block_end_time" class="form-label fw-semibold">Ora di ritorno *</label>
+                                <input type="time" class="form-control" name="block_end_time" id="block_end_time" value="{{ old('block_end_time', '18:00') }}">
+                            </div>
+                        </div>
+
+                        {{-- 4) Catamarano: singolo (normale) o multi-selezione (uso esclusivo) --}}
+                        {{-- Normale: un solo catamarano (o automatico) --}}
+                        <div class="row g-3 mt-1" id="single-catamaran-area" style="display:none">
+                            <div class="col-md-8">
+                                <label for="catamaran_id" class="form-label fw-semibold">Catamarano</label>
+                                <select name="catamaran_id" id="catamaran_id" class="form-select">
+                                    <option value="">Automatico (assegna il sistema)</option>
+                                </select>
+                                <div class="form-text">Lascia "Automatico" per far scegliere al sistema il catamarano con più posti liberi.</div>
+                            </div>
+                        </div>
+
+                        {{-- Uso esclusivo: scegli uno o più catamarani DISPONIBILI nel periodo --}}
+                        <div class="mt-3" id="multi-catamaran-area" style="display:none">
+                            <label class="form-label fw-semibold">Catamarani da riservare *</label>
+                            <div id="multi-catamaran-status" class="form-text mb-2">Seleziona data di partenza e ritorno per vedere i catamarani disponibili.</div>
+                            <div id="multi-catamaran-list" class="d-flex flex-column gap-2"></div>
                         </div>
 
                         {{-- Partenza effettivamente scelta: id reale, oppure "virt:Y-m-d:H:i" --}}
@@ -259,6 +279,7 @@
 <script>
 (function () {
     const departuresUrlTpl = @json(route('admin.bookings.departures.json', ['tour' => '__TOUR__'], false));
+    const catAvailUrlTpl = @json(route('admin.bookings.catamaran-availability', ['tour' => '__TOUR__'], false));
 
     const tourSelect = document.getElementById('tour_id');
     const dateInput = document.getElementById('booking-date-input');
@@ -276,19 +297,27 @@
     const statusHint = document.getElementById('status-hint');
     const custFirst = document.getElementById('customer_first_name');
     const custLast = document.getElementById('customer_last_name');
-    const catamaranArea = document.getElementById('catamaran-area');
+    const exclusiveToggleArea = document.getElementById('exclusive-toggle-area');
+    const singleCatamaranArea = document.getElementById('single-catamaran-area');
     const catamaranSelect = document.getElementById('catamaran_id');
     const blockDayCheck = document.getElementById('block_catamaran_day');
     const blockStartInput = document.getElementById('block_start_date');
     const blockEndInput = document.getElementById('block_end_date');
+    const blockStartTime = document.getElementById('block_start_time');
+    const blockEndTime = document.getElementById('block_end_time');
     const timeCol = document.getElementById('time-col');
+    const startTimeCol = document.getElementById('start-time-col');
     const returnCol = document.getElementById('return-col');
+    const endTimeCol = document.getElementById('end-time-col');
     const returnDateInput = document.getElementById('return-date-input');
+    const multiCatArea = document.getElementById('multi-catamaran-area');
+    const multiCatList = document.getElementById('multi-catamaran-list');
+    const multiCatStatus = document.getElementById('multi-catamaran-status');
     const onRequestPriceArea = document.getElementById('onrequest-price-area');
     const totalPriceInput = document.getElementById('total_price');
     const childrenHeader = document.getElementById('children-header');
 
-    const DEFAULT_TIME = '09:00';     // orario di default in modalità uso esclusivo
+    let DEFAULT_TIME = '09:00';       // ora di partenza in uso esclusivo (sync col campo)
 
     let departures = [];       // tutte le partenze del tour
     let byDate = {};           // 'Y-m-d' => [departure,...]
@@ -302,6 +331,9 @@
     let totalPrice = 0;        // prezzo totale manuale (solo su richiesta)
     let exclusive = false;     // uso esclusivo: partenza+ritorno con date libere
     let tourMeta = null;       // dati tour dalla risposta JSON (capienza, ecc.)
+    let exclusiveCats = [];    // disponibilità catamarani nel periodo (uso esclusivo)
+    let selectedCats = [];     // id catamarani selezionati (uso esclusivo)
+    let availReqSeq = 0;       // sequence per ignorare risposte availability obsolete
 
     function escapeHtml(s) {
         if (s == null) return '';
@@ -320,6 +352,10 @@
         resetDeparture();
         departures = []; byDate = {};
         onRequest = false; tourMeta = null;
+        exclusiveCats = []; selectedCats = [];
+        exclusiveToggleArea.style.display = 'none';
+        singleCatamaranArea.style.display = 'none';
+        multiCatArea.style.display = 'none';
         if (fp) { fp.destroy(); fp = null; }
         if (fpReturn) { fpReturn.destroy(); fpReturn = null; }
         dateInput.value = '';
@@ -347,8 +383,10 @@
                 departures.forEach(d => { (byDate[d.iso_date] = byDate[d.iso_date] || []).push(d); });
 
                 depStatus.innerHTML = '';
+                // Mostra l'opzione "uso esclusivo" appena il tour è caricato.
+                exclusiveToggleArea.style.display = '';
                 buildDatePickers();   // costruisce i picker in base alla modalità
-                renderCatamarans();   // mostra subito catamarano + spunta uso esclusivo
+                renderCatamarans();
             })
             .catch(err => {
                 console.error(err);
@@ -456,12 +494,97 @@
             blockEndInput.value = startDate;
         }
         onDepartureChanged();
+        fetchCatamaranAvailability();
     }
 
     function pickExclusiveEnd(endDate) {
         if (!endDate) { blockEndInput.value = blockStartInput.value || ''; return; }
         blockEndInput.value = endDate;
         renderSummary();
+        fetchCatamaranAvailability();
+    }
+
+    // Sincronizza l'orario di partenza scelto nella partenza virtuale.
+    function syncExclusiveStartTime() {
+        DEFAULT_TIME = (blockStartTime && blockStartTime.value) ? blockStartTime.value : '09:00';
+        if (exclusive && blockStartInput.value) {
+            currentDeparture = buildExclusiveDeparture(blockStartInput.value);
+            depIdInput.value = currentDeparture.id;
+        }
+    }
+
+    // ===== Catamarani disponibili nel periodo (uso esclusivo) =====
+    function fetchCatamaranAvailability() {
+        if (!exclusive || !tourMeta) return;
+        const start = blockStartInput.value;
+        const end = blockEndInput.value || start;
+        if (!start) {
+            exclusiveCats = [];
+            renderMultiCatamarans();
+            return;
+        }
+        const seq = ++availReqSeq;
+        multiCatStatus.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifica disponibilità…';
+        const url = catAvailUrlTpl.replace('__TOUR__', tourMeta.id)
+            + '?start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
+        fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(data => {
+                if (seq !== availReqSeq) return; // risposta obsoleta
+                exclusiveCats = data.catamarans || [];
+                // Mantieni selezionati solo quelli ancora disponibili.
+                selectedCats = selectedCats.filter(id =>
+                    exclusiveCats.some(c => c.id === id && c.available));
+                renderMultiCatamarans();
+                renderSummary();
+            })
+            .catch(() => {
+                if (seq !== availReqSeq) return;
+                multiCatStatus.innerHTML = '<span class="text-danger">Errore nel controllo disponibilità.</span>';
+            });
+    }
+
+    function renderMultiCatamarans() {
+        if (!exclusiveCats.length) {
+            multiCatStatus.textContent = blockStartInput.value
+                ? 'Nessun catamarano per questo tour.'
+                : 'Seleziona data di partenza e ritorno per vedere i catamarani disponibili.';
+            multiCatList.innerHTML = '';
+            return;
+        }
+        const availableCount = exclusiveCats.filter(c => c.available).length;
+        multiCatStatus.textContent = availableCount > 0
+            ? 'Seleziona uno o più catamarani da riservare nel periodo.'
+            : 'Nessun catamarano disponibile nel periodo: ci sono prenotazioni attive (vedi sotto).';
+
+        multiCatList.innerHTML = exclusiveCats.map(c => {
+            const checked = selectedCats.includes(c.id) ? 'checked' : '';
+            const disabled = c.available ? '' : 'disabled';
+            const conflictHtml = (!c.available && c.conflicts && c.conflicts.length)
+                ? `<div class="small text-danger mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Bloccato da: `
+                    + c.conflicts.map(cf => `#${escapeHtml(cf.booking_number)} (${escapeHtml(cf.date)} · ${escapeHtml(cf.customer)})`).join(', ')
+                    + `. Annulla o sposta queste prenotazioni per liberarlo.</div>`
+                : '';
+            return `
+                <div class="ab-participant-row ${c.available ? '' : 'opacity-75'}">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="catamaran_ids[]" value="${c.id}"
+                               id="cat-${c.id}" ${checked} ${disabled} data-cat="${c.id}">
+                        <label class="form-check-label fw-semibold" for="cat-${c.id}">
+                            ${escapeHtml(c.name)} <span class="text-muted small">· ${c.capacity} posti</span>
+                            ${c.available ? '<span class="badge bg-success-subtle text-success ms-1">disponibile</span>' : '<span class="badge bg-danger-subtle text-danger ms-1">occupato</span>'}
+                        </label>
+                        ${conflictHtml}
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // Capienza totale dei catamarani selezionati (uso esclusivo).
+    function selectedCatsCapacity() {
+        return exclusiveCats
+            .filter(c => selectedCats.includes(c.id))
+            .reduce((sum, c) => sum + (c.capacity || 0), 0);
     }
 
     function onDepartureChanged() {
@@ -482,22 +605,40 @@
         renderAdults();
         renderChildren();
         renderSummary();
+
+        // Modalità normale: avvisa se la data non ha catamarani disponibili
+        // (es. tutti riservati/bloccati). Il backend rifiuterebbe comunque.
+        if (!exclusive) {
+            const noAvail = currentDeparture.available != null && currentDeparture.available <= 0;
+            depStatus.innerHTML = noAvail
+                ? '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Nessun catamarano disponibile in questa data (tutti riservati/occupati).</span>'
+                : '';
+        }
     }
 
     // ===== Catamarano =====
     function renderCatamarans() {
-        // L'area catamarano (con la spunta uso esclusivo) è visibile appena c'è un tour.
         if (!tourMeta) {
-            catamaranArea.style.display = 'none';
+            singleCatamaranArea.style.display = 'none';
+            multiCatArea.style.display = 'none';
             return;
         }
-        catamaranArea.style.display = '';
 
-        // Opzioni catamarano: dalla partenza scelta, altrimenti dai catamarani del tour.
-        const cats = currentDeparture
-            ? (currentDeparture.catamarans || [])
-            : ((tourMeta.catamarans || []).map(c => ({ id: c.id, name: c.name, capacity: c.capacity, free: null })));
+        if (exclusive) {
+            // Modalità uso esclusivo: lista multi-selezione (popolata da fetchCatamaranAvailability).
+            singleCatamaranArea.style.display = 'none';
+            multiCatArea.style.display = '';
+            renderMultiCatamarans();
+            return;
+        }
 
+        // Modalità normale: select singolo (automatico o un catamarano).
+        multiCatArea.style.display = '';  // override sotto
+        multiCatArea.style.display = 'none';
+        singleCatamaranArea.style.display = currentDeparture ? '' : 'none';
+        if (!currentDeparture) return;
+
+        const cats = currentDeparture.catamarans || [];
         const prev = catamaranSelect.value;
         catamaranSelect.innerHTML =
             '<option value="">Automatico (assegna il sistema)</option>' +
@@ -670,16 +811,36 @@
     function setExclusiveMode(on) {
         exclusive = on;
         resetDeparture();
-        // Toggle colonne: orario (normale) ↔ data di ritorno (esclusivo).
+        // Colonne: normale = orario; esclusivo = ora partenza + data/ora ritorno.
         timeCol.style.display = exclusive ? 'none' : '';
+        startTimeCol.style.display = exclusive ? '' : 'none';
         returnCol.style.display = exclusive ? '' : 'none';
-        // Reset periodo di blocco.
+        endTimeCol.style.display = exclusive ? '' : 'none';
+        // Reset periodo e selezioni.
         blockStartInput.value = '';
         blockEndInput.value = '';
-        // Ricostruisci i picker e l'area partecipanti.
+        exclusiveCats = []; selectedCats = [];
+        if (exclusive) syncExclusiveStartTime();
+        // Ricostruisci i picker e l'area partecipanti/catamarani.
         if (tourMeta) buildDatePickers();
         onDepartureChanged();
     }
+
+    // Aggiorna l'ora di partenza/virtuale e l'orario di blocco.
+    blockStartTime.addEventListener('change', () => { syncExclusiveStartTime(); renderSummary(); });
+
+    // Selezione catamarani (uso esclusivo): aggiorna lista e capienza.
+    multiCatList.addEventListener('change', e => {
+        const cb = e.target.closest('input[data-cat]');
+        if (!cb) return;
+        const id = parseInt(cb.value, 10);
+        if (cb.checked) {
+            if (!selectedCats.includes(id)) selectedCats.push(id);
+        } else {
+            selectedCats = selectedCats.filter(x => x !== id);
+        }
+        renderSummary();
+    });
 
     document.getElementById('adults-plus').addEventListener('click', () => { adultsCount++; renderAdults(); renderSummary(); });
     document.getElementById('adults-minus').addEventListener('click', () => { adultsCount = Math.max(1, adultsCount - 1); renderAdults(); renderSummary(); });
@@ -711,6 +872,31 @@
 
     // Intestatario → primo adulto
     [custFirst, custLast].forEach(el => el.addEventListener('input', () => { if (!participantsArea.classList.contains('d-none')) renderAdults(); renderSummary(); }));
+
+    // Guardia submit: in uso esclusivo serve almeno un catamarano disponibile
+    // selezionato e la capienza scelta deve coprire i passeggeri.
+    document.getElementById('adminBookingForm').addEventListener('submit', e => {
+        if (!exclusive) {
+            // Modalità normale: blocca se la data non ha posti disponibili.
+            if (currentDeparture && currentDeparture.available != null && currentDeparture.available <= 0) {
+                e.preventDefault();
+                alert('Questa data non ha catamarani disponibili (tutti riservati/occupati). Scegli un\'altra data.');
+            }
+            return;
+        }
+        if (selectedCats.length === 0) {
+            e.preventDefault();
+            alert('Seleziona almeno un catamarano disponibile da riservare.');
+            return;
+        }
+        const totalPax = adultsCount + children.length;
+        const cap = selectedCatsCapacity();
+        if (cap < totalPax) {
+            e.preventDefault();
+            alert('I catamarani selezionati hanno ' + cap + ' posti, ma i passeggeri sono ' + totalPax
+                + '. Seleziona altri catamarani per coprire tutti i passeggeri.');
+        }
+    });
 
     updateStatusHint();
 })();

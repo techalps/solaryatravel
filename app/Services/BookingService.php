@@ -132,15 +132,19 @@ class BookingService
                 throw new \Exception('Numero posti non valido.');
             }
 
-            // Distribuzione posti: automatica, oppure forzata su un catamarano
-            // specifico se l'admin l'ha scelto.
-            $forcedCatamaranId = !empty($data['forced_catamaran_id'])
-                ? (int) $data['forced_catamaran_id']
-                : null;
-            $assignment = $this->distributeSeats($tour, $departure, $countingSeats, $forcedCatamaranId);
+            // Distribuzione posti: automatica, oppure forzata su uno o più catamarani
+            // se l'admin li ha scelti. In uso esclusivo è consentito superare la
+            // capienza dei catamarani scelti (allowOverflow).
+            $exclusive = !empty($data['exclusive_use']);
+            $forcedCatamaranIds = !empty($data['forced_catamaran_ids'])
+                ? array_map('intval', (array) $data['forced_catamaran_ids'])
+                // Retrocompatibilità: vecchio singolo id.
+                : (!empty($data['forced_catamaran_id']) ? [(int) $data['forced_catamaran_id']] : null);
+
+            $assignment = $this->distributeSeats($tour, $departure, $countingSeats, $forcedCatamaranIds, $exclusive);
             if ($assignment === null) {
-                throw new \Exception($forcedCatamaranId !== null
-                    ? 'Il catamarano selezionato non ha posti sufficienti (o non è disponibile) per questa partenza.'
+                throw new \Exception($forcedCatamaranIds !== null
+                    ? 'I catamarani selezionati non hanno posti sufficienti (o non sono disponibili) per questa partenza.'
                     : 'Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.');
             }
 
@@ -441,12 +445,8 @@ class BookingService
             ? $departure->departure_date
             : $departure->departure_date->format('Y-m-d');
 
-        $blockedIds = TourCatamaranBlock::where('tour_id', $tour->id)
-            ->whereDate('start_date', '<=', $departureDate)
-            ->whereDate('end_date', '>=', $departureDate)
-            ->pluck('catamaran_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        // Blocco GLOBALE per catamarano: una barca riservata è occupata per qualsiasi tour.
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate);
 
         $totalFree = 0;
         foreach ($tour->operatingCatamarans() as $cat) {
@@ -484,12 +484,8 @@ class BookingService
             ? $departure->departure_date
             : $departure->departure_date->format('Y-m-d');
 
-        $blockedIds = TourCatamaranBlock::where('tour_id', $tour->id)
-            ->whereDate('start_date', '<=', $departureDate)
-            ->whereDate('end_date', '>=', $departureDate)
-            ->pluck('catamaran_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        // Blocco GLOBALE per catamarano: una barca riservata è occupata per qualsiasi tour.
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate);
 
         $maxFree = 0;
         foreach ($tour->operatingCatamarans() as $cat) {
@@ -507,6 +503,39 @@ class BookingService
     }
 
     /**
+     * Prenotazioni ATTIVE che impedirebbero di bloccare (uso esclusivo) i catamarani
+     * indicati nel periodo [start..end]. Una prenotazione è in conflitto se:
+     *  - è dello stesso tour ed è attiva (non annullata/rimborsata/no-show);
+     *  - la sua data partenza cade nel periodo di blocco;
+     *  - occupa almeno uno dei catamarani che si vogliono bloccare.
+     *
+     * @param  array<int,int>  $catamaranIds
+     * @return \Illuminate\Support\Collection<int, Booking>
+     */
+    public function conflictingBookingsForBlock(
+        int $tourId,
+        array $catamaranIds,
+        string $startDate,
+        string $endDate
+    ): \Illuminate\Support\Collection {
+        $catamaranIds = array_values(array_filter(array_map('intval', $catamaranIds)));
+        if (empty($catamaranIds)) {
+            return collect();
+        }
+
+        // Conflitti GLOBALI: un catamarano con una prenotazione attiva (su qualsiasi
+        // tour) nel periodo non è bloccabile. $tourId non filtra più i conflitti.
+        return Booking::query()
+            ->active()
+            ->whereDate('booking_date', '>=', $startDate)
+            ->whereDate('booking_date', '<=', $endDate)
+            ->whereHas('seatRecords', fn ($q) => $q->whereIn('catamaran_id', $catamaranIds))
+            ->with(['seatRecords' => fn ($q) => $q->whereIn('catamaran_id', $catamaranIds), 'tour'])
+            ->orderBy('booking_date')
+            ->get();
+    }
+
+    /**
      * Auto-distribuzione posti tra catamarani con ottimizzazione "gruppo unito".
      *
      * Strategia:
@@ -518,24 +547,37 @@ class BookingService
      *
      * @return array<int, array{catamaran_id:int, seats:int}>|null
      */
-    public function distributeSeats(Tour $tour, TourDeparture $departure, int $seats, ?int $forcedCatamaranId = null): ?array
+    /**
+     * @param  int|array<int,int>|null  $forcedCatamaranIds  uno o più catamarani da
+     *         usare obbligatoriamente (admin). Null = distribuzione automatica.
+     * @param  bool  $allowOverflow  uso esclusivo: consenti di superare la capienza
+     *         totale dei catamarani scelti (il gruppo viene comunque ripartito su di essi).
+     */
+    public function distributeSeats(Tour $tour, TourDeparture $departure, int $seats, int|array|null $forcedCatamaranIds = null, bool $allowOverflow = false): ?array
     {
         $catamarans = $tour->operatingCatamarans();
+
+        // Normalizza i catamarani forzati in un set di interi (o null).
+        $forcedSet = null;
+        if ($forcedCatamaranIds !== null) {
+            $forcedSet = array_map('intval', (array) $forcedCatamaranIds);
+            $forcedSet = array_values(array_filter($forcedSet));
+            if (empty($forcedSet)) {
+                $forcedSet = null;
+            }
+        }
 
         // Catamarani bloccati per questo tour nella data della partenza
         $departureDate = is_string($departure->departure_date)
             ? $departure->departure_date
             : $departure->departure_date->format('Y-m-d');
-        $blockedIds = TourCatamaranBlock::where('tour_id', $tour->id)
-            ->whereDate('start_date', '<=', $departureDate)
-            ->whereDate('end_date', '>=', $departureDate)
-            ->pluck('catamaran_id')
-            ->all();
+        // Blocco GLOBALE per catamarano: una barca riservata è occupata per qualsiasi tour.
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate);
 
         $candidates = [];
         foreach ($catamarans as $cat) {
-            // Catamarano forzato dall'admin: considera SOLO quello.
-            if ($forcedCatamaranId !== null && (int) $cat->id !== $forcedCatamaranId) {
+            // Catamarani forzati dall'admin: considera SOLO quelli.
+            if ($forcedSet !== null && !in_array((int) $cat->id, $forcedSet, true)) {
                 continue;
             }
             // Salta catamarani bloccati per questo tour nella data
@@ -548,6 +590,11 @@ class BookingService
             }
             $booked = $cat->seatsBookedOnDeparture($departure->id);
             $free = max(0, $cat->capacity - $booked);
+            // In modalità overflow (uso esclusivo) i catamarani scelti sono "vuoti" per
+            // questa prenotazione: usiamo la capienza piena come riferimento.
+            if ($allowOverflow) {
+                $free = (int) $cat->capacity;
+            }
             if ($free <= 0) {
                 continue;
             }
@@ -558,10 +605,28 @@ class BookingService
             ];
         }
 
-        // Catamarano forzato ma non idoneo (inesistente per il tour, bloccato,
-        // non disponibile o pieno): nessuna distribuzione possibile.
-        if ($forcedCatamaranId !== null && empty($candidates)) {
+        // Catamarani forzati ma nessuno idoneo: nessuna distribuzione possibile.
+        if ($forcedSet !== null && empty($candidates)) {
             return null;
+        }
+
+        // Uso esclusivo con overflow: i passeggeri possono superare la capienza
+        // totale dei catamarani scelti. Ripartiamo riempiendo in ordine e mettendo
+        // l'eccedenza sull'ultimo catamarano (tutti vengono comunque bloccati).
+        if ($allowOverflow && $forcedSet !== null && !empty($candidates)) {
+            $sorted = collect($candidates)->sortByDesc('free')->values();
+            $remaining = $seats;
+            $assignment = [];
+            $count = $sorted->count();
+            foreach ($sorted as $idx => $c) {
+                $isLast = ($idx === $count - 1);
+                $take = $isLast ? $remaining : min($remaining, $c['free']);
+                if ($take > 0) {
+                    $assignment[] = ['catamaran_id' => $c['catamaran_id'], 'seats' => $take];
+                    $remaining -= $take;
+                }
+            }
+            return $remaining <= 0 ? $assignment : null;
         }
 
         // Eventuale capacity_override sulla partenza

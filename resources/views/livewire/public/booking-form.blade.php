@@ -389,14 +389,48 @@
                 <div class="alert alert-danger small mb-15">{{ $errorMessage }}</div>
             @endif
 
-            <button type="button" class="tg-btn tg-btn-switch-animation w-100" wire:click="submit" wire:loading.attr="disabled" @disabled($this->hasChildrenWithErrors || $adultsCount < 1 || ($this->maxSeats !== null && ($this->maxSeats <= 0 || $this->totalSelected > $this->maxSeats)))>
-                <span wire:loading.remove wire:target="submit">
+            <button type="button" class="tg-btn tg-btn-switch-animation w-100" wire:click="requestSubmit" wire:loading.attr="disabled" wire:target="requestSubmit,submit,confirmSplit" @disabled($this->hasChildrenWithErrors || $adultsCount < 1 || ($this->maxSeats !== null && ($this->maxSeats <= 0 || $this->totalSelected > $this->maxSeats)))>
+                <span wire:loading.remove wire:target="requestSubmit,submit,confirmSplit">
                     <i class="fa-solid fa-lock me-2"></i>Prenota ora
                 </span>
-                <span wire:loading wire:target="submit">
+                <span wire:loading wire:target="requestSubmit,submit,confirmSplit">
                     <i class="fa-solid fa-spinner fa-spin me-2"></i>Attendere…
                 </span>
             </button>
+
+            {{-- Modale: il gruppo verrà diviso su più catamarani --}}
+            @if($showSplitModal)
+                <div class="bk-modal-overlay" wire:key="split-modal">
+                    <div class="bk-modal" role="dialog" aria-modal="true">
+                        <div class="bk-modal-head">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <h5>Gruppo su più catamarani</h5>
+                        </div>
+                        <div class="bk-modal-body">
+                            <p>
+                                Per questa data non c'è un'unica imbarcazione con
+                                <strong>{{ $this->totalSelected }} posti</strong> liberi: il tuo gruppo verrà
+                                diviso su <strong>{{ $this->splitCatamaransCount }} catamarani</strong> per la stessa partenza.
+                            </p>
+                            <p class="text-muted small mb-0">
+                                Puoi proseguire così, scegliere un'altra data, oppure contattare il nostro
+                                customer care su WhatsApp per organizzare il gruppo su un'unica barca.
+                            </p>
+                        </div>
+                        <div class="bk-modal-actions">
+                            <button type="button" class="tg-btn w-100" wire:click="confirmSplit" wire:loading.attr="disabled" wire:target="confirmSplit">
+                                <i class="fa-solid fa-check me-2"></i>Prosegui comunque
+                            </button>
+                            <button type="button" class="bk-modal-btn-outline w-100" wire:click="closeSplitModal">
+                                <i class="fa-solid fa-calendar-day me-2"></i>Cambia data
+                            </button>
+                            <a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="bk-modal-btn-wa w-100">
+                                <i class="fa-brands fa-whatsapp me-2"></i>Contatta su WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <small class="d-block text-muted text-center mt-2" style="font-size:.78rem">
                 <i class="fa-solid fa-shield-alt me-1"></i>Pagamento sicuro via Stripe
@@ -422,6 +456,20 @@
         .booking-widget .bk-stepper button:disabled { opacity: .3; cursor: not-allowed; }
         .booking-widget .bk-stepper button.plus { background: var(--tg-theme-secondary); color: #fff; }
         .booking-widget .bk-stepper .qty { min-width: 22px; text-align: center; font-weight: 700; font-size: .9rem; color: #0E1B33; }
+
+        /* Modale split catamarani */
+        .bk-modal-overlay { position: fixed; inset: 0; background: rgba(14,27,51,.55); display: flex; align-items: center; justify-content: center; z-index: 1080; padding: 1rem; }
+        .bk-modal { background: #fff; border-radius: 18px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
+        .bk-modal-head { display: flex; align-items: center; gap: .6rem; padding: 1rem 1.25rem; background: #fff8e6; color: #6b4e00; }
+        .bk-modal-head i { font-size: 1.3rem; }
+        .bk-modal-head h5 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+        .bk-modal-body { padding: 1rem 1.25rem; font-size: .9rem; color: #0E1B33; line-height: 1.5; }
+        .bk-modal-body p { margin-bottom: .6rem; }
+        .bk-modal-actions { padding: 0 1.25rem 1.25rem; display: flex; flex-direction: column; gap: .55rem; }
+        .bk-modal-btn-outline { display: inline-flex; align-items: center; justify-content: center; padding: .6rem 1rem; border-radius: 50px; border: 1.5px solid #e2e8f0; background: #fff; color: #0E1B33; font-weight: 600; font-size: .9rem; text-decoration: none; }
+        .bk-modal-btn-outline:hover { background: #f4f4f4; }
+        .bk-modal-btn-wa { display: inline-flex; align-items: center; justify-content: center; padding: .6rem 1rem; border-radius: 50px; border: 0; background: #25D366; color: #fff; font-weight: 600; font-size: .9rem; text-decoration: none; }
+        .bk-modal-btn-wa:hover { background: #1ebe57; color: #fff; }
 
         .booking-widget .bk-summary-mini { background: #fafafa; border-radius: 10px; padding: .65rem .85rem; }
         .booking-widget .bk-summary-line { display: flex; justify-content: space-between; padding: .2rem 0; font-size: .85rem; color: #0E1B33; }

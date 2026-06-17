@@ -120,6 +120,11 @@
                     <li class="px-2 pt-3 pb-1"><div class="section-title text-uppercase fw-bold">Sistema</div></li>
 
                     <li class="nav-item">
+                        <a href="{{ route('admin.guide.index') }}" class="nav-link {{ request()->routeIs('admin.guide.*') ? 'active' : '' }}">
+                            <i class="bi bi-life-preserver me-2"></i>Guida
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.settings') }}" class="nav-link {{ request()->routeIs('admin.settings*') ? 'active' : '' }}">
                             <i class="bi bi-gear-fill me-2"></i>Impostazioni
                         </a>

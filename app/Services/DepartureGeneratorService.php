@@ -33,7 +33,10 @@ class DepartureGeneratorService
     {
         $tour->loadMissing(['periods', 'catamarans']);
 
-        $blocks = TourCatamaranBlock::where('tour_id', $tour->id)
+        // Blocco GLOBALE per catamarano (qualsiasi tour): la barca riservata è
+        // fisicamente occupata. I blocchi su catamarani non usati da questo tour
+        // vengono comunque scartati più sotto dall'intersezione con $tourCatamaranIds.
+        $blocks = TourCatamaranBlock::query()
             ->where(function ($q) use ($from, $to) {
                 $q->whereBetween('start_date', [$from->toDateString(), $to->toDateString()])
                   ->orWhereBetween('end_date', [$from->toDateString(), $to->toDateString()])

@@ -85,6 +85,9 @@ class BookingForm extends Component
 
     public ?string $errorMessage = null;
 
+    /** Mostra il modale di avviso "il gruppo verrà diviso su più catamarani". */
+    public bool $showSplitModal = false;
+
     public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = []): void
     {
         $this->tour = $tour;
@@ -376,6 +379,36 @@ class BookingForm extends Component
         return app(BookingService::class)->largestSingleCatamaranFree($this->departure);
     }
 
+    /**
+     * Vero quando il gruppo selezionato NON entra in un singolo catamarano ma
+     * rientra nella capienza totale della partenza: verrà diviso su più barche.
+     * Serve a mostrare il modale di avviso prima del checkout.
+     */
+    #[Computed]
+    public function willSplit(): bool
+    {
+        if (!$this->departure) {
+            return false;
+        }
+        $largest = $this->largestSingleFree;
+        $max = $this->maxSeats;
+        return $largest !== null
+            && $this->totalSelected > $largest
+            && ($max === null || $this->totalSelected <= $max);
+    }
+
+    /** Numero di catamarani su cui verrà diviso il gruppo (stima per il modale). */
+    #[Computed]
+    public function splitCatamaransCount(): int
+    {
+        if (!$this->departure) {
+            return 1;
+        }
+        $assignment = app(BookingService::class)
+            ->distributeSeats($this->departure->tour, $this->departure, $this->totalSelected);
+        return is_array($assignment) ? count($assignment) : 1;
+    }
+
     #[Computed]
     public function hasChildrenWithErrors(): bool
     {
@@ -506,6 +539,31 @@ class BookingForm extends Component
     }
 
     // ===== Submit =====
+
+    /**
+     * Click su "Prenota ora": se il gruppo verrà diviso su più catamarani,
+     * mostra prima il modale di avviso; altrimenti procede col checkout.
+     */
+    public function requestSubmit(BookingService $bookingService)
+    {
+        if ($this->willSplit && ! $this->showSplitModal) {
+            $this->showSplitModal = true;
+            return null;
+        }
+        return $this->submit($bookingService);
+    }
+
+    public function closeSplitModal(): void
+    {
+        $this->showSplitModal = false;
+    }
+
+    /** Conferma dal modale: procede con la prenotazione (split accettato). */
+    public function confirmSplit(BookingService $bookingService)
+    {
+        $this->showSplitModal = false;
+        return $this->submit($bookingService);
+    }
 
     public function submit(BookingService $bookingService)
     {

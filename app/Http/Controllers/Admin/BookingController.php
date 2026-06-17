@@ -162,12 +162,8 @@ class BookingController extends Controller
 
             // Catamarani selezionabili per questa data: operativi, non bloccati,
             // disponibili, con i posti liberi (se la partenza esiste già).
-            $blockedIds = \App\Models\TourCatamaranBlock::where('tour_id', $tour->id)
-                ->whereDate('start_date', '<=', $isoDate)
-                ->whereDate('end_date', '>=', $isoDate)
-                ->pluck('catamaran_id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+            // Blocco GLOBALE: una barca riservata è occupata per qualsiasi tour.
+            $blockedIds = \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn($isoDate);
 
             $catamarans = $tour->operatingCatamarans()
                 ->filter(fn ($cat) => !in_array((int) $cat->id, $blockedIds, true) && $cat->isAvailableOn($isoDate))
@@ -183,14 +179,19 @@ class BookingController extends Controller
                 })
                 ->values();
 
+            // Posti/capienza coerenti coi catamarani EFFETTIVAMENTE disponibili
+            // (esclusi i bloccati globalmente). Se tutti bloccati → 0.
+            $availSeats = (int) $catamarans->sum('free');
+            $availCapacity = (int) $catamarans->sum('capacity');
+
             return [
                 // id reale (numerico) se la partenza esiste, altrimenti id sintetico.
                 'id' => $d ? (string) $d->id : ('virt:' . $isoDate . ':' . $time),
                 'iso_date' => $isoDate,
                 'date' => \Carbon\Carbon::parse($isoDate)->format('d/m/Y'),
                 'time' => $time,
-                'available' => $d ? $d->seats_available : null,
-                'capacity' => $d ? $d->capacity : $tour->total_capacity,
+                'available' => $availSeats,
+                'capacity' => $availCapacity,
                 'price_modifier' => $modifier,
                 'adult_price' => $period
                     ? round((float) $period->base_price * $modifier, 2)
@@ -221,6 +222,49 @@ class BookingController extends Controller
                     ])->values(),
             ],
             'departures' => $departures,
+        ]);
+    }
+
+    /**
+     * JSON: disponibilità dei catamarani del tour per il blocco "uso esclusivo"
+     * su un periodo (date libere). Per ciascun catamarano indica se è bloccabile
+     * e, in caso contrario, quali prenotazioni attive lo impediscono.
+     */
+    public function catamaranAvailability(Tour $tour, Request $request)
+    {
+        $start = $request->input('start');
+        $end = $request->input('end', $start);
+        if (!$start) {
+            return response()->json(['catamarans' => []]);
+        }
+        if (!$end || $end < $start) {
+            $end = $start;
+        }
+
+        $catamarans = $tour->operatingCatamarans()->map(function ($cat) use ($tour, $start, $end) {
+            $conflicts = $this->bookingService->conflictingBookingsForBlock(
+                $tour->id,
+                [(int) $cat->id],
+                $start,
+                $end
+            );
+
+            return [
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'capacity' => (int) $cat->capacity,
+                'available' => $conflicts->isEmpty(),
+                'conflicts' => $conflicts->map(fn ($b) => [
+                    'booking_number' => $b->booking_number,
+                    'date' => $b->booking_date->format('d/m/Y'),
+                    'customer' => trim($b->customer_first_name . ' ' . $b->customer_last_name),
+                ])->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'tour' => ['id' => $tour->id, 'name' => $tour->name],
+            'catamarans' => $catamarans,
         ]);
     }
 
@@ -257,12 +301,17 @@ class BookingController extends Controller
             'customer_tax_code' => 'nullable|string|max:16',
             'special_requests' => 'nullable|string|max:1000',
             'status' => 'required|in:' . implode(',', $statusValues),
-            // Catamarano: opzionale (vuoto = distribuzione automatica).
+            // Catamarano singolo (modalità normale): opzionale, vuoto = automatico.
             'catamaran_id' => 'nullable|integer|exists:catamarans,id',
-            // Bloccare il catamarano (uso esclusivo) per un periodo.
+            // Uso esclusivo: blocco catamarano(i) per un periodo con orari.
             'block_catamaran_day' => 'nullable|boolean',
             'block_start_date' => 'nullable|date',
             'block_end_date' => 'nullable|date|after_or_equal:block_start_date',
+            'block_start_time' => 'nullable|date_format:H:i',
+            'block_end_time' => 'nullable|date_format:H:i',
+            // Catamarani da riservare (uso esclusivo): uno o più.
+            'catamaran_ids' => 'nullable|array',
+            'catamaran_ids.*' => 'integer|exists:catamarans,id',
         ]);
 
         $status = BookingStatus::from($validated['status']);
@@ -277,6 +326,41 @@ class BookingController extends Controller
         // Uso esclusivo (blocco catamarano): la data di partenza è LIBERA, quindi la
         // partenza virtuale non deve essere validata contro i periodi del tour.
         $exclusive = $request->boolean('block_catamaran_day');
+
+        // Catamarani da riservare in uso esclusivo (uno o più).
+        $exclusiveCatamaranIds = $exclusive
+            ? array_values(array_unique(array_map('intval', $validated['catamaran_ids'] ?? [])))
+            : [];
+
+        if ($exclusive && empty($exclusiveCatamaranIds)) {
+            return back()->withInput()->with('error', 'Seleziona almeno un catamarano da riservare.');
+        }
+
+        // Controllo conflitti: non si possono bloccare catamarani con prenotazioni
+        // attive nel periodo. Segnala all'admin quali prenotazioni lo impediscono.
+        if ($exclusive) {
+            $blockStart = $validated['block_start_date'] ?? null;
+            $blockEnd = $validated['block_end_date'] ?? $blockStart;
+            if ($blockStart) {
+                $conflicts = $this->bookingService->conflictingBookingsForBlock(
+                    (int) $validated['tour_id'],
+                    $exclusiveCatamaranIds,
+                    $blockStart,
+                    $blockEnd ?? $blockStart
+                );
+                if ($conflicts->isNotEmpty()) {
+                    $lines = $conflicts->map(function ($b) {
+                        $cat = $b->seatRecords->pluck('catamaran.name')->filter()->unique()->implode(', ');
+                        return '#' . $b->booking_number . ' (' . $b->booking_date->format('d/m/Y')
+                            . ' · ' . trim($b->customer_first_name . ' ' . $b->customer_last_name) . ')'
+                            . ($cat ? ' — ' . $cat : '');
+                    })->implode('; ');
+                    return back()->withInput()->with('error',
+                        'Impossibile riservare i catamarani selezionati: ci sono prenotazioni attive nel periodo. '
+                        . 'Annulla o sposta queste prenotazioni su un altro catamarano prima di procedere: ' . $lines);
+                }
+            }
+        }
 
         // Risolvi l'id partenza: reale (numerico) o virtuale ("virt:Y-m-d:H:i").
         // La virtuale viene materializzata ora con firstOrCreate (stessa logica
@@ -335,30 +419,30 @@ class BookingController extends Controller
             'admin_override' => true,      // consente partenze passate (retroattive)
             // Prezzo TOTALE manuale (usato solo per i tour su richiesta).
             'total_price' => $isOnRequest ? (float) ($validated['total_price'] ?? 0) : null,
-            // Catamarano forzato (vuoto = distribuzione automatica del service).
-            'forced_catamaran_id' => $validated['catamaran_id'] ?? null,
+            // Uso esclusivo: i catamarani scelti vanno usati (anche oltre capienza).
+            'exclusive_use' => $exclusive,
+            'forced_catamaran_ids' => $exclusive
+                ? $exclusiveCatamaranIds
+                // Modalità normale: eventuale singolo catamarano scelto (o automatico).
+                : (!empty($validated['catamaran_id']) ? [(int) $validated['catamaran_id']] : null),
         ];
 
         try {
             $booking = $this->bookingService->create($payload, 'admin');
 
-            // Blocco catamarano (uso esclusivo) per un periodo, se richiesto: blocca i
-            // catamarani effettivamente assegnati a questa prenotazione (quello
-            // forzato dall'admin oppure quelli scelti dalla distribuzione automatica).
-            if ($request->boolean('block_catamaran_day')) {
-                // Periodo di blocco: usa le date indicate, altrimenti la sola data partenza.
+            // Blocco catamarano (uso esclusivo) per un periodo con orari, se richiesto:
+            // blocca i catamarani esplicitamente scelti dall'admin.
+            if ($exclusive && !empty($exclusiveCatamaranIds)) {
                 $depDate = $booking->booking_date->toDateString();
                 $startDate = $validated['block_start_date'] ?? $depDate;
                 $endDate = $validated['block_end_date'] ?? $startDate;
                 if ($endDate < $startDate) {
                     $endDate = $startDate;
                 }
+                $startTime = $validated['block_start_time'] ?? null;
+                $endTime = $validated['block_end_time'] ?? null;
 
-                $catamaranIds = $booking->seatRecords()
-                    ->whereNotNull('catamaran_id')
-                    ->pluck('catamaran_id')
-                    ->unique();
-                foreach ($catamaranIds as $catId) {
+                foreach ($exclusiveCatamaranIds as $catId) {
                     \App\Models\TourCatamaranBlock::firstOrCreate(
                         [
                             'tour_id' => $booking->tour_id,
@@ -366,7 +450,11 @@ class BookingController extends Controller
                             'start_date' => $startDate,
                             'end_date' => $endDate,
                         ],
-                        ['reason' => 'Bloccato da prenotazione admin #' . $booking->booking_number]
+                        [
+                            'start_time' => $startTime,
+                            'end_time' => $endTime,
+                            'reason' => 'Riservato da prenotazione admin #' . $booking->booking_number,
+                        ]
                     );
                 }
             }
@@ -548,7 +636,15 @@ class BookingController extends Controller
             'seatRecords.ageBracket',
         ]);
         $catamarans = Catamaran::active()->ordered()->get();
-        return view('admin.bookings.show', compact('booking', 'catamarans'));
+
+        // Catamarani riservati (uso esclusivo) da QUESTA prenotazione: i blocchi
+        // sono marcati col numero prenotazione nel campo reason.
+        $reservedBlocks = \App\Models\TourCatamaranBlock::with('catamaran')
+            ->where('reason', 'like', '%#' . $booking->booking_number . '%')
+            ->orderBy('start_date')
+            ->get();
+
+        return view('admin.bookings.show', compact('booking', 'catamarans', 'reservedBlocks'));
     }
 
     public function edit(Booking $booking): View
