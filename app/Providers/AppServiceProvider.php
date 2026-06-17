@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -16,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Il progetto usa Bootstrap 5: la paginazione deve usare la vista Bootstrap,
+        // altrimenti Laravel renderizza il markup Tailwind di default (grafica rotta).
+        Paginator::useBootstrapFive();
+
         $this->applyMailSettings();
         $this->serveLivewireAssetsAsStaticFile();
     }
