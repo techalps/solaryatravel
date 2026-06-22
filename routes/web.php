@@ -117,6 +117,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/bookings/{booking}/send-payment-link', [AdminBookingController::class, 'sendPaymentLink'])->name('bookings.send-payment-link');
     Route::get('/bookings/{booking}/export', [AdminBookingController::class, 'export'])->name('bookings.export');
     Route::post('/bookings/{booking}/seats/{seat}/move', [AdminBookingController::class, 'moveSeat'])->name('bookings.seats.move');
+    // Disdetta di singoli partecipanti/extra con eventuale rimborso parziale.
+    Route::post('/bookings/{booking}/remove-items', [AdminBookingController::class, 'removeItems'])->name('bookings.remove-items');
 
     // Tours
     Route::resource('tours', AdminTourController::class);

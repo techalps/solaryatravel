@@ -330,6 +330,48 @@ class PaymentService
     }
 
     /**
+     * Percentuale di rimborso prevista dalla policy in base ai giorni alla partenza.
+     */
+    public function refundPercentageFor(Booking $booking): int
+    {
+        $daysUntil = (int) floor(now()->startOfDay()->diffInDays(
+            \Illuminate\Support\Carbon::parse($booking->booking_date)->startOfDay(),
+            false
+        ));
+        foreach (Settings::cancellationPolicy() as $tier) {
+            if ($daysUntil >= $tier['days']) {
+                return (int) $tier['refund'];
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Applica la policy di penale a un importo ARBITRARIO (es. somma dei
+     * partecipanti/extra rimossi da una modifica), senza considerare l'incassato.
+     *
+     * @return array{base:float, amount:float, penalty:float, percentage:int, days_until:int}
+     */
+    public function refundForRemovedAmount(Booking $booking, float $base): array
+    {
+        $base = round(max(0, $base), 2);
+        $daysUntil = (int) floor(now()->startOfDay()->diffInDays(
+            \Illuminate\Support\Carbon::parse($booking->booking_date)->startOfDay(),
+            false
+        ));
+        $pct = $this->refundPercentageFor($booking);
+        $amount = round($base * $pct / 100, 2);
+
+        return [
+            'base' => $base,
+            'amount' => $amount,
+            'penalty' => round($base - $amount, 2),
+            'percentage' => $pct,
+            'days_until' => $daysUntil,
+        ];
+    }
+
+    /**
      * Importo effettivamente incassato per la prenotazione.
      * Usa booking.amount_paid se valorizzato, altrimenti somma i pagamenti riusciti
      * al netto di quanto già rimborsato.

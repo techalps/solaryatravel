@@ -122,9 +122,64 @@ class Booking extends Model
         return $this->hasMany(BookingSeat::class);
     }
 
+    /** Solo i posti attivi (non disdetti). */
+    public function activeSeats(): HasMany
+    {
+        return $this->hasMany(BookingSeat::class)->whereNull('cancelled_at');
+    }
+
     public function addons(): HasMany
     {
         return $this->hasMany(BookingAddon::class);
+    }
+
+    /** Solo gli extra attivi (non disdetti). */
+    public function activeAddons(): HasMany
+    {
+        return $this->hasMany(BookingAddon::class)->whereNull('cancelled_at');
+    }
+
+    /**
+     * Ricalcola posti e importi della prenotazione tenendo conto solo dei posti
+     * e degli extra ATTIVI (esclusi i disdetti). Mantiene sconto e aliquota IVA.
+     * Restituisce il nuovo total_amount.
+     */
+    public function recalculateTotals(): float
+    {
+        $seats = $this->seatRecords()->whereNull('cancelled_at')->get();
+        $addons = $this->addons()->whereNull('cancelled_at')->get();
+
+        // Posti "contanti" = quelli con bracket che occupa un posto, o adulti (bracket null).
+        $countingSeats = $seats->filter(function ($s) {
+            $br = $s->ageBracket;
+            return $br === null || $br->counts_as_seat;
+        })->count();
+
+        $basePrice = (float) $seats->sum(fn ($s) => (float) $s->price_paid);
+        $addonsTotal = (float) $addons->sum(fn ($a) => (float) $a->total_price);
+
+        // Sconto: se percentuale nota la riapplichiamo, altrimenti manteniamo l'importo
+        // fisso (ma non oltre il nuovo imponibile).
+        $discount = (float) $this->discount_amount;
+        if ($discount > 0) {
+            $discount = min($discount, $basePrice + $addonsTotal);
+        }
+
+        $subtotal = max(0, $basePrice + $addonsTotal - $discount);
+        $taxRate = (float) config('booking.tax_rate', 0) / 100;
+        $taxAmount = round($subtotal * $taxRate, 2);
+        $total = round($subtotal + $taxAmount, 2);
+
+        $this->update([
+            'seats' => $countingSeats,
+            'base_price' => round($basePrice, 2),
+            'addons_total' => round($addonsTotal, 2),
+            'discount_amount' => round($discount, 2),
+            'tax_amount' => $taxAmount,
+            'total_amount' => $total,
+        ]);
+
+        return $total;
     }
 
     public function payments(): HasMany

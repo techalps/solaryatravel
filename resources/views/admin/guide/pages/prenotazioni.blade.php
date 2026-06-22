@@ -12,6 +12,21 @@
     registrazione della prenotazione è mostrato in ora italiana.
 </p>
 
+<h2>Modificare una prenotazione (disdette)</h2>
+<p>
+    Dal dettaglio prenotazione, con <strong>Modifica</strong>, puoi <strong>disdire singoli
+    partecipanti o extra</strong>: spunta chi/cosa rimuovere e premi "Rimuovi selezionati".
+    Prima di confermare appare un riepilogo con il <strong>rimborso/penale calcolato sulla somma
+    dei rimossi</strong> (stessa policy dell'annullamento, in base ai giorni alla partenza), con le
+    opzioni: penale da policy, rimborso totale, importo personalizzato, nessun rimborso.
+</p>
+<ul>
+    <li>L'<strong>intestatario</strong> non è rimovibile e deve restare almeno un partecipante (per azzerare tutto si usa l'annullamento).</li>
+    <li>Gli elementi rimossi restano nello <strong>storico</strong> segnati come <em>"Disdetto"</em>, sia in admin sia nella pagina del cliente.</li>
+    <li>Posti, totale e disponibilità del catamarano si <strong>ricalcolano</strong> automaticamente.</li>
+    <li>Il rimborso segue il pagamento: su carta è eseguito via Stripe, per bonifico/contanti è da effettuare manualmente.</li>
+</ul>
+
 <h2>Creare una prenotazione manuale</h2>
 <p>
     Da <strong>Prenotazioni → Nuova prenotazione</strong> puoi registrare una prenotazione per telefono,

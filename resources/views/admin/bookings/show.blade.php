@@ -270,13 +270,18 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($booking->seatRecords as $i => $seat)
-                                        <tr>
+                                        <tr class="{{ $seat->cancelled_at ? 'text-muted' : '' }}">
                                             <td>{{ $i + 1 }}{{ $seat->is_primary ? ' ★' : '' }}</td>
                                             <td>
-                                                @if ($seat->guest_first_name || $seat->guest_last_name)
-                                                    {{ trim($seat->guest_first_name . ' ' . $seat->guest_last_name) }}
-                                                @else
-                                                    <span class="text-muted">—</span>
+                                                <span class="{{ $seat->cancelled_at ? 'text-decoration-line-through' : '' }}">
+                                                    @if ($seat->guest_first_name || $seat->guest_last_name)
+                                                        {{ trim($seat->guest_first_name . ' ' . $seat->guest_last_name) }}
+                                                    @else
+                                                        <span class="text-muted">—</span>
+                                                    @endif
+                                                </span>
+                                                @if ($seat->cancelled_at)
+                                                    <span class="badge bg-danger-subtle text-danger ms-1">Disdetto</span>
                                                 @endif
                                                 <div class="small text-muted">{{ $seat->qr_code }}</div>
                                             </td>
@@ -284,7 +289,9 @@
                                             <td>{{ $seat->catamaran?->name ?? '—' }}</td>
                                             <td class="text-end">{{ $fmtMoney($seat->price_paid) }}</td>
                                             <td>
-                                                @if ($seat->boarded_at)
+                                                @if ($seat->cancelled_at)
+                                                    <span class="text-muted small">{{ $seat->cancelled_at->timezone('Europe/Rome')->format('d/m/Y') }}</span>
+                                                @elseif ($seat->boarded_at)
                                                     <span class="badge bg-success-subtle text-success">
                                                         <i class="bi bi-check2 me-1"></i>{{ $seat->boarded_at->format('d/m H:i') }}
                                                     </span>
@@ -308,9 +315,12 @@
                         <h5 class="fw-bold mb-3"><i class="bi bi-bag-plus me-2 text-primary"></i>Servizi extra</h5>
                         <ul class="list-group list-group-flush">
                             @foreach ($booking->addons as $a)
-                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0 {{ $a->cancelled_at ? 'text-muted' : '' }}">
                                     <div>
-                                        <div class="fw-semibold">{{ $a->addon?->name ?? 'Addon' }}</div>
+                                        <div class="fw-semibold {{ $a->cancelled_at ? 'text-decoration-line-through' : '' }}">
+                                            {{ $a->addon?->name ?? 'Addon' }}
+                                            @if ($a->cancelled_at)<span class="badge bg-danger-subtle text-danger ms-1">Disdetto</span>@endif
+                                        </div>
                                         <div class="small text-muted">Q.tà {{ $a->quantity }} × {{ $fmtMoney($a->unit_price ?? 0) }}</div>
                                     </div>
                                     <div class="fw-semibold">{{ $fmtMoney($a->total_price ?? (($a->unit_price ?? 0) * ($a->quantity ?? 1))) }}</div>

@@ -121,6 +121,7 @@ class Catamaran extends Model
     public function seatsBookedOnDeparture(int $tourDepartureId): int
     {
         return (int) $this->bookingSeats()
+            ->whereNull('cancelled_at') // i posti disdetti non occupano più
             ->whereHas('booking', function ($q) use ($tourDepartureId) {
                 $q->where('tour_departure_id', $tourDepartureId)
                   ->whereNotIn('status', ['cancelled', 'refunded', 'no_show']);

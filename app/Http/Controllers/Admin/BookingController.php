@@ -21,6 +21,7 @@ use App\Services\BookingService;
 use App\Services\PaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
@@ -810,10 +811,96 @@ class BookingController extends Controller
 
     public function edit(Booking $booking): View
     {
-        $booking->load(['tour', 'departure', 'seatRecords.catamaran', 'seatRecords.ageBracket']);
+        $booking->load(['tour', 'departure', 'seatRecords.catamaran', 'seatRecords.ageBracket', 'addons.addon']);
         $catamarans = Catamaran::active()->ordered()->get();
         $statuses = BookingStatus::cases();
-        return view('admin.bookings.edit', compact('booking', 'catamarans', 'statuses'));
+        // Percentuale di rimborso prevista dalla policy (per il modale penali).
+        $refundPercentage = $this->paymentService->refundPercentageFor($booking);
+        return view('admin.bookings.edit', compact('booking', 'catamarans', 'statuses', 'refundPercentage'));
+    }
+
+    /**
+     * Disdetta di singoli partecipanti / extra da una prenotazione, con eventuale
+     * rimborso parziale calcolato sulla somma dei rimossi. Gli elementi restano a
+     * DB (storico) marcati cancelled_at; posti/totali vengono ricalcolati.
+     */
+    public function removeItems(Request $request, Booking $booking): RedirectResponse
+    {
+        $validated = $request->validate([
+            'seat_ids' => 'nullable|array',
+            'seat_ids.*' => 'integer',
+            'addon_ids' => 'nullable|array',
+            'addon_ids.*' => 'integer',
+            'reason' => 'nullable|string|max:500',
+            'refund_mode' => 'nullable|in:penalty,full,custom,none',
+            'refund_amount' => 'nullable|numeric|min:0',
+        ]);
+
+        $seatIds = array_map('intval', $validated['seat_ids'] ?? []);
+        $addonIds = array_map('intval', $validated['addon_ids'] ?? []);
+
+        if (empty($seatIds) && empty($addonIds)) {
+            return back()->with('error', 'Nessun elemento selezionato da rimuovere.');
+        }
+
+        // Posti da disdire: solo di questa prenotazione, attivi, NON intestatario.
+        $seats = $booking->seatRecords()
+            ->whereNull('cancelled_at')
+            ->whereIn('id', $seatIds)
+            ->where('is_primary', false)
+            ->get();
+
+        // Blocco: non si può scendere sotto 1 partecipante attivo.
+        $activeSeatCount = $booking->seatRecords()->whereNull('cancelled_at')->count();
+        if (count($seats) >= $activeSeatCount) {
+            return back()->with('error', 'Deve restare almeno un partecipante. Per azzerare la prenotazione usa l\'annullamento.');
+        }
+
+        $addons = $booking->addons()
+            ->whereNull('cancelled_at')
+            ->whereIn('id', $addonIds)
+            ->get();
+
+        if ($seats->isEmpty() && $addons->isEmpty()) {
+            return back()->with('error', 'Gli elementi selezionati non sono validi (forse l\'intestatario o già rimossi).');
+        }
+
+        // Importo dei rimossi (riferimento per il rimborso).
+        $removedAmount = (float) $seats->sum(fn ($s) => (float) $s->price_paid)
+            + (float) $addons->sum(fn ($a) => (float) $a->total_price);
+
+        $reason = $request->filled('reason') ? $request->input('reason') : 'Modifica prenotazione (rimozione partecipanti/extra)';
+        $mode = $validated['refund_mode'] ?? 'penalty';
+        $calc = $this->paymentService->refundForRemovedAmount($booking, $removedAmount);
+
+        $refundAmount = match ($mode) {
+            'full'   => $removedAmount,
+            'custom' => min((float) ($validated['refund_amount'] ?? 0), $removedAmount),
+            'none'   => 0.0,
+            default  => (float) $calc['amount'], // penalty da policy
+        };
+
+        DB::transaction(function () use ($seats, $addons, $reason, $booking) {
+            foreach ($seats as $s) {
+                $s->update(['cancelled_at' => now(), 'cancellation_reason' => $reason]);
+            }
+            foreach ($addons as $a) {
+                $a->update(['cancelled_at' => now(), 'cancellation_reason' => $reason]);
+            }
+            $booking->recalculateTotals();
+        });
+
+        // Rimborso parziale sull'importo deciso (riusa la stessa logica del cancel).
+        $refundMsg = '';
+        if ($refundAmount > 0) {
+            $refund = $this->paymentService->applyCancellationRefund($booking->fresh(), $refundAmount, $reason);
+            $refundMsg = ' Rimborso: € ' . number_format((float) ($refund['amount'] ?? 0), 2, ',', '.')
+                . (($refund['manual'] ?? false) ? ' (da effettuare manualmente)' : ' (su Stripe)') . '.';
+        }
+
+        $removedCount = count($seats) + count($addons);
+        return redirect()->route('admin.bookings.show', $booking)
+            ->with('success', "Rimossi {$removedCount} element" . ($removedCount === 1 ? 'o' : 'i') . "." . $refundMsg);
     }
 
     public function update(Request $request, Booking $booking): RedirectResponse

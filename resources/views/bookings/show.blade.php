@@ -82,16 +82,19 @@
 
                 {{-- Partecipanti --}}
                 <div class="bk-show-card mb-4">
-                    <h3 class="bk-show-section-title"><i class="fa-solid fa-users text-primary"></i>Partecipanti ({{ $booking->seatRecords->count() }})</h3>
+                    <h3 class="bk-show-section-title"><i class="fa-solid fa-users text-primary"></i>Partecipanti ({{ $booking->seatRecords->whereNull('cancelled_at')->count() }})</h3>
                     <div class="bk-pax-list">
                         @foreach($booking->seatRecords as $seat)
-                            <div class="bk-pax-row">
+                            <div class="bk-pax-row" @if($seat->cancelled_at) style="opacity:.6" @endif>
                                 <span class="bk-pax-num">{{ $seat->seat_number }}</span>
                                 <div class="flex-grow-1">
                                     <div class="fw-semibold" style="color:#0E1B33">
-                                        {{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: '— Dati da compilare —' }}
+                                        <span @if($seat->cancelled_at) style="text-decoration:line-through" @endif>{{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: '— Dati da compilare —' }}</span>
                                         @if($seat->is_primary)
                                             <span class="badge ms-1" style="background:#fef3c7;color:#b45309">Prenotante</span>
+                                        @endif
+                                        @if($seat->cancelled_at)
+                                            <span class="badge ms-1" style="background:#fee2e2;color:#dc2626">Disdetto</span>
                                         @endif
                                     </div>
                                     <div class="small text-muted">
@@ -122,10 +125,13 @@
                         <h3 class="bk-show-section-title"><i class="fa-solid fa-plus text-primary"></i>Extra prenotati</h3>
                         <div class="bk-pax-list">
                             @foreach($booking->addons as $bookingAddon)
-                                <div class="bk-pax-row">
+                                <div class="bk-pax-row" @if($bookingAddon->cancelled_at) style="opacity:.6" @endif>
                                     <span class="bk-pax-num"><i class="fa-solid fa-gift"></i></span>
                                     <div class="flex-grow-1">
-                                        <div class="fw-semibold" style="color:#0E1B33">{{ $bookingAddon->addon->name ?? 'Extra' }}</div>
+                                        <div class="fw-semibold" style="color:#0E1B33">
+                                            <span @if($bookingAddon->cancelled_at) style="text-decoration:line-through" @endif>{{ $bookingAddon->addon->name ?? 'Extra' }}</span>
+                                            @if($bookingAddon->cancelled_at)<span class="badge ms-1" style="background:#fee2e2;color:#dc2626">Disdetto</span>@endif
+                                        </div>
                                         <div class="small text-muted">Quantità: {{ $bookingAddon->quantity }}</div>
                                     </div>
                                     <span class="fw-bold text-primary">€{{ number_format($bookingAddon->total_price, 2, ',', '.') }}</span>

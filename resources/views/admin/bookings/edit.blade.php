@@ -45,6 +45,139 @@
         </div>
     @endif
 
+    {{-- Rimozione partecipanti / extra (disdette con rimborso parziale) --}}
+    @php
+        $activeSeats = $booking->seatRecords->whereNull('cancelled_at');
+        $cancelledSeats = $booking->seatRecords->whereNotNull('cancelled_at');
+        $activeAddons = $booking->addons->whereNull('cancelled_at');
+        $cancelledAddons = $booking->addons->whereNotNull('cancelled_at');
+        $fmt = fn ($v) => '€ ' . number_format((float) $v, 2, ',', '.');
+    @endphp
+
+    @if (!in_array($statusValue, ['cancelled', 'refunded']))
+    <form action="{{ route('admin.bookings.remove-items', $booking) }}" method="POST" id="removeItemsForm">
+        @csrf
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1"><i class="bi bi-person-dash me-2 text-danger"></i>Disdetta partecipanti / extra</h5>
+                <p class="text-muted small mb-3">Seleziona chi/cosa rimuovere. Alla conferma vedrai il riepilogo penale/rimborso sulla somma dei rimossi. Gli elementi restano nello storico marcati come disdetti.</p>
+
+                <div class="table-responsive mb-3">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px"></th>
+                                <th>Partecipante</th>
+                                <th>Fascia</th>
+                                <th class="text-end">Prezzo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($activeSeats as $seat)
+                                <tr>
+                                    <td>
+                                        @if ($seat->is_primary)
+                                            <span title="Intestatario (non rimovibile)"><i class="bi bi-star-fill text-warning"></i></span>
+                                        @else
+                                            <input type="checkbox" class="form-check-input rm-seat" name="seat_ids[]" value="{{ $seat->id }}" data-price="{{ (float) $seat->price_paid }}">
+                                        @endif
+                                    </td>
+                                    <td>
+                                        {{ trim($seat->guest_first_name . ' ' . $seat->guest_last_name) ?: '—' }}
+                                        @if ($seat->is_primary)<span class="badge bg-warning-subtle text-warning ms-1">Intestatario</span>@endif
+                                    </td>
+                                    <td>{{ $seat->ageBracket?->label ?? 'Adulto' }}</td>
+                                    <td class="text-end">{{ $fmt($seat->price_paid) }}</td>
+                                </tr>
+                            @endforeach
+                            @foreach ($activeAddons as $ad)
+                                <tr>
+                                    <td><input type="checkbox" class="form-check-input rm-addon" name="addon_ids[]" value="{{ $ad->id }}" data-price="{{ (float) $ad->total_price }}"></td>
+                                    <td><i class="bi bi-plus-square me-1 text-muted"></i>{{ $ad->addon?->name ?? 'Extra' }} <span class="text-muted small">×{{ $ad->quantity }}</span></td>
+                                    <td><span class="badge bg-light text-muted">Extra</span></td>
+                                    <td class="text-end">{{ $fmt($ad->total_price) }}</td>
+                                </tr>
+                            @endforeach
+                            @if ($cancelledSeats->isNotEmpty() || $cancelledAddons->isNotEmpty())
+                                @foreach ($cancelledSeats as $seat)
+                                    <tr class="text-muted text-decoration-line-through">
+                                        <td><i class="bi bi-x-circle text-danger"></i></td>
+                                        <td>{{ trim($seat->guest_first_name . ' ' . $seat->guest_last_name) ?: '—' }}</td>
+                                        <td colspan="2" class="text-end small">Disdetto {{ optional($seat->cancelled_at)->timezone('Europe/Rome')->format('d/m/Y') }}</td>
+                                    </tr>
+                                @endforeach
+                                @foreach ($cancelledAddons as $ad)
+                                    <tr class="text-muted text-decoration-line-through">
+                                        <td><i class="bi bi-x-circle text-danger"></i></td>
+                                        <td>{{ $ad->addon?->name ?? 'Extra' }}</td>
+                                        <td colspan="2" class="text-end small">Disdetto {{ optional($ad->cancelled_at)->timezone('Europe/Rome')->format('d/m/Y') }}</td>
+                                    </tr>
+                                @endforeach
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="small text-muted">Selezionati: <strong id="rmCount">0</strong> · Totale rimossi: <strong id="rmTotal">€ 0,00</strong></div>
+                    <button type="button" class="btn btn-outline-danger rounded-pill px-3 fw-semibold" id="openRemoveModal" disabled>
+                        <i class="bi bi-person-dash me-1"></i>Rimuovi selezionati
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Modale conferma con penale/rimborso sui rimossi --}}
+        <div class="modal fade" id="removeModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title fw-bold">Conferma rimozione e rimborso</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted">Costo degli elementi rimossi: <strong id="rmTotalModal">€ 0,00</strong></p>
+                        <label class="form-label fw-semibold small">Motivo</label>
+                        <textarea name="reason" rows="2" class="form-control rounded-3 mb-3" maxlength="500" placeholder="Es. disdetta di un partecipante…"></textarea>
+
+                        <label class="form-label fw-semibold small">Rimborso al cliente</label>
+                        <div class="d-flex flex-column gap-2">
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="penalty" class="form-check-input mt-1" checked>
+                                <span class="small">Applica penale ({{ 100 - $refundPercentage }}%) → rimborsa <strong id="rmPenaltyRefund">€ 0,00</strong>
+                                    <span class="text-muted d-block">Rimborso {{ $refundPercentage }}% secondo la policy</span></span>
+                            </label>
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="full" class="form-check-input mt-1">
+                                <span class="small">Rimborso totale dei rimossi → <strong id="rmFullRefund">€ 0,00</strong></span>
+                            </label>
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="custom" class="form-check-input mt-1" id="rmCustomRadio">
+                                <span class="small flex-grow-1">Importo personalizzato
+                                    <span class="input-group input-group-sm mt-1" style="max-width:200px">
+                                        <span class="input-group-text">€</span>
+                                        <input type="number" step="0.01" min="0" name="refund_amount" class="form-control" placeholder="0,00"
+                                               onfocus="document.getElementById('rmCustomRadio').checked=true">
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="d-flex align-items-start gap-2">
+                                <input type="radio" name="refund_mode" value="none" class="form-check-input mt-1">
+                                <span class="small">Nessun rimborso</span>
+                            </label>
+                        </div>
+                        <p class="small text-muted mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Per carta il rimborso è su Stripe; per bonifico/contanti è manuale.</p>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>
+                        <button type="submit" class="btn btn-danger rounded-pill px-3 fw-semibold"><i class="bi bi-check2 me-1"></i>Conferma rimozione</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    @endif
+
     <form action="{{ route('admin.bookings.update', $booking) }}" method="POST">
         @csrf
         @method('PUT')
@@ -130,4 +263,43 @@
             </div>
         </div>
     </form>
+
+    @push('scripts')
+    <script>
+    (function () {
+        const refundPct = {{ (int) $refundPercentage }};
+        const checks = Array.from(document.querySelectorAll('.rm-seat, .rm-addon'));
+        if (!checks.length) return;
+
+        const eur = n => '€ ' + (Number(n) || 0).toFixed(2).replace('.', ',');
+        const rmCount = document.getElementById('rmCount');
+        const rmTotal = document.getElementById('rmTotal');
+        const rmTotalModal = document.getElementById('rmTotalModal');
+        const rmPenaltyRefund = document.getElementById('rmPenaltyRefund');
+        const rmFullRefund = document.getElementById('rmFullRefund');
+        const openBtn = document.getElementById('openRemoveModal');
+
+        function selected() {
+            return checks.filter(c => c.checked);
+        }
+        function recompute() {
+            const sel = selected();
+            const total = sel.reduce((s, c) => s + (parseFloat(c.dataset.price) || 0), 0);
+            rmCount.textContent = sel.length;
+            rmTotal.textContent = eur(total);
+            rmTotalModal.textContent = eur(total);
+            rmPenaltyRefund.textContent = eur(total * refundPct / 100);
+            rmFullRefund.textContent = eur(total);
+            openBtn.disabled = sel.length === 0;
+        }
+        checks.forEach(c => c.addEventListener('change', recompute));
+        recompute();
+
+        openBtn.addEventListener('click', function () {
+            const modal = new bootstrap.Modal(document.getElementById('removeModal'));
+            modal.show();
+        });
+    })();
+    </script>
+    @endpush
 @endsection

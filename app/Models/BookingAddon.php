@@ -18,13 +18,27 @@ class BookingAddon extends Model
         'quantity',
         'unit_price',
         'total_price',
+        'cancelled_at',
+        'cancellation_reason',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'created_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
+
+    public function isCancelled(): bool
+    {
+        return $this->cancelled_at !== null;
+    }
+
+    /** Solo gli extra attivi (non disdetti). */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('cancelled_at');
+    }
 
     public function booking(): BelongsTo
     {

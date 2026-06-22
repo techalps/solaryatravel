@@ -27,6 +27,8 @@ class BookingSeat extends Model
         'qr_code',
         'boarded_at',
         'boarded_by',
+        'cancelled_at',
+        'cancellation_reason',
     ];
 
     public function hasGuestDetails(): bool
@@ -40,7 +42,20 @@ class BookingSeat extends Model
         'guest_date_of_birth' => 'date',
         'created_at' => 'datetime',
         'boarded_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
+
+    /** Posto disdetto: resta per storico ma non conta più. */
+    public function isCancelled(): bool
+    {
+        return $this->cancelled_at !== null;
+    }
+
+    /** Solo i posti attivi (non disdetti). */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('cancelled_at');
+    }
 
     protected static function boot()
     {
