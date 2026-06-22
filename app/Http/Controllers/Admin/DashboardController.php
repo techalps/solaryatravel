@@ -150,11 +150,31 @@ class DashboardController extends Controller
      */
     public function schedule(): View
     {
-        $bookings = Booking::with(['tour', 'departure', 'seatRecords.catamaran'])
-            ->whereBetween('booking_date', [now()->startOfMonth(), now()->endOfMonth()->addMonth()])
+        $rangeStart = now()->startOfMonth();
+        $rangeEnd = now()->endOfMonth()->addMonth();
+
+        $bookingsList = Booking::with(['tour', 'departure', 'seatRecords.catamaran'])
+            ->whereBetween('booking_date', [$rangeStart, $rangeEnd])
             ->where('status', '!=', BookingStatus::CANCELLED)
-            ->get()
-            ->map(function ($booking) {
+            ->get();
+
+        // Periodi di blocco (uso esclusivo) per le prenotazioni in vista: così un
+        // evento multi-giorno copre TUTTI i giorni del periodo, non solo la partenza.
+        $blockByNumber = [];
+        if ($bookingsList->isNotEmpty()) {
+            $numbers = $bookingsList->pluck('booking_number')->filter()->all();
+            $blocks = \App\Models\TourCatamaranBlock::where(function ($q) use ($numbers) {
+                foreach ($numbers as $n) {
+                    $q->orWhere('reason', 'like', '%#' . $n . '%');
+                }
+                $q->orWhereRaw('1 = 0');
+            })->get();
+            foreach ($numbers as $n) {
+                $blockByNumber[$n] = $blocks->first(fn ($b) => $b->reason && str_contains($b->reason, '#' . $n));
+            }
+        }
+
+        $bookings = $bookingsList->map(function ($booking) use ($blockByNumber) {
                 // Catamarani distinti assegnati ai posti della prenotazione (di norma uno).
                 $catamarans = $booking->seatRecords
                     ->pluck('catamaran.name')
@@ -162,11 +182,26 @@ class DashboardController extends Controller
                     ->unique()
                     ->values();
 
+                $blk = $blockByNumber[$booking->booking_number] ?? null;
+
+                if ($blk) {
+                    // Uso esclusivo: l'evento copre l'intero periodo (partenza → ritorno).
+                    // FullCalendar tratta 'end' come esclusivo, quindi aggiungiamo 1 giorno.
+                    $startT = $blk->start_time ? \Carbon\Carbon::parse($blk->start_time)->format('H:i:s') : '09:00:00';
+                    $endT = $blk->end_time ? \Carbon\Carbon::parse($blk->end_time)->format('H:i:s') : '18:00:00';
+                    $start = $blk->start_date->format('Y-m-d') . 'T' . $startT;
+                    // se stesso giorno, fine = stessa data + ora fine; se multi-giorno, fine = end_date + ora fine
+                    $end = $blk->end_date->format('Y-m-d') . 'T' . $endT;
+                } else {
+                    $start = $booking->booking_date->format('Y-m-d') . 'T' . ($booking->departure?->start_time ?? '09:00');
+                    $end = $booking->booking_date->format('Y-m-d') . 'T' . ($booking->departure?->end_time ?? '17:00');
+                }
+
                 return [
                     'id' => $booking->id,
                     'title' => "{$booking->customer_first_name} {$booking->customer_last_name}",
-                    'start' => $booking->booking_date->format('Y-m-d') . 'T' . ($booking->departure?->start_time ?? '09:00'),
-                    'end' => $booking->booking_date->format('Y-m-d') . 'T' . ($booking->departure?->end_time ?? '17:00'),
+                    'start' => $start,
+                    'end' => $end,
                     'color' => $this->getBookingColor($booking->status),
                     'extendedProps' => [
                         'booking_number' => $booking->booking_number,
@@ -175,6 +210,7 @@ class DashboardController extends Controller
                         'guests' => $booking->seats,
                         'catamaran' => $catamarans->isNotEmpty() ? $catamarans->implode(', ') : null,
                         'status' => $booking->status->value ?? $booking->status,
+                        'exclusive' => (bool) $blk,
                     ],
                 ];
             });

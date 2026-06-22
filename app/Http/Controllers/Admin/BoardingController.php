@@ -24,10 +24,12 @@ class BoardingController extends Controller
 
         // Vista per singolo giorno (default oggi): pensata per l'operatività di imbarco.
         $date = $request->date('date') ?? now()->startOfDay();
+        $dayStr = $date->toDateString();
         $tourId = $request->integer('tour') ?: null;
 
-        $departures = TourDeparture::with(['tour'])
-            ->whereDate('departure_date', $date->toDateString())
+        // 1) Partenze MATERIALIZZATE del giorno (con conteggio prenotazioni).
+        $materialized = TourDeparture::with(['tour'])
+            ->whereDate('departure_date', $dayStr)
             ->whereIn('status', ['scheduled', 'confirmed'])
             ->when($tourId, fn ($q) => $q->where('tour_id', $tourId))
             ->whereHas('tour', fn ($q) => $q->where('is_active', true))
@@ -37,15 +39,103 @@ class BoardingController extends Controller
             }])
             ->get();
 
-        // Elenco tour attivi per il filtro a tendina.
+        $seen = $materialized->map(fn ($d) => $d->tour_id . '-' . \Carbon\Carbon::parse($d->start_time)->format('H:i'))->all();
+
+        $items = $materialized->map(fn ($d) => [
+            'tour' => $d->tour,
+            'time' => \Carbon\Carbon::parse($d->start_time)->format('H:i'),
+            'end_time' => $d->end_time ? \Carbon\Carbon::parse($d->end_time)->format('H:i') : null,
+            'count' => (int) $d->confirmed_bookings_count,
+            'departure' => $d,          // scanner disponibile
+            'spanning' => false,
+        ])->values()->all();
+
+        // 2) Partenze VIRTUALI dai periodi: tour che OPERANO quel giorno, anche con 0
+        //    prenotazioni e senza riga materializzata. Card visibile, senza scanner.
+        $gen = app(\App\Services\DepartureGeneratorService::class);
+        $tourQuery = \App\Models\Tour::where('is_active', true)->whereHas('periods')
+            ->when($tourId, fn ($q) => $q->where('id', $tourId));
+        foreach ($tourQuery->get() as $tour) {
+            foreach ($gen->generate($tour, $date->copy()->startOfDay(), $date->copy()->endOfDay(), true) as $v) {
+                $key = $tour->id . '-' . $v['time'];
+                if (in_array($key, $seen, true)) {
+                    continue;
+                }
+                $seen[] = $key;
+                $items[] = [
+                    'tour' => $tour,
+                    'time' => $v['time'],
+                    'end_time' => null,
+                    'count' => 0,
+                    'departure' => null,    // niente scanner: nessuna prenotazione
+                    'spanning' => false,
+                ];
+            }
+        }
+
+        // 3) Prenotazioni a USO ESCLUSIVO il cui BLOCCO copre il giorno ma la cui
+        //    partenza è un altro giorno: card dedicata con link allo scanner reale.
+        foreach ($this->spanningReservedDepartures($dayStr, $tourId) as $sp) {
+            $items[] = $sp;
+        }
+
+        usort($items, fn ($a, $b) => strcmp($a['time'], $b['time']));
+
         $tours = \App\Models\Tour::where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.boarding.index', [
-            'departures' => $departures,
+            'items' => collect($items),
             'date' => $date,
             'tours' => $tours,
             'selectedTour' => $tourId,
         ]);
+    }
+
+    /**
+     * Partenze "estese": prenotazioni a uso esclusivo il cui blocco copre il giorno
+     * ma la cui partenza effettiva è in un altro giorno del periodo. Restituisce voci
+     * con la partenza reale (per lo scanner) e il conteggio prenotazioni.
+     *
+     * @return array<int, array>
+     */
+    protected function spanningReservedDepartures(string $dayStr, ?int $tourId): array
+    {
+        $blocks = \App\Models\TourCatamaranBlock::query()
+            ->whereDate('start_date', '<=', $dayStr)
+            ->whereDate('end_date', '>=', $dayStr)
+            ->whereColumn('start_date', '!=', 'end_date')
+            ->get();
+
+        if ($blocks->isEmpty()) {
+            return [];
+        }
+
+        $numbers = $blocks->map(fn ($b) => preg_match('/#(\S+)/', (string) $b->reason, $m) ? $m[1] : null)
+            ->filter()->unique()->values();
+        if ($numbers->isEmpty()) {
+            return [];
+        }
+
+        $bookings = \App\Models\Booking::query()
+            ->whereIn('booking_number', $numbers)
+            ->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN])
+            ->when($tourId, fn ($q) => $q->where('tour_id', $tourId))
+            // solo quelle la cui partenza NON è questo giorno (già incluse altrove)
+            ->whereHas('departure', fn ($d) => $d->whereDate('departure_date', '!=', $dayStr))
+            ->with('tour', 'departure')
+            ->get();
+
+        return $bookings->map(function ($b) {
+            return [
+                'tour' => $b->tour,
+                'time' => $b->departure ? \Carbon\Carbon::parse($b->departure->start_time)->format('H:i') : '00:00',
+                'end_time' => $b->departure && $b->departure->end_time ? \Carbon\Carbon::parse($b->departure->end_time)->format('H:i') : null,
+                'count' => 1,
+                'departure' => $b->departure,
+                'spanning' => true,
+                'origin_date' => $b->booking_date,
+            ];
+        })->all();
     }
 
     /**

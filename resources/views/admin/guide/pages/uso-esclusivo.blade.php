@@ -52,10 +52,22 @@
     aggiorna l'importo della prenotazione.
 </p>
 
-<h2>Prenotazioni su più giorni in Assegnazione</h2>
+<h2>Cambiare le date di una prenotazione su più giorni</h2>
 <p>
-    Quando un catamarano è riservato per <strong>più giorni</strong>, nella pagina
-    <strong>Assegnazione catamarani</strong> i passeggeri compaiono su <strong>ogni giorno</strong>
-    del periodo (con il badge "uso esclusivo" e la data di partenza), non solo nel giorno iniziale.
-    Su questi giorni i posti sono in sola lettura (il catamarano è riservato per tutto il periodo).
+    Per una prenotazione a uso esclusivo, dalla <strong>Modifica → Cambia data</strong> imposti
+    <strong>sia la data di partenza sia quella di ritorno</strong> (con gli orari). Il sistema sposta
+    l'intero periodo riservato; se in quel nuovo periodo i catamarani risultano occupati da altre
+    prenotazioni, lo spostamento viene <strong>bloccato e segnalato</strong>.
 </p>
+
+<h2>Prenotazioni su più giorni nelle altre pagine</h2>
+<p>
+    Una prenotazione che copre <strong>più giorni</strong> è visibile su <strong>ogni giorno</strong>
+    del periodo (non solo nel giorno di partenza) in:
+</p>
+<ul>
+    <li><strong>Assegnazione catamarani</strong> — i passeggeri compaiono ogni giorno (badge "uso esclusivo", in sola lettura).</li>
+    <li><strong>Programma</strong> — l'evento copre tutti i giorni del periodo nel calendario.</li>
+    <li><strong>Imbarco</strong> — la partenza compare ogni giorno del periodo, con lo scanner attivo.</li>
+</ul>
+<p class="text-muted small">Nella pagina Imbarco vengono mostrati anche i tour che operano in giornata pur senza prenotazioni (con "0 prenot.").</p>

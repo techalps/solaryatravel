@@ -189,25 +189,57 @@
         <div class="card border-0 shadow-sm rounded-4 mb-3">
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-1"><i class="bi bi-calendar2-week me-2 text-primary"></i>Cambia data</h5>
-                <p class="text-muted small mb-3">Sposta la prenotazione su un'altra data/orario. Se il prezzo cambia, vedrai il conguaglio da gestire secondo il metodo di pagamento usato.</p>
 
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-5">
-                        <label for="resched-date" class="form-label fw-semibold">Nuova data</label>
-                        <input type="text" id="resched-date" class="form-control" placeholder="Caricamento date…" autocomplete="off" disabled>
+                @if ($reservedBlock)
+                    {{-- Uso esclusivo (multi-giorno): nuovo periodo con orari, date libere. --}}
+                    <p class="text-muted small mb-3">Catamarano riservato: sposta l'intero periodo. Le date sono libere e i catamarani riservati vengono spostati al nuovo periodo (se liberi).</p>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="ex-start-date" class="form-label fw-semibold">Partenza</label>
+                            <input type="text" name="new_start_date" id="ex-start-date" class="form-control" autocomplete="off"
+                                   value="{{ $reservedBlock->start_date->format('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="ex-start-time" class="form-label fw-semibold">Ora</label>
+                            <input type="time" name="new_start_time" id="ex-start-time" class="form-control"
+                                   value="{{ $reservedBlock->start_time ? \Carbon\Carbon::parse($reservedBlock->start_time)->format('H:i') : '09:00' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ex-end-date" class="form-label fw-semibold">Ritorno</label>
+                            <input type="text" name="new_end_date" id="ex-end-date" class="form-control" autocomplete="off"
+                                   value="{{ $reservedBlock->end_date->format('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="ex-end-time" class="form-label fw-semibold">Ora</label>
+                            <input type="time" name="new_end_time" id="ex-end-time" class="form-control"
+                                   value="{{ $reservedBlock->end_time ? \Carbon\Carbon::parse($reservedBlock->end_time)->format('H:i') : '18:00' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary rounded-pill w-100 fw-semibold">
+                                <i class="bi bi-arrow-left-right me-1"></i>Sposta
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label for="resched-time" class="form-label fw-semibold">Orario</label>
-                        <select id="resched-time" class="form-select" disabled><option value="">—</option></select>
+                @else
+                    <p class="text-muted small mb-3">Sposta la prenotazione su un'altra data/orario. Se il prezzo cambia, vedrai il conguaglio da gestire secondo il metodo di pagamento usato.</p>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label for="resched-date" class="form-label fw-semibold">Nuova data</label>
+                            <input type="text" id="resched-date" class="form-control" placeholder="Caricamento date…" autocomplete="off" disabled>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="resched-time" class="form-label fw-semibold">Orario</label>
+                            <select id="resched-time" class="form-select" disabled><option value="">—</option></select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-outline-primary rounded-pill w-100 fw-semibold" id="reschedPreviewBtn" disabled>
+                                <i class="bi bi-arrow-left-right me-1"></i>Verifica
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <button type="button" class="btn btn-outline-primary rounded-pill w-100 fw-semibold" id="reschedPreviewBtn" disabled>
-                            <i class="bi bi-arrow-left-right me-1"></i>Verifica
-                        </button>
-                    </div>
-                </div>
-                <input type="hidden" name="tour_departure_id" id="resched-departure-id">
-                <div id="reschedStatus" class="small mt-2"></div>
+                    <input type="hidden" name="tour_departure_id" id="resched-departure-id">
+                    <div id="reschedStatus" class="small mt-2"></div>
+                @endif
             </div>
         </div>
 
@@ -480,6 +512,21 @@
             }
             new bootstrap.Modal(document.getElementById('reschedModal')).show();
         }
+    })();
+    </script>
+
+    {{-- Cambio data uso esclusivo: date libere partenza/ritorno --}}
+    <script>
+    (function () {
+        const startEl = document.getElementById('ex-start-date');
+        const endEl = document.getElementById('ex-end-date');
+        if (!startEl || !endEl || typeof flatpickr === 'undefined') return;
+        const opts = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', disableMobile: true,
+            locale: (flatpickr.l10ns && flatpickr.l10ns.it) ? 'it' : 'default' };
+        const fpStart = flatpickr(startEl, { ...opts, onChange: (sel, s) => {
+            if (fpEnd) { fpEnd.set('minDate', s); if (endEl.value && endEl.value < s) fpEnd.setDate(s, true); }
+        }});
+        const fpEnd = flatpickr(endEl, { ...opts, minDate: startEl.value || null });
     })();
     </script>
     @endpush

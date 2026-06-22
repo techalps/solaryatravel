@@ -819,7 +819,12 @@ class BookingController extends Controller
         $statuses = BookingStatus::cases();
         // Percentuale di rimborso prevista dalla policy (per il modale penali).
         $refundPercentage = $this->paymentService->refundPercentageFor($booking);
-        return view('admin.bookings.edit', compact('booking', 'catamarans', 'statuses', 'refundPercentage'));
+
+        // Prenotazione a uso esclusivo (multi-giorno): periodo/orari attuali dal blocco.
+        $reservedBlock = \App\Models\TourCatamaranBlock::where('reason', 'like', '%#' . $booking->booking_number . '%')
+            ->orderBy('start_date')->first();
+
+        return view('admin.bookings.edit', compact('booking', 'catamarans', 'statuses', 'refundPercentage', 'reservedBlock'));
     }
 
     /**
@@ -990,13 +995,76 @@ class BookingController extends Controller
     public function reschedule(Request $request, Booking $booking): RedirectResponse
     {
         $validated = $request->validate([
-            'tour_departure_id' => 'required|string',
+            'tour_departure_id' => 'nullable|string',
             // Come gestire una differenza A FAVORE del cliente (nuova data più economica).
             'credit_mode' => 'nullable|in:refund,none,custom',
             'credit_amount' => 'nullable|numeric|min:0',
             // Come incassare un conguaglio in AUMENTO se bonifico/manuale.
             'surcharge_handling' => 'nullable|in:paid,pending',
+            // Uso esclusivo: nuovo periodo (partenza + ritorno) con orari.
+            'new_start_date' => 'nullable|date',
+            'new_end_date' => 'nullable|date|after_or_equal:new_start_date',
+            'new_start_time' => 'nullable|date_format:H:i',
+            'new_end_time' => 'nullable|date_format:H:i',
         ]);
+
+        // I blocchi (uso esclusivo) collegati a questa prenotazione.
+        $blocks = \App\Models\TourCatamaranBlock::where('reason', 'like', '%#' . $booking->booking_number . '%')->get();
+        $isExclusive = $blocks->isNotEmpty();
+
+        if ($isExclusive) {
+            // Cambio data uso esclusivo: nuovo periodo con orari liberi.
+            $startDate = $validated['new_start_date'] ?? null;
+            if (!$startDate) {
+                return back()->with('error', 'Indica la nuova data di partenza.');
+            }
+            $endDate = $validated['new_end_date'] ?? $startDate;
+            if ($endDate < $startDate) {
+                $endDate = $startDate;
+            }
+            $startTime = $validated['new_start_time'] ?? \Carbon\Carbon::parse($blocks->first()->start_time ?: '09:00')->format('H:i');
+            $endTime = $validated['new_end_time'] ?? \Carbon\Carbon::parse($blocks->first()->end_time ?: '18:00')->format('H:i');
+            $catamaranIds = $blocks->pluck('catamaran_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+            // Controllo conflitti sul NUOVO periodo, escludendo questa prenotazione.
+            $conflicts = $this->bookingService->conflictingBookingsForBlock(
+                (int) $booking->tour_id, $catamaranIds, $startDate, $endDate, $startTime, $endTime, $booking->id
+            );
+            if ($conflicts->isNotEmpty()) {
+                $lines = $conflicts->map(fn ($b) => '#' . $b->booking_number . ' (' . $b->booking_date->format('d/m/Y') . ')')->implode('; ');
+                return back()->with('error', 'Impossibile spostare: i catamarani sono occupati nel nuovo periodo da: ' . $lines);
+            }
+
+            // Materializza/riusa la partenza sulla nuova data di partenza (data libera).
+            try {
+                $departureId = $this->resolveDepartureId((int) $booking->tour_id, 'virt:' . $startDate . ':' . $startTime, true, $endTime);
+            } catch (\RuntimeException $e) {
+                return back()->with('error', $e->getMessage());
+            }
+            $newDeparture = \App\Models\TourDeparture::findOrFail($departureId);
+
+            $this->bookingService->reschedule($booking, $newDeparture);
+
+            // Sposta i blocchi sul nuovo periodo (con i nuovi orari).
+            foreach ($blocks as $blk) {
+                $blk->update([
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                ]);
+            }
+
+            $booking->refresh();
+            return redirect()->route('admin.bookings.show', $booking)->with('success',
+                'Prenotazione (uso esclusivo) spostata dal ' . \Carbon\Carbon::parse($startDate)->format('d/m/Y')
+                . ' al ' . \Carbon\Carbon::parse($endDate)->format('d/m/Y') . '.');
+        }
+
+        // --- Cambio data prenotazione NORMALE (singolo giorno) ---
+        if (empty($validated['tour_departure_id'])) {
+            return back()->with('error', 'Seleziona la nuova data.');
+        }
 
         try {
             $departureId = $this->resolveDepartureId(

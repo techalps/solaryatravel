@@ -365,6 +365,9 @@ class BookingService
      * posti ATTIVI in base al periodo della nuova data. Non tocca i pagamenti:
      * restituisce i totali prima/dopo e la differenza (positiva = da incassare).
      *
+     * Per i tour "su richiesta" (prezzo manuale) NON riprezza: il totale resta
+     * quello inserito a mano e la differenza è 0 (salvo modifica esplicita del prezzo).
+     *
      * @return array{old_total:float, new_total:float, difference:float}
      */
     public function reschedule(Booking $booking, TourDeparture $newDeparture): array
@@ -372,6 +375,15 @@ class BookingService
         return DB::transaction(function () use ($booking, $newDeparture) {
             $tour = $booking->tour;
             $oldTotal = (float) $booking->total_amount;
+
+            // Tour su richiesta: prezzo manuale, niente riprezzatura per periodo.
+            if ($tour?->booking_on_request) {
+                $booking->update([
+                    'tour_departure_id' => $newDeparture->id,
+                    'booking_date' => $newDeparture->departure_date,
+                ]);
+                return ['old_total' => round($oldTotal, 2), 'new_total' => round($oldTotal, 2), 'difference' => 0.0];
+            }
 
             $period = $this->pricingService->resolvePeriod($tour, $newDeparture->departure_date);
             $modifier = (float) $newDeparture->price_modifier;
@@ -584,7 +596,8 @@ class BookingService
         string $startDate,
         string $endDate,
         ?string $startTime = null,
-        ?string $endTime = null
+        ?string $endTime = null,
+        ?int $excludeBookingId = null
     ): \Illuminate\Support\Collection {
         $catamaranIds = array_values(array_filter(array_map('intval', $catamaranIds)));
         if (empty($catamaranIds)) {
@@ -593,52 +606,81 @@ class BookingService
 
         // Conflitti GLOBALI: un catamarano con una prenotazione attiva (su qualsiasi
         // tour) nel periodo non è bloccabile. $tourId non filtra più i conflitti.
-        $bookings = Booking::query()
+        // $excludeBookingId: esclude la prenotazione stessa (es. durante un cambio data).
+
+        // Fonte 1: prenotazioni con DATA nel periodo e posti sui catamarani indicati.
+        $byDate = Booking::query()
             ->active()
+            ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))
             ->whereDate('booking_date', '>=', $startDate)
             ->whereDate('booking_date', '<=', $endDate)
             ->whereHas('seatRecords', fn ($q) => $q->whereIn('catamaran_id', $catamaranIds))
             ->with(['seatRecords' => fn ($q) => $q->whereIn('catamaran_id', $catamaranIds), 'tour', 'departure'])
-            ->orderBy('booking_date')
             ->get();
 
-        // Se è indicata una fascia oraria di blocco, tieni solo le prenotazioni la
-        // cui finestra di OCCUPAZIONE si sovrappone (fasce disgiunte non collidono).
-        if ($startTime !== null && $endTime !== null) {
-            $reqStart = $this->minutesOfDay($startTime);
-            $reqEnd = $this->minutesOfDay($endTime);
+        // Fonte 2: prenotazioni a USO ESCLUSIVO il cui BLOCCO si sovrappone al periodo
+        // (anche se la loro data di partenza è fuori dall'intervallo). Le ricaviamo
+        // dal numero prenotazione nel campo reason dei blocchi che si sovrappongono.
+        $overlapBlocks = TourCatamaranBlock::whereIn('catamaran_id', $catamaranIds)
+            ->whereDate('start_date', '<=', $endDate)
+            ->whereDate('end_date', '>=', $startDate)
+            ->get();
+        $blockNumbers = $overlapBlocks->map(fn ($b) =>
+            preg_match('/#(\S+)/', (string) $b->reason, $m) ? $m[1] : null
+        )->filter()->unique()->values();
 
-            // Per le prenotazioni a uso esclusivo, la finestra reale è quella del
-            // BLOCCO (gli orari indicati dall'admin), non la durata del tour. La
-            // recuperiamo dai blocchi marcati col numero prenotazione.
+        $byBlock = collect();
+        if ($blockNumbers->isNotEmpty()) {
+            $byBlock = Booking::query()
+                ->active()
+                ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))
+                ->whereIn('booking_number', $blockNumbers)
+                ->with(['seatRecords' => fn ($q) => $q->whereIn('catamaran_id', $catamaranIds), 'tour', 'departure'])
+                ->get();
+        }
+
+        $bookings = $byDate->concat($byBlock)->unique('id')->values();
+
+        // Se è indicata una fascia oraria, tieni solo le prenotazioni la cui finestra
+        // di OCCUPAZIONE (data+ora inizio → data+ora fine) si sovrappone a quella
+        // richiesta. Finestre disgiunte (es. mattina/pomeriggio dello stesso giorno,
+        // o periodi su giorni diversi) non collidono.
+        if ($startTime !== null && $endTime !== null) {
+            $reqStart = \Carbon\Carbon::parse($startDate . ' ' . $startTime);
+            $reqEnd = \Carbon\Carbon::parse($endDate . ' ' . $endTime);
+
+            // Finestra reale dal BLOCCO esclusivo (date+orari), per prenotazione.
             $blockWindows = TourCatamaranBlock::whereIn('catamaran_id', $catamaranIds)
                 ->where(function ($q) use ($bookings) {
                     foreach ($bookings as $b) {
                         $q->orWhere('reason', 'like', '%#' . $b->booking_number . '%');
                     }
-                    // garantisce 0 risultati se non ci sono prenotazioni
                     $q->orWhereRaw('1 = 0');
                 })
-                ->get(['reason', 'start_time', 'end_time']);
+                ->get(['reason', 'start_date', 'end_date', 'start_time', 'end_time']);
 
             $bookings = $bookings->filter(function ($b) use ($reqStart, $reqEnd, $blockWindows) {
-                // Finestra dal blocco esclusivo della prenotazione (se presente e con orari).
                 $blk = $blockWindows->first(fn ($w) =>
                     $w->reason && str_contains($w->reason, '#' . $b->booking_number)
                     && !empty($w->start_time) && !empty($w->end_time));
 
                 if ($blk) {
-                    $bs = \Carbon\Carbon::parse($blk->start_time)->format('H:i');
-                    $be = \Carbon\Carbon::parse($blk->end_time)->format('H:i');
+                    // Periodo del blocco: data inizio+ora → data fine+ora.
+                    $bs = \Carbon\Carbon::parse($blk->start_date->format('Y-m-d') . ' ' . \Carbon\Carbon::parse($blk->start_time)->format('H:i'));
+                    $be = \Carbon\Carbon::parse($blk->end_date->format('Y-m-d') . ' ' . \Carbon\Carbon::parse($blk->end_time)->format('H:i'));
                 } elseif ($b->departure) {
-                    [$bs, $be] = $this->departureTimeWindow($b->departure);
+                    [$st, $et] = $this->departureTimeWindow($b->departure);
+                    if ($st === null || $et === null) {
+                        return true;
+                    }
+                    $day = $b->booking_date->format('Y-m-d');
+                    $bs = \Carbon\Carbon::parse($day . ' ' . $st);
+                    $be = \Carbon\Carbon::parse($day . ' ' . $et);
                 } else {
                     return true; // niente info → prudenzialmente in conflitto
                 }
-                if ($bs === null || $be === null) {
-                    return true;
-                }
-                return $reqStart < $this->minutesOfDay($be) && $this->minutesOfDay($bs) < $reqEnd;
+                // Sovrapposizione di intervalli [bs,be) vs [reqStart,reqEnd).
+                return $reqStart->lt($be) && $bs->lt($reqEnd);
             })->values();
         }
 
