@@ -17,12 +17,21 @@
 </ul>
 
 <h2>Quando registri tu una prenotazione</h2>
-<p>Lo stato che scegli al momento della creazione determina cosa succede:</p>
+<p>In creazione scegli il <strong>metodo di pagamento</strong>, che determina lo stato e cosa succede:</p>
 <ul>
-    <li><strong>In attesa</strong> → email con link di pagamento al cliente.</li>
-    <li><strong>Confermata</strong> → biglietti inviati subito (pagamento già incassato a parte).</li>
-    <li>Altri stati → nessuna email automatica.</li>
+    <li><strong>Già incassato (contanti / POS / altro)</strong> → registra subito l'incasso e conferma la prenotazione (invia i biglietti). L'importo incassato risulta nella prenotazione, quindi in caso di annullamento il calcolo di penale/rimborso funziona.</li>
+    <li><strong>Link di pagamento (Stripe)</strong> → la prenotazione resta "in attesa"; viene generato un <strong>link</strong> che trovi nel dettaglio, con il bottone <em>"Invia al cliente"</em> (puoi anche copiarlo e inviarlo come preferisci). Non parte alcuna email finché non premi il bottone.</li>
+    <li><strong>Bonifico bancario</strong> (se attivo) → resta in "Attesa bonifico"; confermi tu l'incasso quando arriva.</li>
 </ul>
+<p>
+    Se l'<strong>acconto</strong> è attivo, puoi scegliere la rata: "Intero importo" oppure
+    "Acconto" (registra/richiede solo la prima rata, il saldo resta da incassare).
+</p>
+<div class="guide-tip">
+    Lo <strong>Stato avanzato</strong> (sezione opzionale) serve solo per le registrazioni
+    retroattive: forza manualmente lo stato (es. Completata, Check-in). Normalmente lo stato
+    viene impostato in automatico dal metodo di pagamento.
+</div>
 
 <div class="guide-tip">
     Le opzioni "acconto" e "bonifico" si attivano dalle <strong>Impostazioni</strong>: quando sono spente,

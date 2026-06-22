@@ -130,8 +130,14 @@ class BookingController extends Controller
         }
 
         $statuses = BookingStatus::cases();
+        $depositEnabled = \App\Support\Settings::depositEnabled();
+        $depositPercentage = \App\Support\Settings::depositPercentage();
+        $bankTransferEnabled = \App\Support\Settings::bankTransferEnabled();
 
-        return view('admin.bookings.create', compact('tours', 'selectedTour', 'departures', 'statuses'));
+        return view('admin.bookings.create', compact(
+            'tours', 'selectedTour', 'departures', 'statuses',
+            'depositEnabled', 'depositPercentage', 'bankTransferEnabled'
+        ));
     }
 
     /**
@@ -349,7 +355,15 @@ class BookingController extends Controller
             'customer_country' => 'nullable|string|max:5',
             'customer_tax_code' => 'nullable|string|max:16',
             'special_requests' => 'nullable|string|max:1000',
-            'status' => 'required|in:' . implode(',', $statusValues),
+            'status' => 'nullable|in:' . implode(',', $statusValues),
+            // Metodo di pagamento scelto dall'admin:
+            //  - manual: già incassato (contanti/POS/altro) → registra un pagamento;
+            //  - stripe: genera un link di pagamento da inviare al cliente;
+            //  - bank_transfer: in attesa bonifico.
+            'payment_method' => 'nullable|in:manual,stripe,bank_transfer',
+            // Rata: intero o acconto (2 rate), solo se l'acconto è attivo.
+            'payment_installment' => 'nullable|in:full,deposit',
+            // Stato forzato manualmente (retroattive: completata/check-in/ecc.).
             // Catamarano singolo (modalità normale): opzionale, vuoto = automatico.
             'catamaran_id' => 'nullable|integer|exists:catamarans,id',
             // Uso esclusivo: blocco catamarano(i) per un periodo con orari.
@@ -363,7 +377,23 @@ class BookingController extends Controller
             'catamaran_ids.*' => 'integer|exists:catamarans,id',
         ]);
 
-        $status = BookingStatus::from($validated['status']);
+        // Metodo di pagamento e rata (acconto solo se abilitato nelle impostazioni).
+        $paymentMethod = $validated['payment_method'] ?? null;
+        $useDeposit = \App\Support\Settings::depositEnabled()
+            && ($validated['payment_installment'] ?? 'full') === 'deposit';
+
+        // Lo stato deriva dal metodo di pagamento; se l'admin ha forzato uno stato
+        // (retroattive), quello ha la precedenza.
+        if (!empty($validated['status'])) {
+            $status = BookingStatus::from($validated['status']);
+        } else {
+            $status = match ($paymentMethod) {
+                'stripe' => BookingStatus::PENDING,            // attende pagamento online
+                'bank_transfer' => BookingStatus::AWAITING_TRANSFER,
+                'manual' => $useDeposit ? BookingStatus::DEPOSIT_PAID : BookingStatus::CONFIRMED,
+                default => BookingStatus::CONFIRMED,           // default: già incassato
+            };
+        }
 
         // Tour "su richiesta": prezzi inseriti a mano dall'admin (niente listino).
         $tour = Tour::findOrFail($validated['tour_id']);
@@ -472,6 +502,9 @@ class BookingController extends Controller
             'guests' => $guests,
             'status' => $status,           // stato scelto dall'admin
             'admin_override' => true,      // consente partenze passate (retroattive)
+            // Tipo di pagamento per il calcolo acconto/saldo nel service.
+            'payment_type' => $useDeposit ? 'deposit' : ($paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'full'),
+            'use_deposit' => $useDeposit,
             // Prezzo TOTALE manuale (usato solo per i tour su richiesta).
             'total_price' => $isOnRequest ? (float) ($validated['total_price'] ?? 0) : null,
             // Uso esclusivo: i catamarani scelti vanno usati (anche oltre capienza).
@@ -534,15 +567,33 @@ class BookingController extends Controller
                 $booking->update($stamps);
             }
 
-            // Email in base allo stato scelto:
-            //  - PENDING → invia il link di pagamento Stripe al cliente;
-            //  - CONFIRMED → pagamento già incassato off-platform: invia i biglietti;
-            //  - altri stati (deposito/bonifico/completata/...) → nessuna email automatica.
-            if ($status === BookingStatus::PENDING) {
-                $emailSent = $this->sendPaymentLinkEmail($booking);
-                $message = $emailSent
-                    ? 'Prenotazione creata. Email con link di pagamento inviata al cliente.'
-                    : 'Prenotazione creata, ma l\'invio dell\'email è fallito (controlla il log).';
+            // Gestione pagamento in base al metodo scelto dall'admin.
+            if ($paymentMethod === 'stripe') {
+                // Genera il link di pagamento e SALVALO (senza inviare email):
+                // l'admin lo vede nel dettaglio e decide se inviarlo al cliente.
+                $linkOk = $this->generatePaymentLink($booking);
+                $message = $linkOk
+                    ? 'Prenotazione creata. Link di pagamento pronto: invialo al cliente dal dettaglio.'
+                    : 'Prenotazione creata, ma la generazione del link di pagamento è fallita (controlla il log).';
+            } elseif ($paymentMethod === 'manual') {
+                // Pagamento già incassato (contanti/POS/altro): registra l'incasso
+                // così amount_paid è valorizzato (necessario per penali/rimborsi).
+                $amount = $useDeposit && (float) $booking->deposit_amount > 0
+                    ? (float) $booking->deposit_amount
+                    : (float) $booking->total_amount;
+                $this->registerManualPayment($booking, $amount);
+                if ($status === BookingStatus::CONFIRMED) {
+                    $this->sendTicketsEmail($booking);
+                    $message = 'Prenotazione creata e confermata (incasso registrato). Biglietti inviati al cliente.';
+                } else {
+                    $message = 'Prenotazione creata. Incasso registrato (€ ' . number_format($amount, 2, ',', '.') . ').';
+                }
+            } elseif ($paymentMethod === 'bank_transfer') {
+                $message = 'Prenotazione creata in attesa di bonifico.';
+            } elseif ($status === BookingStatus::PENDING) {
+                // Stato forzato PENDING senza metodo: comportamento storico (email link).
+                $this->sendPaymentLinkEmail($booking);
+                $message = 'Prenotazione creata. Email con link di pagamento inviata al cliente.';
             } elseif ($status === BookingStatus::CONFIRMED) {
                 $this->sendTicketsEmail($booking);
                 $message = 'Prenotazione creata e confermata. Biglietti inviati al cliente.';
@@ -653,12 +704,15 @@ class BookingController extends Controller
     protected function sendPaymentLinkEmail(Booking $booking): bool
     {
         try {
-            $session = $this->paymentService->createCheckoutSession($booking);
-            $booking->update([
-                'checkout_url' => $session['url'],
-                'payment_link_sent_at' => now(),
-            ]);
-            Mail::to($booking->customer_email)->send(new BookingPaymentLink($booking, $session['url']));
+            // Riusa il link già generato se presente, altrimenti creane uno.
+            $url = $booking->checkout_url;
+            if (! $url) {
+                $session = $this->paymentService->createCheckoutSession($booking);
+                $url = $session['url'];
+                $booking->update(['checkout_url' => $url]);
+            }
+            Mail::to($booking->customer_email)->send(new BookingPaymentLink($booking, $url));
+            $booking->update(['payment_link_sent_at' => now()]);
             return true;
         } catch (\Throwable $e) {
             Log::error('Invio email link pagamento fallito', [
@@ -667,6 +721,46 @@ class BookingController extends Controller
             ]);
             return false;
         }
+    }
+
+    /**
+     * Genera (e salva) il link di pagamento Stripe SENZA inviare email.
+     * Usato quando l'admin vuole il link da inviare lui al cliente.
+     */
+    protected function generatePaymentLink(Booking $booking): bool
+    {
+        try {
+            $session = $this->paymentService->createCheckoutSession($booking);
+            $booking->update(['checkout_url' => $session['url']]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Generazione link pagamento fallita', [
+                'booking' => $booking->booking_number,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Registra un incasso "manuale" (contanti/POS/altro) sulla prenotazione,
+     * così amount_paid è valorizzato e penali/rimborsi funzionano correttamente.
+     */
+    protected function registerManualPayment(Booking $booking, float $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+        Payment::create([
+            'booking_id' => $booking->id,
+            'gateway' => 'manual',
+            'amount' => $amount,
+            'currency' => $booking->currency ?: 'EUR',
+            'status' => PaymentStatus::SUCCEEDED,
+            'payment_method_type' => 'manual',
+            'paid_at' => now(),
+        ]);
+        $booking->update(['amount_paid' => (float) $booking->amount_paid + $amount]);
     }
 
     /**
@@ -937,6 +1031,17 @@ class BookingController extends Controller
             ]);
             return back()->with('error', 'Invio fallito: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Invia al cliente l'email col link di pagamento Stripe (genera il link se manca).
+     */
+    public function sendPaymentLink(Booking $booking): RedirectResponse
+    {
+        $ok = $this->sendPaymentLinkEmail($booking);
+        return $ok
+            ? back()->with('success', 'Link di pagamento inviato a ' . $booking->customer_email . '.')
+            : back()->with('error', 'Invio del link fallito (controlla il log).');
     }
 
     public function export(Request $request)

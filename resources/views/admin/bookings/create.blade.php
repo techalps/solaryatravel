@@ -251,17 +251,57 @@
 
                         <hr>
 
+                        {{-- Metodo di pagamento --}}
                         <div class="mb-3">
-                            <label for="status" class="form-label fw-semibold">Stato della prenotazione *</label>
-                            <select name="status" id="status" class="form-select" required>
-                                @foreach($statuses as $st)
-                                    <option value="{{ $st->value }}" {{ old('status', 'pending') === $st->value ? 'selected' : '' }}>
-                                        {{ $st->label() }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="form-text" id="status-hint"></div>
+                            <label class="form-label fw-semibold">Pagamento</label>
+                            <div class="d-flex flex-column gap-2">
+                                <label class="d-flex align-items-start gap-2">
+                                    <input type="radio" name="payment_method" value="manual" class="form-check-input mt-1" {{ old('payment_method', 'manual') === 'manual' ? 'checked' : '' }}>
+                                    <span class="small">Già incassato (contanti / POS / altro)
+                                        <span class="text-muted d-block">Registra subito l'incasso e conferma la prenotazione.</span></span>
+                                </label>
+                                <label class="d-flex align-items-start gap-2">
+                                    <input type="radio" name="payment_method" value="stripe" class="form-check-input mt-1" {{ old('payment_method') === 'stripe' ? 'checked' : '' }}>
+                                    <span class="small">Link di pagamento (Stripe)
+                                        <span class="text-muted d-block">Genera un link da inviare al cliente; resta "in attesa".</span></span>
+                                </label>
+                                @if($bankTransferEnabled)
+                                    <label class="d-flex align-items-start gap-2">
+                                        <input type="radio" name="payment_method" value="bank_transfer" class="form-check-input mt-1" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }}>
+                                        <span class="small">Bonifico bancario
+                                            <span class="text-muted d-block">In attesa di bonifico; confermi tu l'incasso.</span></span>
+                                    </label>
+                                @endif
+                            </div>
                         </div>
+
+                        {{-- Acconto / 2 rate (solo se abilitato nelle impostazioni) --}}
+                        @if($depositEnabled)
+                            <div class="mb-3" id="installment-block">
+                                <label class="form-label fw-semibold small">Rata</label>
+                                <select name="payment_installment" id="payment_installment" class="form-select form-select-sm">
+                                    <option value="full" {{ old('payment_installment', 'full') === 'full' ? 'selected' : '' }}>Intero importo</option>
+                                    <option value="deposit" {{ old('payment_installment') === 'deposit' ? 'selected' : '' }}>Acconto {{ $depositPercentage }}% (saldo successivo)</option>
+                                </select>
+                                <div class="form-text">Con "Acconto" viene registrata/richiesta solo la prima rata.</div>
+                            </div>
+                        @endif
+
+                        {{-- Stato avanzato (opzionale): forza lo stato per retroattive --}}
+                        <details class="mb-3">
+                            <summary class="form-label fw-semibold small mb-0" style="cursor:pointer">Stato avanzato (opzionale)</summary>
+                            <div class="mt-2">
+                                <select name="status" id="status" class="form-select">
+                                    <option value="">— Automatico dal pagamento —</option>
+                                    @foreach($statuses as $st)
+                                        <option value="{{ $st->value }}" {{ old('status') === $st->value ? 'selected' : '' }}>
+                                            {{ $st->label() }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">Usa solo per registrazioni retroattive (es. Completata, Check-in).</div>
+                            </div>
+                        </details>
 
                         <button type="submit" class="btn btn-primary w-100 rounded-pill fw-semibold mt-1">
                             <i class="bi bi-check2-circle me-1"></i>Crea prenotazione
@@ -799,6 +839,7 @@
     }
 
     function updateStatusHint() {
+        if (!statusHint) return; // hint rimosso dalla UI: nessuna azione
         const v = statusSelect.value;
         if (v === 'pending') statusHint.textContent = 'Verrà inviata al cliente l\'email con il link di pagamento Stripe.';
         else if (v === 'confirmed') statusHint.textContent = 'Pagamento già incassato: verranno inviati i biglietti al cliente.';

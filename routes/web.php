@@ -113,6 +113,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
     Route::post('/bookings/{booking}/refund', [AdminBookingController::class, 'refund'])->name('bookings.refund');
     Route::post('/bookings/{booking}/resend-confirmation', [AdminBookingController::class, 'resendConfirmation'])->name('bookings.resend');
+    // Genera/invia il link di pagamento Stripe al cliente (uso admin).
+    Route::post('/bookings/{booking}/send-payment-link', [AdminBookingController::class, 'sendPaymentLink'])->name('bookings.send-payment-link');
     Route::get('/bookings/{booking}/export', [AdminBookingController::class, 'export'])->name('bookings.export');
     Route::post('/bookings/{booking}/seats/{seat}/move', [AdminBookingController::class, 'moveSeat'])->name('bookings.seats.move');
 

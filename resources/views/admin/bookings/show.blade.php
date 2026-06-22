@@ -99,6 +99,34 @@
         <div class="alert alert-danger rounded-3">{{ session('error') }}</div>
     @endif
 
+    {{-- Link di pagamento Stripe: presente quando la prenotazione attende il pagamento --}}
+    @if ($booking->checkout_url && in_array($statusValue, ['pending', 'deposit_paid']))
+        <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-primary">
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="min-w-0">
+                        <div class="fw-bold mb-1"><i class="bi bi-link-45deg me-1 text-primary"></i>Link di pagamento</div>
+                        <div class="input-group input-group-sm" style="max-width:520px">
+                            <input type="text" class="form-control font-monospace small" id="payLinkInput" value="{{ $booking->checkout_url }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('payLinkInput').value); this.innerHTML='<i class=\'bi bi-check2\'></i>'">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        @if ($booking->payment_link_sent_at)
+                            <div class="small text-muted mt-1"><i class="bi bi-envelope-check me-1"></i>Inviato il {{ $booking->payment_link_sent_at->timezone('Europe/Rome')->format('d/m/Y H:i') }}</div>
+                        @endif
+                    </div>
+                    <form action="{{ route('admin.bookings.send-payment-link', $booking) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-primary rounded-pill px-3 fw-semibold">
+                            <i class="bi bi-envelope-arrow-up me-2"></i>{{ $booking->payment_link_sent_at ? 'Reinvia' : 'Invia' }} al cliente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="row g-3">
         {{-- Colonna principale --}}
         <div class="col-lg-8">
