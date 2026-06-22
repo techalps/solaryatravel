@@ -382,7 +382,9 @@ class BookingController extends Controller
             $departureId = $this->resolveDepartureId(
                 (int) $validated['tour_id'],
                 (string) $validated['tour_departure_id'],
-                $exclusive
+                $exclusive,
+                // In uso esclusivo la partenza dura quanto la fascia indicata (ritorno).
+                $exclusive ? ($validated['block_end_time'] ?? null) : null
             );
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -528,7 +530,7 @@ class BookingController extends Controller
      *                               (la data di partenza è scelta liberamente).
      * @throws \RuntimeException se la partenza non è valida per il tour.
      */
-    protected function resolveDepartureId(int $tourId, string $rawId, bool $allowFreeDate = false): int
+    protected function resolveDepartureId(int $tourId, string $rawId, bool $allowFreeDate = false, ?string $endTimeOverride = null): int
     {
         // Id reale già esistente.
         if (ctype_digit($rawId)) {
@@ -573,9 +575,14 @@ class BookingController extends Controller
         }
 
         $startTime = $time . ':00';
-        $endTime = \Carbon\Carbon::parse($startTime)
-            ->addMinutes((int) round(($tour->duration_hours ?? 1) * 60))
-            ->format('H:i:s');
+        // In uso esclusivo fa fede l'orario di RITORNO indicato dall'admin: la
+        // partenza dura solo la fascia riservata, non l'intera durata del tour.
+        // Così dalle 12:30 il catamarano torna prenotabile (da admin) lo stesso giorno.
+        $endTime = $endTimeOverride
+            ? (strlen($endTimeOverride) === 5 ? $endTimeOverride . ':00' : $endTimeOverride)
+            : \Carbon\Carbon::parse($startTime)
+                ->addMinutes((int) round(($tour->duration_hours ?? 1) * 60))
+                ->format('H:i:s');
 
         $dep = \App\Models\TourDeparture::firstOrCreate(
             [
@@ -589,6 +596,13 @@ class BookingController extends Controller
                 'price_modifier' => 1.0,
             ]
         );
+
+        // Se la riga esisteva già con un end_time diverso (es. durata piena del tour),
+        // allinealo alla fascia esclusiva indicata dall'admin.
+        if ($endTimeOverride && $dep->wasRecentlyCreated === false
+            && \Carbon\Carbon::parse($dep->end_time)->format('H:i:s') !== $endTime) {
+            $dep->update(['end_time' => $endTime]);
+        }
 
         return $dep->id;
     }

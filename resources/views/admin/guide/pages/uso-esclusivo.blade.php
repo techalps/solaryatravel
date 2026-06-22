@@ -12,10 +12,16 @@
 <div class="guide-step"><span class="guide-step-num">4</span><div>Alla conferma, i catamarani scelti vengono <strong>bloccati</strong> dalla partenza al ritorno (con gli orari indicati).</div></div>
 
 <div class="guide-tip">
-    <strong>Le fasce orarie contano:</strong> il blocco vale solo per l'intervallo orario indicato.
-    Puoi riservare lo stesso catamarano in più fasce dello stesso giorno, purché non si sovrappongano.
-    Esempio: una barca riservata 09:00–12:30 resta libera per un altro uso esclusivo 12:30–18:00.
-    Due fasce che si sovrappongono (es. 11:00–14:00) sono invece in conflitto.
+    <strong>Gli orari che inserisci fanno fede:</strong> in uso esclusivo conta la fascia
+    oraria che indichi (partenza → ritorno), <u>non</u> la durata del tour. Puoi riservare lo
+    stesso catamarano in più fasce dello stesso giorno, purché non si sovrappongano.
+    Esempio: riservi una barca 09:00–12:30; dalle 12:30 resta riservabile (da admin) per un'altra
+    uscita 12:30–18:00. Due fasce che si sovrappongono (es. 11:00–14:00) sono invece in conflitto.
+</div>
+<div class="guide-warn">
+    <strong>Sul sito (clienti)</strong> vale invece la durata piena del tour: se una barca è
+    riservata al mattino, il cliente non riesce a prenotarla per un tour che, per durata,
+    occuperebbe anche quella fascia. La libertà di riusare la fascia successiva è solo lato admin.
 </div>
 
 <h2>Catamarani occupati</h2>
