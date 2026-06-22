@@ -539,15 +539,38 @@ class BookingService
             ->get();
 
         // Se è indicata una fascia oraria di blocco, tieni solo le prenotazioni la
-        // cui partenza si SOVRAPPONE a quella fascia (fasce disgiunte non collidono).
+        // cui finestra di OCCUPAZIONE si sovrappone (fasce disgiunte non collidono).
         if ($startTime !== null && $endTime !== null) {
             $reqStart = $this->minutesOfDay($startTime);
             $reqEnd = $this->minutesOfDay($endTime);
-            $bookings = $bookings->filter(function ($b) use ($reqStart, $reqEnd) {
-                if (! $b->departure) {
-                    return true; // senza partenza nota → prudenzialmente in conflitto
+
+            // Per le prenotazioni a uso esclusivo, la finestra reale è quella del
+            // BLOCCO (gli orari indicati dall'admin), non la durata del tour. La
+            // recuperiamo dai blocchi marcati col numero prenotazione.
+            $blockWindows = TourCatamaranBlock::whereIn('catamaran_id', $catamaranIds)
+                ->where(function ($q) use ($bookings) {
+                    foreach ($bookings as $b) {
+                        $q->orWhere('reason', 'like', '%#' . $b->booking_number . '%');
+                    }
+                    // garantisce 0 risultati se non ci sono prenotazioni
+                    $q->orWhereRaw('1 = 0');
+                })
+                ->get(['reason', 'start_time', 'end_time']);
+
+            $bookings = $bookings->filter(function ($b) use ($reqStart, $reqEnd, $blockWindows) {
+                // Finestra dal blocco esclusivo della prenotazione (se presente e con orari).
+                $blk = $blockWindows->first(fn ($w) =>
+                    $w->reason && str_contains($w->reason, '#' . $b->booking_number)
+                    && !empty($w->start_time) && !empty($w->end_time));
+
+                if ($blk) {
+                    $bs = \Carbon\Carbon::parse($blk->start_time)->format('H:i');
+                    $be = \Carbon\Carbon::parse($blk->end_time)->format('H:i');
+                } elseif ($b->departure) {
+                    [$bs, $be] = $this->departureTimeWindow($b->departure);
+                } else {
+                    return true; // niente info → prudenzialmente in conflitto
                 }
-                [$bs, $be] = $this->departureTimeWindow($b->departure);
                 if ($bs === null || $be === null) {
                     return true;
                 }
