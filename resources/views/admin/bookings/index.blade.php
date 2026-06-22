@@ -22,6 +22,22 @@
         if (\App\Support\Settings::depositEnabled()) {
             array_splice($miniStatuses, 1, 0, ['deposit_paid']);
         }
+
+        // Fuso orario di visualizzazione (il DB resta in UTC).
+        $TZ = 'Europe/Rome';
+
+        // Helper per le intestazioni ordinabili: link che alterna asc/desc + freccia.
+        $sortLink = function (string $key, string $label, string $thClass = '') use ($sort, $dir) {
+            $active = $sort === $key;
+            $nextDir = ($active && $dir === 'asc') ? 'desc' : 'asc';
+            $icon = $active ? ($dir === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
+            $params = array_merge(request()->except(['page', 'sort', 'dir']), ['sort' => $key, 'dir' => $nextDir]);
+            $url = route('admin.bookings.index', $params);
+            $opacity = $active ? '' : 'opacity-50';
+            return '<th class="' . $thClass . '">'
+                . '<a href="' . $url . '" class="text-reset text-decoration-none d-inline-flex align-items-center gap-1">'
+                . e($label) . ' <i class="bi ' . $icon . ' small ' . $opacity . '"></i></a></th>';
+        };
     @endphp
 
     {{-- Page header --}}
@@ -138,13 +154,13 @@
             <table class="dash-table">
                 <thead>
                     <tr>
-                        <th>Prenotazione</th>
-                        <th>Cliente</th>
-                        <th>Tour</th>
-                        <th>Data</th>
-                        <th class="text-center">Ospiti</th>
-                        <th class="text-end">Totale</th>
-                        <th>Stato</th>
+                        {!! $sortLink('number', 'Prenotazione') !!}
+                        {!! $sortLink('customer', 'Cliente') !!}
+                        {!! $sortLink('tour', 'Tour') !!}
+                        {!! $sortLink('date', 'Data') !!}
+                        {!! $sortLink('seats', 'Ospiti', 'text-center') !!}
+                        {!! $sortLink('total', 'Totale', 'text-end') !!}
+                        {!! $sortLink('status', 'Stato') !!}
                         <th class="text-end">Azioni</th>
                     </tr>
                 </thead>
@@ -160,7 +176,7 @@
                                     #{{ $booking->booking_number }}
                                 </a>
                                 <div class="small text-muted mt-1">
-                                    <i class="bi bi-clock me-1"></i>{{ $booking->created_at->format('d/m/Y H:i') }}
+                                    <i class="bi bi-clock me-1"></i>{{ $booking->created_at->timezone($TZ)->format('d/m/Y H:i') }}
                                 </div>
                             </td>
                             <td>
@@ -185,12 +201,48 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ \Carbon\Carbon::parse($booking->booking_date)->format('d/m/Y') }}</div>
-                                @if($booking->departure)
-                                    <div class="small text-muted">
-                                        <i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($booking->departure->start_time)->format('H:i') }}@if($booking->departure->end_time) – {{ \Carbon\Carbon::parse($booking->departure->end_time)->format('H:i') }}@endif
+                                @php
+                                    $blk = $blockByBooking[$booking->booking_number] ?? null;
+                                    if ($blk) {
+                                        // Uso esclusivo: andata/ritorno dagli orari del blocco.
+                                        $startDate = $blk->start_date;
+                                        $endDate = $blk->end_date;
+                                        $startT = $blk->start_time ? \Carbon\Carbon::parse($blk->start_time)->format('H:i') : null;
+                                        $endT = $blk->end_time ? \Carbon\Carbon::parse($blk->end_time)->format('H:i') : null;
+                                    } else {
+                                        // Tour normale: stessa data andata/ritorno; orario dalla partenza
+                                        // (end_time, oppure inizio + durata del tour).
+                                        $startDate = \Carbon\Carbon::parse($booking->booking_date);
+                                        $endDate = $startDate;
+                                        $dep = $booking->departure;
+                                        $startT = $dep && $dep->start_time ? \Carbon\Carbon::parse($dep->start_time)->format('H:i') : null;
+                                        if ($dep && $dep->end_time) {
+                                            $endT = \Carbon\Carbon::parse($dep->end_time)->format('H:i');
+                                        } elseif ($dep && $dep->start_time) {
+                                            $durMin = (int) round(((float) ($booking->tour->duration_hours ?? 1)) * 60);
+                                            $endT = \Carbon\Carbon::parse($dep->start_time)->addMinutes($durMin)->format('H:i');
+                                        } else {
+                                            $endT = null;
+                                        }
+                                    }
+                                    $sameDay = $startDate && $endDate
+                                        && \Carbon\Carbon::parse($startDate)->isSameDay(\Carbon\Carbon::parse($endDate));
+                                @endphp
+                                <div class="small">
+                                    <div>
+                                        <span class="text-muted">Andata:</span>
+                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }}</span>
+                                        @if($startT)<span class="text-muted">· {{ $startT }}</span>@endif
                                     </div>
-                                @endif
+                                    <div>
+                                        <span class="text-muted">Ritorno:</span>
+                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</span>
+                                        @if($endT)<span class="text-muted">· {{ $endT }}</span>@endif
+                                    </div>
+                                    @if($blk)
+                                        <span class="badge bg-info-subtle text-info mt-1"><i class="bi bi-water me-1"></i>Uso esclusivo</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="text-center">
                                 <span class="d-inline-flex align-items-center justify-content-center bg-light rounded-pill px-3 py-1 fw-semibold small">

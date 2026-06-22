@@ -1,3 +1,17 @@
+<h2>L'elenco prenotazioni</h2>
+<p>
+    L'elenco è ordinato per <strong>numero di prenotazione</strong> (dal più recente).
+    Puoi <strong>riordinare per qualsiasi colonna</strong> cliccando sulla sua intestazione
+    (un secondo click inverte l'ordine). L'ordinamento vale su tutte le prenotazioni, non solo
+    sulla pagina visibile.
+</p>
+<p>
+    La colonna <strong>Data</strong> mostra <strong>andata e ritorno</strong>: per i tour normali
+    coincidono come giorno e l'orario di ritorno deriva dalla durata del tour; per le prenotazioni
+    a uso esclusivo valgono gli orari indicati (con il badge "Uso esclusivo"). L'orario di
+    registrazione della prenotazione è mostrato in ora italiana.
+</p>
+
 <h2>Creare una prenotazione manuale</h2>
 <p>
     Da <strong>Prenotazioni → Nuova prenotazione</strong> puoi registrare una prenotazione per telefono,

@@ -58,13 +58,53 @@ class BookingController extends Controller
             });
         }
 
-        $bookings = $query->orderBy('booking_date', 'desc')->paginate(20)->withQueryString();
+        // Ordinamento: colonne consentite (chiave UI => colonna/espressione DB).
+        // Default: per numero prenotazione (decrescente).
+        $sortable = [
+            'number'   => 'booking_number',
+            'customer' => 'customer_last_name',
+            'tour'     => 'tour_id',
+            'date'     => 'booking_date',
+            'seats'    => 'seats',
+            'total'    => 'total_amount',
+            'status'   => 'status',
+            'created'  => 'created_at',
+        ];
+        $sort = $request->input('sort', 'number');
+        if (! array_key_exists($sort, $sortable)) {
+            $sort = 'number';
+        }
+        $dir = strtolower($request->input('dir', $sort === 'number' ? 'desc' : 'asc')) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sortable[$sort], $dir);
+        // Ordinamento secondario stabile.
+        if ($sort !== 'number') {
+            $query->orderBy('booking_number', 'desc');
+        }
+
+        $bookings = $query->paginate(20)->withQueryString();
+
+        // Blocchi a uso esclusivo delle prenotazioni in pagina (per mostrare
+        // andata/ritorno con gli orari reali). Mappa: booking_number => blocco.
+        $numbers = $bookings->pluck('booking_number')->filter()->all();
+        $blockByBooking = collect();
+        if (! empty($numbers)) {
+            $blocks = \App\Models\TourCatamaranBlock::where(function ($q) use ($numbers) {
+                foreach ($numbers as $n) {
+                    $q->orWhere('reason', 'like', '%#' . $n . '%');
+                }
+            })->get();
+            foreach ($numbers as $n) {
+                $blockByBooking[$n] = $blocks->first(fn ($b) => $b->reason && str_contains($b->reason, '#' . $n));
+            }
+        }
+
         $tours = Tour::orderBy('name')->get();
         $statuses = BookingStatus::cases();
         $stats = Booking::selectRaw('status, COUNT(*) as count')
             ->groupBy('status')->pluck('count', 'status')->toArray();
 
-        return view('admin.bookings.index', compact('bookings', 'tours', 'statuses', 'stats'));
+        return view('admin.bookings.index', compact('bookings', 'tours', 'statuses', 'stats', 'sort', 'dir', 'blockByBooking'));
     }
 
     /**
