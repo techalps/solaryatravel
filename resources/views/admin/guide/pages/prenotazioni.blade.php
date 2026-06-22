@@ -43,6 +43,14 @@
 </ul>
 <p class="text-muted small">I prezzi dei posti vengono ricalcolati in base al periodo della nuova data; vale solo per i partecipanti attivi (non quelli disdetti).</p>
 
+<h2>Cliente con account</h2>
+<p>
+    Se inserisci l'<strong>email di un cliente già registrato</strong>, la prenotazione viene
+    collegata al suo account e <strong>compare nel suo storico</strong> ("Le mie prenotazioni").
+    Se l'email non ha ancora un account, la prenotazione resta valida e — quando il cliente si
+    registrerà con quella stessa email — comparirà automaticamente nel suo storico.
+</p>
+
 <h2>Creare una prenotazione manuale</h2>
 <p>
     Da <strong>Prenotazioni → Nuova prenotazione</strong> puoi registrare una prenotazione per telefono,

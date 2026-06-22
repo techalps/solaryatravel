@@ -503,6 +503,9 @@ class BookingController extends Controller
             'guests' => $guests,
             'status' => $status,           // stato scelto dall'admin
             'admin_override' => true,      // consente partenze passate (retroattive)
+            // Collega la prenotazione al CLIENTE (se l'email è di un utente registrato),
+            // mai all'admin che la sta creando. Null se l'email non ha un account.
+            'user_id' => \App\Models\User::where('email', $validated['customer_email'])->value('id'),
             // Tipo di pagamento per il calcolo acconto/saldo nel service.
             'payment_type' => $useDeposit ? 'deposit' : ($paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'full'),
             'use_deposit' => $useDeposit,

@@ -191,7 +191,9 @@ class BookingService
             };
 
             $booking = Booking::create([
-                'user_id' => $data['user_id'] ?? auth()->id(),
+                // Se il chiamante passa esplicitamente user_id (anche null, es. admin
+                // che prenota per un cliente), lo rispettiamo; altrimenti self-booking.
+                'user_id' => array_key_exists('user_id', $data) ? $data['user_id'] : auth()->id(),
                 'tour_id' => $tour->id,
                 'tour_departure_id' => $departure->id,
                 'booking_date' => $departure->departure_date,
