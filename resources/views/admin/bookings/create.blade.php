@@ -525,8 +525,13 @@
         }
         const seq = ++availReqSeq;
         multiCatStatus.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifica disponibilità…';
+        // Includi la fascia oraria: due slot disgiunti nello stesso giorno non collidono.
+        const st = blockStartTime && blockStartTime.value ? blockStartTime.value : '';
+        const et = blockEndTime && blockEndTime.value ? blockEndTime.value : '';
         const url = catAvailUrlTpl.replace('__TOUR__', tourMeta.id)
-            + '?start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
+            + '?start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end)
+            + (st ? '&start_time=' + encodeURIComponent(st) : '')
+            + (et ? '&end_time=' + encodeURIComponent(et) : '');
         fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
             .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
             .then(data => {
@@ -826,8 +831,9 @@
         onDepartureChanged();
     }
 
-    // Aggiorna l'ora di partenza/virtuale e l'orario di blocco.
-    blockStartTime.addEventListener('change', () => { syncExclusiveStartTime(); renderSummary(); });
+    // Aggiorna l'ora di partenza/virtuale e ricontrolla la disponibilità nella fascia.
+    blockStartTime.addEventListener('change', () => { syncExclusiveStartTime(); renderSummary(); fetchCatamaranAvailability(); });
+    blockEndTime.addEventListener('change', () => { fetchCatamaranAvailability(); });
 
     // Selezione catamarani (uso esclusivo): aggiorna lista e capienza.
     multiCatList.addEventListener('change', e => {

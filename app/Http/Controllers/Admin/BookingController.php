@@ -162,8 +162,12 @@ class BookingController extends Controller
 
             // Catamarani selezionabili per questa data: operativi, non bloccati,
             // disponibili, con i posti liberi (se la partenza esiste già).
-            // Blocco GLOBALE: una barca riservata è occupata per qualsiasi tour.
-            $blockedIds = \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn($isoDate);
+            // Blocco GLOBALE per catamarano + per fascia oraria della partenza:
+            // due slot disgiunti nello stesso giorno non si bloccano a vicenda.
+            $winEnd = $d && $d->end_time
+                ? \Carbon\Carbon::parse($d->end_time)->format('H:i')
+                : \Carbon\Carbon::parse($time)->addMinutes((int) round(((float) ($tour->duration_hours ?? 1)) * 60))->format('H:i');
+            $blockedIds = \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn($isoDate, $time, $winEnd);
 
             $catamarans = $tour->operatingCatamarans()
                 ->filter(fn ($cat) => !in_array((int) $cat->id, $blockedIds, true) && $cat->isAvailableOn($isoDate))
@@ -234,6 +238,9 @@ class BookingController extends Controller
     {
         $start = $request->input('start');
         $end = $request->input('end', $start);
+        // Fascia oraria del blocco: due slot disgiunti nello stesso giorno non collidono.
+        $startTime = $request->input('start_time');
+        $endTime = $request->input('end_time');
         if (!$start) {
             return response()->json(['catamarans' => []]);
         }
@@ -241,12 +248,14 @@ class BookingController extends Controller
             $end = $start;
         }
 
-        $catamarans = $tour->operatingCatamarans()->map(function ($cat) use ($tour, $start, $end) {
+        $catamarans = $tour->operatingCatamarans()->map(function ($cat) use ($tour, $start, $end, $startTime, $endTime) {
             $conflicts = $this->bookingService->conflictingBookingsForBlock(
                 $tour->id,
                 [(int) $cat->id],
                 $start,
-                $end
+                $end,
+                $startTime,
+                $endTime
             );
 
             return [
@@ -341,12 +350,16 @@ class BookingController extends Controller
         if ($exclusive) {
             $blockStart = $validated['block_start_date'] ?? null;
             $blockEnd = $validated['block_end_date'] ?? $blockStart;
+            $blockStartTime = $validated['block_start_time'] ?? null;
+            $blockEndTime = $validated['block_end_time'] ?? null;
             if ($blockStart) {
                 $conflicts = $this->bookingService->conflictingBookingsForBlock(
                     (int) $validated['tour_id'],
                     $exclusiveCatamaranIds,
                     $blockStart,
-                    $blockEnd ?? $blockStart
+                    $blockEnd ?? $blockStart,
+                    $blockStartTime,
+                    $blockEndTime
                 );
                 if ($conflicts->isNotEmpty()) {
                     $lines = $conflicts->map(function ($b) {

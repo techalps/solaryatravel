@@ -446,7 +446,8 @@ class BookingService
             : $departure->departure_date->format('Y-m-d');
 
         // Blocco GLOBALE per catamarano: una barca riservata è occupata per qualsiasi tour.
-        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate);
+        [$winStart, $winEnd] = $this->departureTimeWindow($departure);
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate, $winStart, $winEnd);
 
         $totalFree = 0;
         foreach ($tour->operatingCatamarans() as $cat) {
@@ -485,7 +486,8 @@ class BookingService
             : $departure->departure_date->format('Y-m-d');
 
         // Blocco GLOBALE per catamarano: una barca riservata è occupata per qualsiasi tour.
-        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate);
+        [$winStart, $winEnd] = $this->departureTimeWindow($departure);
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate, $winStart, $winEnd);
 
         $maxFree = 0;
         foreach ($tour->operatingCatamarans() as $cat) {
@@ -516,7 +518,9 @@ class BookingService
         int $tourId,
         array $catamaranIds,
         string $startDate,
-        string $endDate
+        string $endDate,
+        ?string $startTime = null,
+        ?string $endTime = null
     ): \Illuminate\Support\Collection {
         $catamaranIds = array_values(array_filter(array_map('intval', $catamaranIds)));
         if (empty($catamaranIds)) {
@@ -525,14 +529,66 @@ class BookingService
 
         // Conflitti GLOBALI: un catamarano con una prenotazione attiva (su qualsiasi
         // tour) nel periodo non è bloccabile. $tourId non filtra più i conflitti.
-        return Booking::query()
+        $bookings = Booking::query()
             ->active()
             ->whereDate('booking_date', '>=', $startDate)
             ->whereDate('booking_date', '<=', $endDate)
             ->whereHas('seatRecords', fn ($q) => $q->whereIn('catamaran_id', $catamaranIds))
-            ->with(['seatRecords' => fn ($q) => $q->whereIn('catamaran_id', $catamaranIds), 'tour'])
+            ->with(['seatRecords' => fn ($q) => $q->whereIn('catamaran_id', $catamaranIds), 'tour', 'departure'])
             ->orderBy('booking_date')
             ->get();
+
+        // Se è indicata una fascia oraria di blocco, tieni solo le prenotazioni la
+        // cui partenza si SOVRAPPONE a quella fascia (fasce disgiunte non collidono).
+        if ($startTime !== null && $endTime !== null) {
+            $reqStart = $this->minutesOfDay($startTime);
+            $reqEnd = $this->minutesOfDay($endTime);
+            $bookings = $bookings->filter(function ($b) use ($reqStart, $reqEnd) {
+                if (! $b->departure) {
+                    return true; // senza partenza nota → prudenzialmente in conflitto
+                }
+                [$bs, $be] = $this->departureTimeWindow($b->departure);
+                if ($bs === null || $be === null) {
+                    return true;
+                }
+                return $reqStart < $this->minutesOfDay($be) && $this->minutesOfDay($bs) < $reqEnd;
+            })->values();
+        }
+
+        return $bookings;
+    }
+
+    /**
+     * Finestra oraria [start, end] di una partenza in formato 'H:i'.
+     * L'orario di fine è end_time, oppure start_time + durata del tour come fallback.
+     *
+     * @return array{0:?string,1:?string}
+     */
+    /** Minuti dall'inizio giornata da 'HH:MM' o 'HH:MM:SS'. */
+    protected function minutesOfDay(string $time): int
+    {
+        [$h, $m] = array_pad(explode(':', $time), 2, '0');
+        return ((int) $h) * 60 + (int) $m;
+    }
+
+    protected function departureTimeWindow(TourDeparture $departure): array
+    {
+        $start = $departure->start_time
+            ? \Carbon\Carbon::parse($departure->start_time)->format('H:i')
+            : null;
+
+        if (!$start) {
+            return [null, null];
+        }
+
+        if ($departure->end_time) {
+            $end = \Carbon\Carbon::parse($departure->end_time)->format('H:i');
+        } else {
+            $durationMin = (int) round(((float) ($departure->tour?->duration_hours ?? 1)) * 60);
+            $end = \Carbon\Carbon::parse($departure->start_time)->addMinutes($durationMin)->format('H:i');
+        }
+
+        return [$start, $end];
     }
 
     /**
@@ -572,7 +628,8 @@ class BookingService
             ? $departure->departure_date
             : $departure->departure_date->format('Y-m-d');
         // Blocco GLOBALE per catamarano: una barca riservata è occupata per qualsiasi tour.
-        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate);
+        [$winStart, $winEnd] = $this->departureTimeWindow($departure);
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate, $winStart, $winEnd);
 
         $candidates = [];
         foreach ($catamarans as $cat) {

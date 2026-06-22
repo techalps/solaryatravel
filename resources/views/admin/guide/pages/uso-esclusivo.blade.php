@@ -11,9 +11,16 @@
 <div class="guide-step"><span class="guide-step-num">3</span><div>Puoi superare la capienza di una singola barca: basta selezionare abbastanza catamarani da coprire tutti i passeggeri.</div></div>
 <div class="guide-step"><span class="guide-step-num">4</span><div>Alla conferma, i catamarani scelti vengono <strong>bloccati</strong> dalla partenza al ritorno (con gli orari indicati).</div></div>
 
+<div class="guide-tip">
+    <strong>Le fasce orarie contano:</strong> il blocco vale solo per l'intervallo orario indicato.
+    Puoi riservare lo stesso catamarano in più fasce dello stesso giorno, purché non si sovrappongano.
+    Esempio: una barca riservata 09:00–12:30 resta libera per un altro uso esclusivo 12:30–18:00.
+    Due fasce che si sovrappongono (es. 11:00–14:00) sono invece in conflitto.
+</div>
+
 <h2>Catamarani occupati</h2>
 <p>
-    Se un catamarano ha già una prenotazione attiva nel periodo, appare come <strong>"occupato"</strong>
+    Se un catamarano ha già una prenotazione attiva <strong>nella stessa fascia oraria</strong>, appare come <strong>"occupato"</strong>
     e non è selezionabile: il sistema ti mostra <em>quali prenotazioni</em> lo stanno bloccando
     (numero, data, cliente). Per liberarlo devi annullare quelle prenotazioni o spostare i passeggeri
     su un'altra barca.
