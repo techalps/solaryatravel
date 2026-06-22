@@ -2,6 +2,10 @@
 
 @section('title', 'Modifica prenotazione ' . $booking->booking_number)
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.css">
+@endpush
+
 @section('content')
     @php
         $statusValue = $booking->status?->value ?? (string) $booking->status;
@@ -178,6 +182,85 @@
     </form>
     @endif
 
+    {{-- Cambio data con conguaglio --}}
+    @if (!in_array($statusValue, ['cancelled', 'refunded', 'completed']))
+    <form action="{{ route('admin.bookings.reschedule', $booking) }}" method="POST" id="rescheduleForm">
+        @csrf
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1"><i class="bi bi-calendar2-week me-2 text-primary"></i>Cambia data</h5>
+                <p class="text-muted small mb-3">Sposta la prenotazione su un'altra data/orario. Se il prezzo cambia, vedrai il conguaglio da gestire secondo il metodo di pagamento usato.</p>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label for="resched-date" class="form-label fw-semibold">Nuova data</label>
+                        <input type="text" id="resched-date" class="form-control" placeholder="Caricamento date…" autocomplete="off" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="resched-time" class="form-label fw-semibold">Orario</label>
+                        <select id="resched-time" class="form-select" disabled><option value="">—</option></select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-outline-primary rounded-pill w-100 fw-semibold" id="reschedPreviewBtn" disabled>
+                            <i class="bi bi-arrow-left-right me-1"></i>Verifica
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" name="tour_departure_id" id="resched-departure-id">
+                <div id="reschedStatus" class="small mt-2"></div>
+            </div>
+        </div>
+
+        {{-- Modale conguaglio --}}
+        <div class="modal fade" id="reschedModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title fw-bold">Conferma cambio data</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Nuova partenza</span><strong id="md-newdate">—</strong></div>
+                        <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Totale attuale</span><span id="md-old">—</span></div>
+                        <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Nuovo totale</span><span id="md-new">—</span></div>
+                        <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-1"><span id="md-difflabel">Differenza</span><span id="md-diff">—</span></div>
+                        <div class="small text-muted mt-1">Metodo di pagamento: <strong id="md-method">—</strong></div>
+
+                        {{-- Conguaglio IN AUMENTO con bonifico/manuale --}}
+                        <div id="md-surcharge" class="mt-3" style="display:none">
+                            <label class="form-label fw-semibold small">Come registrare il conguaglio</label>
+                            <div class="d-flex flex-column gap-2">
+                                <label class="d-flex align-items-start gap-2"><input type="radio" name="surcharge_handling" value="paid" class="form-check-input mt-1" checked><span class="small">Già incassato (contanti/POS/bonifico ricevuto)</span></label>
+                                <label class="d-flex align-items-start gap-2"><input type="radio" name="surcharge_handling" value="pending" class="form-check-input mt-1"><span class="small">In attesa di incasso</span></label>
+                            </div>
+                        </div>
+                        {{-- Conguaglio IN AUMENTO con Stripe --}}
+                        <div id="md-stripe" class="mt-3 small text-muted" style="display:none">
+                            <i class="bi bi-info-circle me-1"></i>Verrà generato un link di pagamento per la differenza, da inviare al cliente dal dettaglio.
+                        </div>
+                        {{-- Differenza A CREDITO --}}
+                        <div id="md-credit" class="mt-3" style="display:none">
+                            <label class="form-label fw-semibold small">Differenza a favore del cliente</label>
+                            <div class="d-flex flex-column gap-2">
+                                <label class="d-flex align-items-start gap-2"><input type="radio" name="credit_mode" value="none" class="form-check-input mt-1" checked><span class="small">Non rimborsare (sposta soltanto)</span></label>
+                                <label class="d-flex align-items-start gap-2"><input type="radio" name="credit_mode" value="refund" class="form-check-input mt-1"><span class="small">Rimborsa la differenza</span></label>
+                                <label class="d-flex align-items-start gap-2"><input type="radio" name="credit_mode" value="custom" class="form-check-input mt-1" id="creditCustomRadio"><span class="small flex-grow-1">Importo personalizzato
+                                    <span class="input-group input-group-sm mt-1" style="max-width:200px"><span class="input-group-text">€</span>
+                                    <input type="number" step="0.01" min="0" name="credit_amount" class="form-control" placeholder="0,00" onfocus="document.getElementById('creditCustomRadio').checked=true"></span>
+                                </span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Indietro</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-3 fw-semibold"><i class="bi bi-check2 me-1"></i>Conferma cambio data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    @endif
+
     <form action="{{ route('admin.bookings.update', $booking) }}" method="POST">
         @csrf
         @method('PUT')
@@ -299,6 +382,94 @@
             const modal = new bootstrap.Modal(document.getElementById('removeModal'));
             modal.show();
         });
+    })();
+    </script>
+
+    {{-- Cambio data --}}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.js"></script>
+    <script src="https://npmcdn.com/flatpickr@4/dist/l10n/it.js"></script>
+    <script>
+    (function () {
+        const dateInput = document.getElementById('resched-date');
+        const timeSelect = document.getElementById('resched-time');
+        const depIdInput = document.getElementById('resched-departure-id');
+        const previewBtn = document.getElementById('reschedPreviewBtn');
+        const statusEl = document.getElementById('reschedStatus');
+        if (!dateInput) return;
+
+        const eur = n => '€ ' + (Number(n) || 0).toFixed(2).replace('.', ',');
+        const depUrl = @json(route('admin.bookings.departures.json', ['tour' => $booking->tour_id], false));
+        const previewUrl = @json(route('admin.bookings.reschedule-preview', $booking, false));
+
+        let byDate = {};
+        let fp = null;
+
+        fetch(depUrl, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                const deps = data.departures || [];
+                byDate = {};
+                deps.forEach(d => { (byDate[d.iso_date] = byDate[d.iso_date] || []).push(d); });
+                const enable = Object.keys(byDate);
+                if (!enable.length) { dateInput.placeholder = 'Nessuna data disponibile'; return; }
+                dateInput.disabled = false;
+                dateInput.placeholder = 'Seleziona una data…';
+                fp = flatpickr(dateInput, {
+                    enable, dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', disableMobile: true,
+                    locale: (flatpickr.l10ns && flatpickr.l10ns.it) ? 'it' : 'default',
+                    onChange: (sel, s) => pickDate(s),
+                });
+            })
+            .catch(() => { dateInput.placeholder = 'Errore caricamento date'; });
+
+        function pickDate(dateStr) {
+            const list = byDate[dateStr] || [];
+            timeSelect.disabled = list.length === 0;
+            timeSelect.innerHTML = list.map(d => `<option value="${d.id}">${d.time}</option>`).join('') || '<option value="">—</option>';
+            sync();
+        }
+        function sync() {
+            depIdInput.value = timeSelect.value || '';
+            previewBtn.disabled = !depIdInput.value;
+        }
+        timeSelect.addEventListener('change', sync);
+
+        previewBtn.addEventListener('click', function () {
+            if (!depIdInput.value) return;
+            statusEl.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Calcolo differenza…</span>';
+            const url = previewUrl + '?tour_departure_id=' + encodeURIComponent(depIdInput.value);
+            fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(j)))
+                .then(data => { statusEl.innerHTML = ''; openModal(data); })
+                .catch(j => { statusEl.innerHTML = '<span class="text-danger">' + (j.error || 'Errore nel calcolo.') + '</span>'; });
+        });
+
+        function openModal(d) {
+            const diff = Number(d.difference) || 0;
+            document.getElementById('md-newdate').textContent = d.new_date + ' · ' + d.new_time;
+            document.getElementById('md-old').textContent = eur(d.old_total);
+            document.getElementById('md-new').textContent = eur(d.new_total);
+            const methodLabel = { stripe: 'Carta (Stripe)', bank_transfer: 'Bonifico', manual: 'Manuale/contanti' }[d.payment_method] || d.payment_method;
+            document.getElementById('md-method').textContent = methodLabel;
+
+            const diffEl = document.getElementById('md-diff');
+            const diffLabel = document.getElementById('md-difflabel');
+            diffEl.textContent = (diff > 0 ? '+ ' : (diff < 0 ? '− ' : '')) + eur(Math.abs(diff));
+            diffLabel.textContent = diff > 0 ? 'Conguaglio da incassare' : (diff < 0 ? 'Differenza a favore del cliente' : 'Differenza');
+
+            const surcharge = document.getElementById('md-surcharge');
+            const stripe = document.getElementById('md-stripe');
+            const credit = document.getElementById('md-credit');
+            surcharge.style.display = 'none'; stripe.style.display = 'none'; credit.style.display = 'none';
+
+            if (diff > 0.001) {
+                if (d.payment_method === 'stripe') stripe.style.display = '';
+                else surcharge.style.display = '';
+            } else if (diff < -0.001) {
+                credit.style.display = '';
+            }
+            new bootstrap.Modal(document.getElementById('reschedModal')).show();
+        }
     })();
     </script>
     @endpush

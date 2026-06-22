@@ -119,6 +119,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/bookings/{booking}/seats/{seat}/move', [AdminBookingController::class, 'moveSeat'])->name('bookings.seats.move');
     // Disdetta di singoli partecipanti/extra con eventuale rimborso parziale.
     Route::post('/bookings/{booking}/remove-items', [AdminBookingController::class, 'removeItems'])->name('bookings.remove-items');
+    // Anteprima differenza prezzo per un cambio data (JSON).
+    Route::get('/bookings/{booking}/reschedule-preview', [AdminBookingController::class, 'reschedulePreview'])->name('bookings.reschedule-preview');
+    // Cambio data con conguaglio secondo il metodo di pagamento.
+    Route::post('/bookings/{booking}/reschedule', [AdminBookingController::class, 'reschedule'])->name('bookings.reschedule');
 
     // Tours
     Route::resource('tours', AdminTourController::class);

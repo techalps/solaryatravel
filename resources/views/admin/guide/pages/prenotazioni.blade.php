@@ -27,6 +27,22 @@
     <li>Il rimborso segue il pagamento: su carta è eseguito via Stripe, per bonifico/contanti è da effettuare manualmente.</li>
 </ul>
 
+<h2>Cambiare la data di una prenotazione</h2>
+<p>
+    Dalla <strong>Modifica</strong>, nella sezione <strong>"Cambia data"</strong>, scegli la nuova
+    data e l'orario, poi premi <em>"Verifica"</em>: il sistema mostra il <strong>nuovo totale</strong>
+    e l'eventuale conguaglio rispetto a quanto già pagato.
+</p>
+<ul>
+    <li><strong>Nuova data più cara</strong> → conguaglio da incassare. Segue il metodo di pagamento
+        originale: con <strong>carta</strong> viene generato un link Stripe per la differenza (lo invii
+        dal dettaglio); con <strong>bonifico/contanti</strong> scegli se segnarlo già incassato o in attesa.</li>
+    <li><strong>Nuova data più economica</strong> → scegli se non rimborsare, rimborsare la differenza
+        o un importo personalizzato (rimborso su Stripe o manuale secondo il pagamento).</li>
+    <li><strong>Stesso prezzo</strong> → la prenotazione viene semplicemente spostata.</li>
+</ul>
+<p class="text-muted small">I prezzi dei posti vengono ricalcolati in base al periodo della nuova data; vale solo per i partecipanti attivi (non quelli disdetti).</p>
+
 <h2>Creare una prenotazione manuale</h2>
 <p>
     Da <strong>Prenotazioni → Nuova prenotazione</strong> puoi registrare una prenotazione per telefono,

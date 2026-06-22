@@ -359,6 +359,68 @@ class BookingService
     }
 
     /**
+     * Sposta una prenotazione su una nuova partenza, ricalcolando i prezzi dei
+     * posti ATTIVI in base al periodo della nuova data. Non tocca i pagamenti:
+     * restituisce i totali prima/dopo e la differenza (positiva = da incassare).
+     *
+     * @return array{old_total:float, new_total:float, difference:float}
+     */
+    public function reschedule(Booking $booking, TourDeparture $newDeparture): array
+    {
+        return DB::transaction(function () use ($booking, $newDeparture) {
+            $tour = $booking->tour;
+            $oldTotal = (float) $booking->total_amount;
+
+            $period = $this->pricingService->resolvePeriod($tour, $newDeparture->departure_date);
+            $modifier = (float) $newDeparture->price_modifier;
+            $adultUnit = $period ? (float) $period->base_price * $modifier : 0.0;
+
+            // Fasce d'età valide per la nuova data.
+            $brackets = $this->pricingService
+                ->resolveBrackets($tour, $newDeparture->departure_date)
+                ->keyBy('id');
+
+            // Riprezza ogni posto ATTIVO sul nuovo periodo.
+            foreach ($booking->seatRecords()->whereNull('cancelled_at')->get() as $seat) {
+                if ($seat->tour_age_bracket_id === null) {
+                    // Adulto: prezzo pieno del periodo.
+                    $seat->update(['price_paid' => round($adultUnit, 2)]);
+                    continue;
+                }
+                // Bambino: prova a mantenere la stessa fascia sulla nuova data; se non
+                // esiste più, risolvila in base alla DOB.
+                $bracket = $brackets->get($seat->tour_age_bracket_id);
+                if (!$bracket && $seat->guest_date_of_birth) {
+                    $bracket = $this->pricingService->resolveBracketForDob(
+                        $brackets->values(),
+                        $seat->guest_date_of_birth->toDateString(),
+                        $newDeparture->departure_date
+                    );
+                }
+                if ($bracket) {
+                    $seat->update([
+                        'tour_age_bracket_id' => $bracket->id,
+                        'price_paid' => round((float) $bracket->price * $modifier, 2),
+                    ]);
+                }
+            }
+
+            // Sposta la prenotazione e ricalcola i totali (sconto/IVA mantenuti).
+            $booking->update([
+                'tour_departure_id' => $newDeparture->id,
+                'booking_date' => $newDeparture->departure_date,
+            ]);
+            $newTotal = $booking->fresh()->recalculateTotals();
+
+            return [
+                'old_total' => round($oldTotal, 2),
+                'new_total' => round($newTotal, 2),
+                'difference' => round($newTotal - $oldTotal, 2),
+            ];
+        });
+    }
+
+    /**
      * Annulla una prenotazione (libera i posti).
      */
     public function cancel(Booking $booking, ?string $reason = null): bool

@@ -914,6 +914,123 @@ class BookingController extends Controller
         return redirect()->route('admin.bookings.show', $booking)->with('success', 'Prenotazione aggiornata.');
     }
 
+    /**
+     * Anteprima JSON del cambio data: calcola il nuovo totale e la differenza
+     * SENZA salvare nulla (transazione annullata).
+     */
+    public function reschedulePreview(Request $request, Booking $booking)
+    {
+        $request->validate(['tour_departure_id' => 'required|string']);
+
+        try {
+            $departureId = $this->resolveDepartureId(
+                (int) $booking->tour_id,
+                (string) $request->input('tour_departure_id')
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        $newDeparture = \App\Models\TourDeparture::findOrFail($departureId);
+
+        // Simula in una transazione annullata per non toccare i dati.
+        DB::beginTransaction();
+        try {
+            $result = $this->bookingService->reschedule($booking, $newDeparture);
+        } finally {
+            DB::rollBack();
+        }
+        $booking->refresh(); // scarta eventuali modifiche in memoria
+
+        $paid = (float) $this->paymentService->amountPaid($booking);
+        return response()->json([
+            'old_total' => $result['old_total'],
+            'new_total' => $result['new_total'],
+            'difference' => $result['difference'],
+            'amount_paid' => round($paid, 2),
+            'payment_method' => $this->paymentService->primaryPaymentMethod($booking),
+            'new_date' => $newDeparture->departure_date->format('d/m/Y'),
+            'new_time' => \Carbon\Carbon::parse($newDeparture->start_time)->format('H:i'),
+        ]);
+    }
+
+    /**
+     * Esegue il cambio data e gestisce il conguaglio secondo il metodo di pagamento
+     * originale (Stripe / bonifico / manuale).
+     */
+    public function reschedule(Request $request, Booking $booking): RedirectResponse
+    {
+        $validated = $request->validate([
+            'tour_departure_id' => 'required|string',
+            // Come gestire una differenza A FAVORE del cliente (nuova data più economica).
+            'credit_mode' => 'nullable|in:refund,none,custom',
+            'credit_amount' => 'nullable|numeric|min:0',
+            // Come incassare un conguaglio in AUMENTO se bonifico/manuale.
+            'surcharge_handling' => 'nullable|in:paid,pending',
+        ]);
+
+        try {
+            $departureId = $this->resolveDepartureId(
+                (int) $booking->tour_id,
+                (string) $validated['tour_departure_id']
+            );
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $newDeparture = \App\Models\TourDeparture::findOrFail($departureId);
+        $method = $this->paymentService->primaryPaymentMethod($booking);
+
+        $result = $this->bookingService->reschedule($booking, $newDeparture);
+        $booking->refresh();
+        $diff = (float) $result['difference'];
+
+        $msg = 'Prenotazione spostata al ' . $newDeparture->departure_date->format('d/m/Y')
+            . ' alle ' . \Carbon\Carbon::parse($newDeparture->start_time)->format('H:i') . '.';
+
+        if (abs($diff) < 0.01) {
+            return redirect()->route('admin.bookings.show', $booking)->with('success', $msg . ' Nessun conguaglio.');
+        }
+
+        if ($diff > 0) {
+            // Conguaglio DA INCASSARE.
+            if ($method === 'stripe') {
+                $ok = $this->generatePaymentLink($booking);
+                $booking->update(['status' => BookingStatus::PENDING]);
+                $msg .= $ok
+                    ? ' Conguaglio di € ' . number_format($diff, 2, ',', '.') . ': link di pagamento pronto nel dettaglio.'
+                    : ' Conguaglio dovuto ma generazione link fallita (controlla il log).';
+            } else {
+                // Bonifico / manuale: scelta nel modale.
+                $handling = $validated['surcharge_handling'] ?? 'paid';
+                if ($handling === 'paid') {
+                    $this->registerManualPayment($booking, $diff);
+                    $msg .= ' Conguaglio di € ' . number_format($diff, 2, ',', '.') . ' registrato come incassato.';
+                } else {
+                    $booking->update(['status' => BookingStatus::AWAITING_TRANSFER]);
+                    $msg .= ' Conguaglio di € ' . number_format($diff, 2, ',', '.') . ' in attesa di incasso.';
+                }
+            }
+        } else {
+            // Differenza A CREDITO: scelta dell'admin.
+            $creditMode = $validated['credit_mode'] ?? 'none';
+            if ($creditMode !== 'none') {
+                $credit = $creditMode === 'custom'
+                    ? min((float) ($validated['credit_amount'] ?? 0), abs($diff))
+                    : abs($diff);
+                if ($credit > 0) {
+                    $refund = $this->paymentService->applyCancellationRefund($booking, $credit, 'Conguaglio cambio data');
+                    $msg .= ' Rimborso differenza € ' . number_format((float) ($refund['amount'] ?? 0), 2, ',', '.')
+                        . (($refund['manual'] ?? false) ? ' (manuale)' : ' (su Stripe)') . '.';
+                }
+            } else {
+                $msg .= ' Differenza a favore del cliente non rimborsata.';
+            }
+        }
+
+        return redirect()->route('admin.bookings.show', $booking)->with('success', $msg);
+    }
+
     public function destroy(Booking $booking): RedirectResponse
     {
         $booking->delete();

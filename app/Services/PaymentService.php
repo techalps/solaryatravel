@@ -390,6 +390,29 @@ class PaymentService
     }
 
     /**
+     * Metodo di pagamento "prevalente" della prenotazione: il gateway dell'ultimo
+     * pagamento riuscito; fallback su booking.payment_type, poi 'manual'.
+     * Valori: 'stripe' | 'bank_transfer' | 'manual'.
+     */
+    public function primaryPaymentMethod(Booking $booking): string
+    {
+        $last = $booking->payments()
+            ->whereIn('status', [PaymentStatus::SUCCEEDED, PaymentStatus::PARTIALLY_REFUNDED])
+            ->latest('paid_at')
+            ->first();
+
+        if ($last && $last->gateway) {
+            return $last->gateway === 'stripe' ? 'stripe'
+                : ($last->gateway === 'bank_transfer' ? 'bank_transfer' : 'manual');
+        }
+
+        return match ($booking->payment_type) {
+            'bank_transfer' => 'bank_transfer',
+            default => 'manual',
+        };
+    }
+
+    /**
      * Esegue un rimborso di un dato importo per una prenotazione e registra la
      * penale trattenuta sul booking. Se il pagamento è via carta (Stripe) esegue
      * il refund reale; se è bonifico, registra solo lo stato (l'accredito è manuale).
