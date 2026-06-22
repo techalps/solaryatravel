@@ -35,7 +35,7 @@ class BoardingController extends Controller
             ->whereHas('tour', fn ($q) => $q->where('is_active', true))
             ->orderBy('start_time')
             ->withCount(['bookings as confirmed_bookings_count' => function ($q) {
-                $q->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN]);
+                $q->whereIn('status', BookingStatus::boardableStatuses());
             }])
             ->get();
 
@@ -118,7 +118,7 @@ class BoardingController extends Controller
 
         $bookings = \App\Models\Booking::query()
             ->whereIn('booking_number', $numbers)
-            ->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN])
+            ->whereIn('status', BookingStatus::boardableStatuses())
             ->when($tourId, fn ($q) => $q->where('tour_id', $tourId))
             // solo quelle la cui partenza NON è questo giorno (già incluse altrove)
             ->whereHas('departure', fn ($d) => $d->whereDate('departure_date', '!=', $dayStr))
@@ -145,7 +145,8 @@ class BoardingController extends Controller
     {
         $departure->load([
             'tour',
-            'bookings' => fn ($q) => $q->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN]),
+            'bookings' => fn ($q) => $q->whereIn('status', BookingStatus::boardableStatuses()),
+            'bookings.seatRecords' => fn ($q) => $q->whereNull('cancelled_at'),
             'bookings.seatRecords.ageBracket',
             'bookings.seatRecords.catamaran',
             'bookings.seatRecords.boardedBy',
@@ -202,7 +203,7 @@ class BoardingController extends Controller
             ], 422);
         }
 
-        if (! in_array($seat->booking->status, [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN], true)) {
+        if (! in_array($seat->booking->status, BookingStatus::boardableStatuses(), true)) {
             return response()->json([
                 'success' => false,
                 'code' => 'booking_not_confirmed',
@@ -222,10 +223,14 @@ class BoardingController extends Controller
 
         $seat->markBoarded(auth()->id());
 
-        // Aggiorna stato booking se tutti i seat sono imbarcati
+        // Aggiorna stato booking se tutti i seat ATTIVI sono imbarcati: una
+        // prenotazione imbarcabile (confermata, acconto versato, attesa bonifico)
+        // passa a "check-in". I posti disdetti non bloccano il check-in.
         $booking = $seat->booking->loadMissing('seatRecords');
-        if ($booking->seatRecords->every(fn ($s) => $s->boarded_at !== null)
-            && $booking->status === BookingStatus::CONFIRMED) {
+        $activeSeats = $booking->seatRecords->whereNull('cancelled_at');
+        $allBoarded = $activeSeats->isNotEmpty() && $activeSeats->every(fn ($s) => $s->boarded_at !== null);
+        if ($allBoarded
+            && in_array($booking->status, [BookingStatus::CONFIRMED, BookingStatus::DEPOSIT_PAID, BookingStatus::AWAITING_TRANSFER], true)) {
             $booking->update(['status' => BookingStatus::CHECKED_IN, 'checked_in_at' => now()]);
         }
 
@@ -262,9 +267,10 @@ class BoardingController extends Controller
     private function seatsFor(TourDeparture $departure)
     {
         return BookingSeat::with(['booking', 'ageBracket', 'catamaran', 'boardedBy'])
+            ->whereNull('cancelled_at') // i partecipanti disdetti non si imbarcano
             ->whereHas('booking', function ($q) use ($departure) {
                 $q->where('tour_departure_id', $departure->id)
-                    ->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN]);
+                    ->whereIn('status', BookingStatus::boardableStatuses());
             })
             ->orderBy('booking_id')
             ->orderBy('seat_number')

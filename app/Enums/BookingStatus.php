@@ -86,6 +86,23 @@ enum BookingStatus: string
         return array_map(fn (self $s) => $s->value, self::revenueStatuses());
     }
 
+    /**
+     * Stati che rappresentano un partecipante da IMBARCARE: prenotazione valida e
+     * pagata/dovuta, non ancora conclusa. Include l'acconto versato e l'attesa
+     * bonifico (clienti reali che salgono a bordo).
+     *
+     * @return array<int, self>
+     */
+    public static function boardableStatuses(): array
+    {
+        return [
+            self::DEPOSIT_PAID,
+            self::AWAITING_TRANSFER,
+            self::CONFIRMED,
+            self::CHECKED_IN,
+        ];
+    }
+
     public function canTransitionTo(BookingStatus $status): bool
     {
         return match($this) {

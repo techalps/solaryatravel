@@ -8,6 +8,11 @@
     <li><strong>Completata</strong> — escursione effettuata.</li>
     <li><strong>Annullata / Rimborsata</strong> — non occupa più posti e non conta nei ricavi.</li>
 </ul>
+<div class="guide-tip">
+    <strong>Imbarco:</strong> sono imbarcabili (compaiono nello scanner e nelle liste imbarco) le
+    prenotazioni in stato <strong>Acconto versato, Attesa bonifico, Confermata, Check-in</strong> —
+    non solo le confermate. Le prenotazioni "In attesa" (non pagate) non sono imbarcabili.
+</div>
 
 <h2>Metodi di pagamento</h2>
 <ul>
