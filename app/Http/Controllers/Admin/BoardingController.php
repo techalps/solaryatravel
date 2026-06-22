@@ -73,11 +73,8 @@ class BoardingController extends Controller
             }
         }
 
-        // 3) Prenotazioni a USO ESCLUSIVO il cui BLOCCO copre il giorno ma la cui
-        //    partenza è un altro giorno: card dedicata con link allo scanner reale.
-        foreach ($this->spanningReservedDepartures($dayStr, $tourId) as $sp) {
-            $items[] = $sp;
-        }
+        // Nota: le prenotazioni multidata si imbarcano SOLO nel giorno di partenza
+        // (già incluse nelle partenze materializzate sopra), non nei giorni intermedi.
 
         usort($items, fn ($a, $b) => strcmp($a['time'], $b['time']));
 
@@ -89,53 +86,6 @@ class BoardingController extends Controller
             'tours' => $tours,
             'selectedTour' => $tourId,
         ]);
-    }
-
-    /**
-     * Partenze "estese": prenotazioni a uso esclusivo il cui blocco copre il giorno
-     * ma la cui partenza effettiva è in un altro giorno del periodo. Restituisce voci
-     * con la partenza reale (per lo scanner) e il conteggio prenotazioni.
-     *
-     * @return array<int, array>
-     */
-    protected function spanningReservedDepartures(string $dayStr, ?int $tourId): array
-    {
-        $blocks = \App\Models\TourCatamaranBlock::query()
-            ->whereDate('start_date', '<=', $dayStr)
-            ->whereDate('end_date', '>=', $dayStr)
-            ->whereColumn('start_date', '!=', 'end_date')
-            ->get();
-
-        if ($blocks->isEmpty()) {
-            return [];
-        }
-
-        $numbers = $blocks->map(fn ($b) => preg_match('/#(\S+)/', (string) $b->reason, $m) ? $m[1] : null)
-            ->filter()->unique()->values();
-        if ($numbers->isEmpty()) {
-            return [];
-        }
-
-        $bookings = \App\Models\Booking::query()
-            ->whereIn('booking_number', $numbers)
-            ->whereIn('status', BookingStatus::boardableStatuses())
-            ->when($tourId, fn ($q) => $q->where('tour_id', $tourId))
-            // solo quelle la cui partenza NON è questo giorno (già incluse altrove)
-            ->whereHas('departure', fn ($d) => $d->whereDate('departure_date', '!=', $dayStr))
-            ->with('tour', 'departure')
-            ->get();
-
-        return $bookings->map(function ($b) {
-            return [
-                'tour' => $b->tour,
-                'time' => $b->departure ? \Carbon\Carbon::parse($b->departure->start_time)->format('H:i') : '00:00',
-                'end_time' => $b->departure && $b->departure->end_time ? \Carbon\Carbon::parse($b->departure->end_time)->format('H:i') : null,
-                'count' => 1,
-                'departure' => $b->departure,
-                'spanning' => true,
-                'origin_date' => $b->booking_date,
-            ];
-        })->all();
     }
 
     /**

@@ -68,6 +68,6 @@
 <ul>
     <li><strong>Assegnazione catamarani</strong> — i passeggeri compaiono ogni giorno (badge "uso esclusivo", in sola lettura).</li>
     <li><strong>Programma</strong> — l'evento copre tutti i giorni del periodo nel calendario.</li>
-    <li><strong>Imbarco</strong> — la partenza compare ogni giorno del periodo, con lo scanner attivo.</li>
 </ul>
+<p class="text-muted small">Nell'<strong>Imbarco</strong>, invece, la prenotazione compare solo nel <strong>giorno di partenza</strong> (l'imbarco avviene una volta sola, all'inizio del periodo).</p>
 <p class="text-muted small">Nella pagina Imbarco vengono mostrati anche i tour che operano in giornata pur senza prenotazioni (con "0 prenot.").</p>

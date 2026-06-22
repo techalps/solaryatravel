@@ -63,9 +63,6 @@
                                 </div>
                                 <div class="text-muted small mb-3">
                                     <i class="bi bi-clock me-1"></i>{{ $it['time'] }}@if($it['end_time']) – {{ $it['end_time'] }}@endif
-                                    @if($it['spanning'])
-                                        <span class="badge bg-info-subtle text-info ms-1"><i class="bi bi-water me-1"></i>uso esclusivo</span>
-                                    @endif
                                 </div>
                                 @if($hasScanner)
                                     <span class="text-primary fw-semibold small">Avvia scanner <i class="bi bi-arrow-right"></i></span>
