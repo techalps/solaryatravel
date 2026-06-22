@@ -912,8 +912,34 @@ class BookingController extends Controller
             'status' => 'sometimes|in:' . implode(',', array_column(BookingStatus::cases(), 'value')),
             'special_requests' => 'nullable|string|max:1000',
             'customer_phone' => 'nullable|string|max:30',
+            // Prezzo totale manuale (solo tour "su richiesta" / catamarano riservato).
+            'total_price' => 'nullable|numeric|min:0',
         ]);
-        $booking->update($validated);
+
+        // Aggiorna il prezzo totale manuale per le prenotazioni su richiesta:
+        // il totale è "secco" e viene attribuito al primo posto (gli altri a 0),
+        // coerentemente con come è stato creato.
+        $booking->loadMissing('tour');
+        if ($booking->tour?->booking_on_request && $request->filled('total_price')) {
+            $newTotal = round((float) $validated['total_price'], 2);
+            DB::transaction(function () use ($booking, $newTotal) {
+                $seats = $booking->seatRecords()->whereNull('cancelled_at')->orderByDesc('is_primary')->orderBy('id')->get();
+                foreach ($seats as $i => $seat) {
+                    $seat->update(['price_paid' => $i === 0 ? $newTotal : 0.0]);
+                }
+                $booking->update([
+                    'base_price' => $newTotal,
+                    'total_amount' => $newTotal,
+                ]);
+            });
+        }
+
+        $booking->update([
+            'status' => $validated['status'] ?? $booking->status,
+            'special_requests' => $validated['special_requests'] ?? $booking->special_requests,
+            'customer_phone' => $validated['customer_phone'] ?? $booking->customer_phone,
+        ]);
+
         return redirect()->route('admin.bookings.show', $booking)->with('success', 'Prenotazione aggiornata.');
     }
 

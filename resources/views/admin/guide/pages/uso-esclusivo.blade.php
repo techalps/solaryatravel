@@ -44,3 +44,18 @@
     Nel <strong>dettaglio della prenotazione</strong> trovi la sezione
     <em>"Catamarani riservati (uso esclusivo)"</em> con l'elenco delle barche, le date e gli orari di blocco.
 </p>
+
+<h2>Modificare il prezzo</h2>
+<p>
+    Per i tour su richiesta / catamarano riservato puoi <strong>modificare il prezzo totale</strong>
+    in un secondo momento dalla <strong>Modifica</strong> prenotazione (campo "Prezzo totale"):
+    aggiorna l'importo della prenotazione.
+</p>
+
+<h2>Prenotazioni su più giorni in Assegnazione</h2>
+<p>
+    Quando un catamarano è riservato per <strong>più giorni</strong>, nella pagina
+    <strong>Assegnazione catamarani</strong> i passeggeri compaiono su <strong>ogni giorno</strong>
+    del periodo (con il badge "uso esclusivo" e la data di partenza), non solo nel giorno iniziale.
+    Su questi giorni i posti sono in sola lettura (il catamarano è riservato per tutto il periodo).
+</p>

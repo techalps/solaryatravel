@@ -114,12 +114,19 @@ class DepartureAssignmentController extends Controller
 
         $seats = $departure->bookings
             ->flatMap->seatRecords
+            ->reject(fn ($s) => $s->cancelled_at !== null) // posti disdetti non si assegnano
             ->sortBy(function ($s) {
                 return ($s->booking?->booking_number ?? '') . '-' . str_pad((string) $s->seat_number, 4, '0', STR_PAD_LEFT);
             })
             ->values();
 
-        $byCatamaran = $seats->groupBy(fn ($s) => $s->catamaran_id ?? 0);
+        // Posti delle prenotazioni a USO ESCLUSIVO il cui blocco copre questo giorno
+        // ma la cui partenza è in un altro giorno del periodo: li mostriamo qui (in
+        // sola lettura) così l'assegnazione è visibile per OGNI giorno del periodo.
+        $spanningSeats = $this->spanningReservedSeats($departure);
+
+        $allSeats = $seats->concat($spanningSeats);
+        $byCatamaran = $allSeats->groupBy(fn ($s) => $s->catamaran_id ?? 0);
 
         $stats = [];
         foreach ($catamarans as $cat) {
@@ -134,5 +141,69 @@ class DepartureAssignmentController extends Controller
         $unassignedCount = $byCatamaran->get(0)?->count() ?? 0;
 
         return compact('catamarans', 'byCatamaran', 'stats', 'unassignedCount');
+    }
+
+    /**
+     * Posti delle prenotazioni a uso esclusivo il cui BLOCCO copre la data della
+     * partenza ma la cui partenza effettiva è un altro giorno del periodo.
+     * Restituisce i BookingSeat marcati (is_spanning, span_date) per la sola
+     * visualizzazione: il catamarano è quello del blocco.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\BookingSeat>
+     */
+    protected function spanningReservedSeats(TourDeparture $departure): \Illuminate\Support\Collection
+    {
+        $day = $departure->departure_date instanceof \DateTimeInterface
+            ? $departure->departure_date->format('Y-m-d')
+            : (string) $departure->departure_date;
+
+        // Blocchi (di qualsiasi tour: il catamarano è fisicamente occupato) che
+        // coprono questo giorno e si estendono su PIÙ giorni (start != end).
+        $blocks = \App\Models\TourCatamaranBlock::query()
+            ->whereDate('start_date', '<=', $day)
+            ->whereDate('end_date', '>=', $day)
+            ->whereColumn('start_date', '!=', 'end_date')
+            ->get();
+
+        if ($blocks->isEmpty()) {
+            return collect();
+        }
+
+        // Ricava i numeri prenotazione dal campo reason ("... #SLY-...").
+        $numbers = $blocks->map(function ($b) {
+            return preg_match('/#(\S+)/', (string) $b->reason, $m) ? $m[1] : null;
+        })->filter()->unique()->values();
+
+        if ($numbers->isEmpty()) {
+            return collect();
+        }
+
+        $catByNumber = []; // booking_number => [catamaran_id,...]
+        foreach ($blocks as $b) {
+            if (preg_match('/#(\S+)/', (string) $b->reason, $m)) {
+                $catByNumber[$m[1]][] = (int) $b->catamaran_id;
+            }
+        }
+
+        return \App\Models\Booking::query()
+            ->whereIn('booking_number', $numbers)
+            ->whereNotIn('status', [BookingStatus::CANCELLED, BookingStatus::REFUNDED, BookingStatus::NO_SHOW])
+            // Escludi quelle la cui partenza È già questo giorno (già incluse sopra).
+            ->where(fn ($q) => $q->whereHas('departure', fn ($d) => $d->whereDate('departure_date', '!=', $day)))
+            ->with(['seatRecords.ageBracket', 'departure'])
+            ->get()
+            ->flatMap(function ($booking) use ($catByNumber, $day) {
+                $allowedCats = $catByNumber[$booking->booking_number] ?? [];
+                return $booking->seatRecords
+                    ->reject(fn ($s) => $s->cancelled_at !== null)
+                    ->filter(fn ($s) => in_array((int) $s->catamaran_id, $allowedCats, true))
+                    ->map(function ($s) use ($booking) {
+                        // Marcatori per la vista (sola lettura, niente spostamento).
+                        $s->is_spanning = true;
+                        $s->span_origin_date = $booking->booking_date;
+                        return $s;
+                    });
+            })
+            ->values();
     }
 }

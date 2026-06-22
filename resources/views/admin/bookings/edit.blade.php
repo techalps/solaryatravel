@@ -271,6 +271,16 @@
                     <div class="card-body p-4">
                         <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square me-2 text-primary"></i>Dettagli modificabili</h5>
 
+                        @if ($booking->tour?->booking_on_request)
+                            <div class="mb-3">
+                                <label for="total_price" class="form-label fw-semibold">Prezzo totale (€)</label>
+                                <input type="number" step="0.01" min="0" name="total_price" id="total_price"
+                                       class="form-control"
+                                       value="{{ old('total_price', number_format((float) $booking->total_amount, 2, '.', '')) }}">
+                                <small class="text-muted">Tour su richiesta / catamarano riservato: prezzo totale manuale della prenotazione.</small>
+                            </div>
+                        @endif
+
                         <div class="mb-3">
                             <label for="status" class="form-label fw-semibold">Stato</label>
                             <select name="status" id="status" class="form-select">
