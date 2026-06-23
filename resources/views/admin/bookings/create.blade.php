@@ -285,6 +285,21 @@
                                 </select>
                                 <div class="form-text">Con "Acconto" viene registrata/richiesta solo la prima rata.</div>
                             </div>
+
+                            {{-- Riepilogo saldo: visibile quando si sceglie l'acconto --}}
+                            <div class="mb-3 p-2 rounded-3 bg-light border" id="balance-block" style="display:none">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted">Acconto ({{ $depositPercentage }}%)</span>
+                                    <strong id="deposit-amount">—</strong>
+                                </div>
+                                <div class="d-flex justify-content-between small mb-2">
+                                    <span class="text-muted">Saldo da incassare</span>
+                                    <strong id="balance-amount" class="text-primary">—</strong>
+                                </div>
+                                <label for="balance_due_date" class="form-label small fw-semibold mb-1">Scadenza saldo</label>
+                                <input type="date" name="balance_due_date" id="balance_due_date" class="form-control form-control-sm" value="{{ old('balance_due_date') }}">
+                                <div class="form-text">Predefinita in base alle impostazioni; modificabile.</div>
+                            </div>
                         @endif
 
                         {{-- Stato avanzato (opzionale): forza lo stato per retroattive --}}
@@ -369,6 +384,7 @@
     let fpReturn = null;       // flatpickr data di ritorno (uso esclusivo)
     let onRequest = false;     // tour "su richiesta": prezzo totale inserito a mano
     let totalPrice = 0;        // prezzo totale manuale (solo su richiesta)
+    let lastTotal = 0;         // ultimo totale calcolato (per il riepilogo saldo)
     let exclusive = false;     // uso esclusivo: partenza+ritorno con date libere
     let tourMeta = null;       // dati tour dalla risposta JSON (capienza, ecc.)
     let exclusiveCats = [];    // disponibilità catamarani nel periodo (uso esclusivo)
@@ -836,6 +852,33 @@
             <div class="d-flex justify-content-between fw-bold fs-5 mt-2 pt-2 border-top"><span>Totale</span><span>${eur(total)}</span></div>
             ${currentDeparture.is_past ? '<div class="alert alert-warning py-2 px-2 mt-2 mb-0 small"><i class="bi bi-clock-history me-1"></i>Partenza passata: prenotazione retroattiva.</div>' : ''}
         `;
+
+        lastTotal = total;
+        renderBalance();
+    }
+
+    // ===== Saldo (acconto) =====
+    function renderBalance() {
+        const block = document.getElementById('balance-block');
+        const sel = document.getElementById('payment_installment');
+        if (!block || !sel) return;
+        const isDeposit = sel.value === 'deposit';
+        block.style.display = isDeposit ? '' : 'none';
+        if (!isDeposit) return;
+
+        const pct = {{ (int) ($depositPercentage ?? 50) }};
+        const deposit = Math.round(lastTotal * pct) / 100;
+        const balance = Math.round((lastTotal - deposit) * 100) / 100;
+        document.getElementById('deposit-amount').textContent = eur(deposit);
+        document.getElementById('balance-amount').textContent = eur(balance);
+
+        // Scadenza saldo predefinita: data partenza − balanceDueHours (solo se vuota).
+        const dueInput = document.getElementById('balance_due_date');
+        if (dueInput && !dueInput.value && currentDeparture && currentDeparture.iso_date) {
+            const dep = new Date(currentDeparture.iso_date + 'T00:00:00');
+            dep.setHours(dep.getHours() - {{ (int) ($balanceDueHours ?? 48) }});
+            dueInput.value = dep.toISOString().slice(0, 10);
+        }
     }
 
     function updateStatusHint() {
@@ -850,6 +893,7 @@
     tourSelect.addEventListener('change', e => fetchTour(e.target.value));
     timeSelect.addEventListener('change', onTimeChanged);
     statusSelect.addEventListener('change', updateStatusHint);
+    document.getElementById('payment_installment')?.addEventListener('change', renderBalance);
 
     // Uso esclusivo: i campi data/orario diventano data di partenza + data di ritorno.
     blockDayCheck.addEventListener('change', () => setExclusiveMode(blockDayCheck.checked));

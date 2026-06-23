@@ -134,10 +134,11 @@ class BookingController extends Controller
         $depositEnabled = \App\Support\Settings::depositEnabled();
         $depositPercentage = \App\Support\Settings::depositPercentage();
         $bankTransferEnabled = \App\Support\Settings::bankTransferEnabled();
+        $balanceDueHours = \App\Support\Settings::balanceDueHours();
 
         return view('admin.bookings.create', compact(
             'tours', 'selectedTour', 'departures', 'statuses',
-            'depositEnabled', 'depositPercentage', 'bankTransferEnabled'
+            'depositEnabled', 'depositPercentage', 'bankTransferEnabled', 'balanceDueHours'
         ));
     }
 
@@ -364,6 +365,8 @@ class BookingController extends Controller
             'payment_method' => 'nullable|in:manual,stripe,bank_transfer',
             // Rata: intero o acconto (2 rate), solo se l'acconto è attivo.
             'payment_installment' => 'nullable|in:full,deposit',
+            // Scadenza saldo (solo acconto): proposta in automatico, modificabile.
+            'balance_due_date' => 'nullable|date',
             // Stato forzato manualmente (retroattive: completata/check-in/ecc.).
             // Catamarano singolo (modalità normale): opzionale, vuoto = automatico.
             'catamaran_id' => 'nullable|integer|exists:catamarans,id',
@@ -521,6 +524,12 @@ class BookingController extends Controller
 
         try {
             $booking = $this->bookingService->create($payload, 'admin');
+
+            // Scadenza saldo: se l'admin l'ha indicata a mano (acconto), sovrascrive
+            // quella calcolata in automatico dal service.
+            if ($useDeposit && !empty($validated['balance_due_date'])) {
+                $booking->update(['balance_due_at' => \Carbon\Carbon::parse($validated['balance_due_date'])]);
+            }
 
             // Blocco catamarano (uso esclusivo) per un periodo con orari, se richiesto:
             // blocca i catamarani esplicitamente scelti dall'admin.
@@ -919,6 +928,8 @@ class BookingController extends Controller
             'customer_phone' => 'nullable|string|max:30',
             // Prezzo totale manuale (solo tour "su richiesta" / catamarano riservato).
             'total_price' => 'nullable|numeric|min:0',
+            // Scadenza saldo (prenotazioni con acconto): modificabile.
+            'balance_due_date' => 'nullable|date',
         ]);
 
         // Aggiorna il prezzo totale manuale per le prenotazioni su richiesta:
@@ -944,6 +955,11 @@ class BookingController extends Controller
             'special_requests' => $validated['special_requests'] ?? $booking->special_requests,
             'customer_phone' => $validated['customer_phone'] ?? $booking->customer_phone,
         ]);
+
+        // Scadenza saldo modificabile (solo se c'è un saldo da incassare).
+        if ($request->filled('balance_due_date') && (float) $booking->balance_amount > 0) {
+            $booking->update(['balance_due_at' => \Carbon\Carbon::parse($validated['balance_due_date'])]);
+        }
 
         return redirect()->route('admin.bookings.show', $booking)->with('success', 'Prenotazione aggiornata.');
     }
@@ -1343,6 +1359,26 @@ class BookingController extends Controller
         return $ok
             ? back()->with('success', 'Link di pagamento inviato a ' . $booking->customer_email . '.')
             : back()->with('error', 'Invio del link fallito (controlla il log).');
+    }
+
+    /**
+     * Invia al cliente la richiesta di pagamento del SALDO (prenotazioni con
+     * acconto). L'email contiene il link alla pagina di saldo, che gestisce sia
+     * il pagamento con carta (Stripe) sia le istruzioni per il bonifico.
+     */
+    public function sendBalanceRequest(Booking $booking): RedirectResponse
+    {
+        if (! $booking->hasBalanceDue()) {
+            return back()->with('error', 'Per questa prenotazione non risulta un saldo da pagare.');
+        }
+        try {
+            Mail::to($booking->customer_email)->send(new \App\Mail\BookingBalanceReminder($booking));
+            $booking->update(['balance_reminder_sent_at' => now()]);
+            return back()->with('success', 'Richiesta di saldo inviata a ' . $booking->customer_email . '.');
+        } catch (\Throwable $e) {
+            Log::error('Invio richiesta saldo fallito', ['booking' => $booking->booking_number, 'error' => $e->getMessage()]);
+            return back()->with('error', 'Invio della richiesta di saldo fallito (controlla il log).');
+        }
     }
 
     public function export(Request $request)

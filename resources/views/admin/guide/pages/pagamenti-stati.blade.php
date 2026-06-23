@@ -42,3 +42,21 @@
     Le opzioni "acconto" e "bonifico" si attivano dalle <strong>Impostazioni</strong>: quando sono spente,
     i relativi stati e scelte non compaiono.
 </div>
+
+<h2>Saldo (prenotazioni con acconto)</h2>
+<p>
+    Quando crei una prenotazione con <strong>acconto</strong>, in creazione vedi l'importo dell'acconto,
+    il <strong>saldo da incassare</strong> e la <strong>data di scadenza</strong> del saldo (proposta in
+    automatico dalle impostazioni, ma modificabile). La scadenza è modificabile anche dalla pagina di
+    <strong>Modifica</strong>.
+</p>
+<p>
+    Nel <strong>dettaglio</strong> della prenotazione, finché c'è un saldo aperto, compare il riquadro
+    <em>"Saldo da incassare"</em> con importo e scadenza e il pulsante
+    <strong>"Invia richiesta di saldo"</strong>: il cliente riceve un'email con il link per saldare
+    (carta) o le istruzioni per il bonifico, secondo il metodo scelto.
+</p>
+<p>
+    Inoltre il sistema invia <strong>automaticamente</strong> un promemoria di saldo al cliente quando la
+    scadenza si avvicina (entro 24 ore), una sola volta.
+</p>

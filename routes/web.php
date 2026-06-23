@@ -115,6 +115,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/bookings/{booking}/resend-confirmation', [AdminBookingController::class, 'resendConfirmation'])->name('bookings.resend');
     // Genera/invia il link di pagamento Stripe al cliente (uso admin).
     Route::post('/bookings/{booking}/send-payment-link', [AdminBookingController::class, 'sendPaymentLink'])->name('bookings.send-payment-link');
+    // Invia al cliente la richiesta di saldo (link Stripe o istruzioni bonifico).
+    Route::post('/bookings/{booking}/send-balance-request', [AdminBookingController::class, 'sendBalanceRequest'])->name('bookings.send-balance-request');
     Route::get('/bookings/{booking}/export', [AdminBookingController::class, 'export'])->name('bookings.export');
     Route::post('/bookings/{booking}/seats/{seat}/move', [AdminBookingController::class, 'moveSeat'])->name('bookings.seats.move');
     // Disdetta di singoli partecipanti/extra con eventuale rimborso parziale.

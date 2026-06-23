@@ -127,6 +127,36 @@
         </div>
     @endif
 
+    {{-- Saldo da incassare (prenotazioni con acconto) --}}
+    @if ($booking->hasBalanceDue())
+        <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-warning">
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="min-w-0">
+                        <div class="fw-bold mb-1"><i class="bi bi-wallet2 me-1 text-warning"></i>Saldo da incassare</div>
+                        <div class="d-flex flex-wrap gap-3 small">
+                            <span>Acconto versato: <strong>{{ $fmtMoney($booking->amount_paid) }}</strong></span>
+                            <span>Saldo: <strong class="text-primary">{{ $fmtMoney($booking->balance_amount) }}</strong></span>
+                            @if ($booking->balance_due_at)
+                                <span>Scadenza: <strong>{{ $booking->balance_due_at->timezone('Europe/Rome')->format('d/m/Y') }}</strong></span>
+                            @endif
+                        </div>
+                        @if ($booking->balance_reminder_sent_at)
+                            <div class="small text-muted mt-1"><i class="bi bi-envelope-check me-1"></i>Richiesta inviata il {{ $booking->balance_reminder_sent_at->timezone('Europe/Rome')->format('d/m/Y H:i') }}</div>
+                        @endif
+                    </div>
+                    <form action="{{ route('admin.bookings.send-balance-request', $booking) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-warning rounded-pill px-3 fw-semibold">
+                            <i class="bi bi-envelope-arrow-up me-2"></i>{{ $booking->balance_reminder_sent_at ? 'Reinvia' : 'Invia' }} richiesta di saldo
+                        </button>
+                    </form>
+                </div>
+                <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Il cliente riceve un'email con il link per saldare (carta) o le istruzioni per il bonifico, secondo il metodo scelto.</div>
+            </div>
+        </div>
+    @endif
+
     <div class="row g-3">
         {{-- Colonna principale --}}
         <div class="col-lg-8">

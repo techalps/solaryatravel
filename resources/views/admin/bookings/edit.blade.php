@@ -313,6 +313,15 @@
                             </div>
                         @endif
 
+                        @if ((float) $booking->balance_amount > 0)
+                            <div class="mb-3">
+                                <label for="balance_due_date" class="form-label fw-semibold">Scadenza saldo</label>
+                                <input type="date" name="balance_due_date" id="balance_due_date" class="form-control"
+                                       value="{{ old('balance_due_date', $booking->balance_due_at?->format('Y-m-d')) }}">
+                                <small class="text-muted">Saldo da incassare: € {{ number_format((float) $booking->balance_amount, 2, ',', '.') }}.</small>
+                            </div>
+                        @endif
+
                         <div class="mb-3">
                             <label for="status" class="form-label fw-semibold">Stato</label>
                             <select name="status" id="status" class="form-select">
