@@ -23,5 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Traccia in modo uniforme i fallimenti di invio email (anche quelli delle
+        // notifiche auth, es. reset password, che non hanno try/catch dedicato).
+        $exceptions->report(function (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e): void {
+            \App\Support\BookingLog::error('email_failed', 'Invio email fallito (trasporto SMTP)', null, [
+                'error' => $e->getMessage(),
+            ]);
+        });
     })->create();

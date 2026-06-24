@@ -62,11 +62,13 @@ class BookingLog
         Log::channel(self::CHANNEL)->{$level}($message, self::context($context, $booking, $extra));
 
         try {
+            // booking_number può arrivare dall'oggetto Booking oppure, per eventi
+            // senza Booking (es. email auth), come stringa in extra['booking_number'].
             \App\Models\BookingEvent::create([
                 'occurred_at' => now(),
                 'level' => $level,
                 'context' => $context,
-                'booking_number' => $booking?->booking_number,
+                'booking_number' => $booking?->booking_number ?? ($extra['booking_number'] ?? null),
                 'booking_id' => $booking?->id,
                 'status' => $booking?->status?->value,
                 'message' => mb_substr($message, 0, 255),

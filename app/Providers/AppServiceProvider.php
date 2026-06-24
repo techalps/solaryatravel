@@ -23,6 +23,14 @@ class AppServiceProvider extends ServiceProvider
 
         $this->applyMailSettings();
         $this->serveLivewireAssetsAsStaticFile();
+
+        // Traccia ogni email realmente spedita (Mailable + notifiche auth) come
+        // evento email_sent in booking_events. Punto unico, copre anche reset
+        // password / verifica / registrazione.
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Mail\Events\MessageSent::class,
+            \App\Listeners\RecordSentEmail::class
+        );
     }
 
     /**
