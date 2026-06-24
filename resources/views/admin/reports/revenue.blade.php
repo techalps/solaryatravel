@@ -22,10 +22,11 @@
         </div>
 
         <div class="rpt-kpis">
+            @php $outstanding = max(0, (float) $stats['total'] - (float) $stats['collected']); @endphp
             <div class="rpt-kpi is-accent-success">
-                <span class="rpt-kpi-label"><i class="bi bi-cash-coin"></i>Totale ricavi</span>
+                <span class="rpt-kpi-label"><i class="bi bi-cash-coin"></i>Venduto</span>
                 <span class="rpt-kpi-value">€{{ number_format($stats['total'], 0, ',', '.') }}</span>
-                <span class="rpt-kpi-sub">netto del periodo</span>
+                <span class="rpt-kpi-sub"><i class="bi bi-wallet2"></i>€{{ number_format($stats['collected'], 0, ',', '.') }} incassato · €{{ number_format($outstanding, 0, ',', '.') }} da incassare</span>
             </div>
             <div class="rpt-kpi">
                 <span class="rpt-kpi-label"><i class="bi bi-receipt"></i>Prenotazioni</span>

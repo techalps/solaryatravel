@@ -31,6 +31,13 @@ class ReportController extends Controller
             ->whereBetween('booking_date', [$startDate, $endDate])
             ->sum('total_amount');
 
+        // Incassato = quanto è EFFETTIVAMENTE entrato in cassa (amount_paid),
+        // sulle stesse prenotazioni del venduto. Per acconto/attesa bonifico è
+        // inferiore al totale finché non c'è il saldo.
+        $collected = Booking::whereIn('status', $revenueStatuses)
+            ->whereBetween('booking_date', [$startDate, $endDate])
+            ->sum('amount_paid');
+
         $previousRevenue = Booking::whereIn('status', $revenueStatuses)
             ->whereBetween('booking_date', [$startDate->copy()->subDays($startDate->diffInDays($endDate)), $startDate])
             ->sum('total_amount');
@@ -67,7 +74,7 @@ class ReportController extends Controller
 
         return view('admin.reports.index', compact(
             'period', 'startDate', 'endDate',
-            'revenue', 'previousRevenue',
+            'revenue', 'previousRevenue', 'collected',
             'totalBookings', 'confirmedBookings', 'totalPassengers', 'avgBookingValue',
             'topTours', 'revenueByDay', 'bookingsByStatus'
         ));
@@ -133,6 +140,9 @@ class ReportController extends Controller
         $stats = [
             'total' => Booking::whereIn('status', $revenueStatuses)
                 ->whereBetween('booking_date', [$startDate, $endDate])->sum('total_amount'),
+            // Incassato reale (acconti + saldi effettivamente versati) sulle stesse prenotazioni.
+            'collected' => Booking::whereIn('status', $revenueStatuses)
+                ->whereBetween('booking_date', [$startDate, $endDate])->sum('amount_paid'),
             'transactions' => Booking::whereIn('status', $revenueStatuses)
                 ->whereBetween('booking_date', [$startDate, $endDate])->count(),
             'avg_transaction' => Booking::whereIn('status', $revenueStatuses)

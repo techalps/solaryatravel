@@ -36,15 +36,14 @@
 
         <div class="rpt-kpis">
             <div class="rpt-kpi is-accent-success">
-                <span class="rpt-kpi-label"><i class="bi bi-cash-coin"></i>Ricavi</span>
+                <span class="rpt-kpi-label"><i class="bi bi-cash-coin"></i>Ricavi (venduto)</span>
                 <span class="rpt-kpi-value">€{{ number_format($revenue, 0, ',', '.') }}</span>
+                <span class="rpt-kpi-sub"><i class="bi bi-wallet2"></i>€{{ number_format($collected, 0, ',', '.') }} incassato</span>
                 @if($delta !== null)
                     <span class="rpt-kpi-delta {{ $delta >= 0 ? 'is-up' : 'is-down' }}">
                         <i class="bi {{ $delta >= 0 ? 'bi-arrow-up-short' : 'bi-arrow-down-short' }}"></i>
                         {{ number_format(abs($delta), 1, ',', '.') }}% vs precedente
                     </span>
-                @else
-                    <span class="rpt-kpi-sub">—</span>
                 @endif
             </div>
             <div class="rpt-kpi is-accent-primary">

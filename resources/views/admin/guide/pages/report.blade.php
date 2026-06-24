@@ -24,9 +24,19 @@
     <li><strong>Completata</strong></li>
 </ul>
 <p>Non rientrano: <strong>In attesa</strong> (non ancora pagata), <strong>Annullata</strong>, <strong>Rimborsata</strong>, <strong>No show</strong>.</p>
+<h2>Venduto vs Incassato (importante)</h2>
+<p>
+    Il dato principale dei ricavi è il <strong>venduto</strong>: il <strong>totale della prenotazione</strong>,
+    non quanto è stato effettivamente incassato. Una prenotazione con solo acconto versato (o bonifico ancora in
+    attesa) conta già per l'<strong>intero importo</strong>.
+</p>
+<p>
+    Accanto trovi sempre l'<strong>incassato</strong>: quanto è davvero entrato in cassa finora (acconti + saldi
+    realmente versati). La differenza è quello che resta <strong>da incassare</strong> (i saldi non ancora pagati).
+</p>
 <p class="text-muted">
-    Nota: il ricavo è sempre il <strong>totale della prenotazione</strong>, non quanto è stato effettivamente incassato.
-    Una prenotazione con solo acconto versato conta già per l'intero importo.
+    Esempio: prenotazione da €200 con acconto del 50% versato → <strong>Venduto €200</strong>,
+    <strong>Incassato €100</strong>, <strong>da incassare €100</strong>. Quando il cliente salda, l'incassato sale a €200.
 </p>
 
 <hr>
@@ -34,7 +44,7 @@
 <h2>Scheda «Overview»</h2>
 <p>La panoramica del periodo. Le quattro card in alto:</p>
 <ul>
-    <li><strong>Ricavi</strong> — totale dei ricavi del periodo (per data escursione). La freccetta sotto confronta col periodo precedente di pari durata.</li>
+    <li><strong>Ricavi (venduto)</strong> — totale venduto del periodo (per data escursione), con sotto quanto è stato <em>incassato</em> finora. La freccetta confronta il venduto col periodo precedente di pari durata.</li>
     <li><strong>Prenotazioni</strong> — numero di prenotazioni <em>create</em> nel periodo, di qualsiasi stato; sotto, quante sono confermate.</li>
     <li><strong>Passeggeri</strong> — somma dei posti venduti (campo "posti") delle prenotazioni create nel periodo.</li>
     <li><strong>Valore medio</strong> — ricavo medio per prenotazione (totale ÷ numero prenotazioni).</li>
@@ -49,7 +59,7 @@
 <h2>Scheda «Ricavi»</h2>
 <p>Tutto per <strong>data escursione</strong>. Card in alto:</p>
 <ul>
-    <li><strong>Totale ricavi</strong> — somma dei totali delle prenotazioni valide del periodo.</li>
+    <li><strong>Venduto</strong> — somma dei totali delle prenotazioni valide del periodo; sotto, quanto è già stato <em>incassato</em> e quanto resta <em>da incassare</em> (vedi sopra).</li>
     <li><strong>Prenotazioni</strong> — quante prenotazioni hanno fatto ricavo nel periodo (confermate/incassate).</li>
     <li><strong>Valore medio</strong> — ricavo medio per prenotazione.</li>
     <li><strong>Rimborsi</strong> — soldi <strong>realmente rimborsati</strong> nel periodo (pagamenti rimborsati su Stripe). È un dato di cassa reale, basato sulla data del rimborso, non sottratto automaticamente dal totale ricavi.</li>
