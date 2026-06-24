@@ -45,12 +45,16 @@
         </nav>
     </div>
 
-    @if($exportType)
-        <div class="rpt-aside-section">
+    <div class="rpt-aside-section">
+        <a href="{{ route('admin.reports.export-excel', ['period' => $period]) }}"
+           class="rpt-aside-btn">
+            <i class="bi bi-file-earmark-excel"></i>Esporta tutto (Excel)
+        </a>
+        @if($exportType)
             <a href="{{ route('admin.reports.export', ['type' => $exportType, 'period' => $period]) }}"
-               class="rpt-aside-btn">
-                <i class="bi bi-download"></i>Esporta CSV
+               class="rpt-aside-btn rpt-aside-btn-ghost">
+                <i class="bi bi-download"></i>Esporta CSV (questa scheda)
             </a>
-        </div>
-    @endif
+        @endif
+    </div>
 </aside>

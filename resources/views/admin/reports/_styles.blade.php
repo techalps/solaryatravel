@@ -84,6 +84,15 @@
         transition: all .15s ease;
     }
     .rpt-aside-btn:hover { background: #1e293b; color: #fff; transform: translateY(-1px); }
+    .rpt-aside-section > .rpt-aside-btn { display: flex; width: 100%; }
+    .rpt-aside-section > .rpt-aside-btn + .rpt-aside-btn { margin-top: 8px; }
+    .rpt-aside-btn-ghost {
+        background: transparent;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        font-weight: 500;
+    }
+    .rpt-aside-btn-ghost:hover { background: #f1f5f9; color: #0f172a; }
 
     .rpt-main { min-width: 0; }
     .rpt-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px; }

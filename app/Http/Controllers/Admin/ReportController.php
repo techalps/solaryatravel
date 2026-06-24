@@ -297,6 +297,31 @@ class ReportController extends Controller
         ));
     }
 
+    /**
+     * Esporta TUTTI i report in un unico file Excel multi-foglio
+     * (Riepilogo, Ricavi giornalieri, Ricavi per tour, Prenotazioni, Occupazione).
+     */
+    public function exportExcel(Request $request, \App\Services\ReportExportService $exporter): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $period = $request->input('period', 'month');
+        $startDate = $this->getStartDate($period);
+        $endDate = now();
+
+        $periodLabel = [
+            'today' => 'Oggi', 'week' => 'Settimana', 'month' => 'Mese',
+            'quarter' => 'Trimestre', 'year' => 'Anno', 'all' => 'Tutto lo storico',
+        ][$period] ?? 'Periodo';
+
+        $book = $exporter->build($startDate, $endDate, $periodLabel);
+        $filename = $exporter->filename($periodLabel);
+
+        return response()->streamDownload(
+            fn () => print($exporter->toString($book)),
+            $filename,
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        );
+    }
+
     public function export(Request $request): Response
     {
         $type = $request->input('type', 'bookings');

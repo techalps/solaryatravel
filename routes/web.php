@@ -154,6 +154,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/reports/bookings', [ReportController::class, 'bookings'])->name('reports.bookings');
     Route::get('/reports/occupancy', [ReportController::class, 'occupancy'])->name('reports.occupancy');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    // Export Excel completo: un file .xlsx con un foglio per ogni report.
+    Route::get('/reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
 
     // Payments
     Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');

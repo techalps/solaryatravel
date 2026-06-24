@@ -107,10 +107,20 @@
     è interamente impegnata.
 </div>
 
-<h2>Esporta CSV</h2>
-<p>Ogni scheda esporta i dati grezzi del periodo, da aprire in Excel:</p>
+<h2>Esportazioni</h2>
+<p>Nel menu a sinistra, sotto i report, ci sono due pulsanti.</p>
+<p>
+    <strong>Esporta tutto (Excel)</strong> — scarica un unico file <strong>.xlsx</strong> del periodo scelto,
+    con un foglio per ogni report:
+</p>
 <ul>
-    <li>Da Overview/Prenotazioni → elenco prenotazioni (numero, date, tour, cliente, posti, totale, stato).</li>
-    <li>Da Ricavi → elenco pagamenti reali (data, prenotazione, gateway, importo, riferimento Stripe).</li>
-    <li>Da Occupazione → elenco passeggeri per escursione (data, orario, tour, cliente, posti).</li>
+    <li><strong>Riepilogo</strong> — i numeri chiave (venduto, incassato, da incassare, rimborsi, prenotazioni, passeggeri).</li>
+    <li><strong>Ricavi giornalieri</strong> — venduto e incassato giorno per giorno.</li>
+    <li><strong>Ricavi per tour</strong> — venduto e incassato per ogni tour.</li>
+    <li><strong>Prenotazioni</strong> — elenco completo: numero, date, tour, cliente, email, posti, stato, tipo pagamento, venduto, incassato, saldo residuo.</li>
+    <li><strong>Occupazione</strong> — riempimento per tour (capacità, partenze, passeggeri, %).</li>
 </ul>
+<p>
+    <strong>Esporta CSV (questa scheda)</strong> — il vecchio export rapido in CSV della sola scheda aperta,
+    utile per importazioni veloci.
+</p>
