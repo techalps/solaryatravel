@@ -132,17 +132,26 @@ SESSION_SECURE_COOKIE=true
 APP_URL=https://www.solaryatravel.com
 ```
 
-### 1.8 Cron dello scheduler (reminder email)
+### 1.8 Cron (reminder email + scadenze)
 
-I reminder (24h/48h, saldo acconto, bonifico) dipendono dallo scheduler Laravel.
-Su OVH va impostato un cron che esegue ogni minuto:
+I reminder (24h/48h, saldo acconto, bonifico) e la scadenza delle prenotazioni
+non pagate dipendono da due comandi artisan. Su OVH (hosting condiviso) il cron:
+- ha frequenza **minima oraria** (non si può ogni minuto);
+- nel pannello accetta come comando **solo un percorso di file** (niente argomenti
+  né spazi), quindi NON si può usare `artisan schedule:run`.
+
+Per questo ci sono due **wrapper PHP** in `cron/` che lanciano i comandi. Nel pannello
+OVH → Hosting → Cron job, crea **due interventi programmati** (lingua PHP 8.4, frequenza
+ogni ora), con questi percorsi (relativi alla home, senza `..`):
 
 ```
-* * * * * cd ~/www && php artisan schedule:run >> /dev/null 2>&1
+www/cron/send-reminders.php
+www/cron/expire-unpaid.php
 ```
 
-(da pannello OVH → Hosting → Cron job; usare la versione PHP del sito, es. `php8.4`).
-Senza questo cron, i reminder non partono.
+I comandi sono idempotenti (ogni email parte una sola volta, flag `*_sent_at`) e usano
+finestre ampie, quindi il passo orario è sufficiente. Senza questi cron, i reminder e
+le scadenze non partono.
 
 ### 1.9 Pagamenti: acconto, bonifico, penali
 
