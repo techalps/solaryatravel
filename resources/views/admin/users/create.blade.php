@@ -141,6 +141,7 @@
                             <div class="d-flex flex-column gap-2">
                                 @php
                                     $roleConfig = [
+                                        'system_admin' => ['icon' => 'bi-cpu-fill', 'desc' => 'Tecnico: poteri super admin + log, deploy e migrazioni', 'color' => 'dark'],
                                         'super_admin' => ['icon' => 'bi-shield-fill-check', 'desc' => 'Accesso completo a tutte le funzionalità', 'color' => 'warning'],
                                         'admin'       => ['icon' => 'bi-shield-fill',       'desc' => 'Gestisce prenotazioni e contenuti', 'color' => 'info'],
                                         'customer'    => ['icon' => 'bi-person-fill',       'desc' => 'Cliente standard della piattaforma', 'color' => 'secondary'],

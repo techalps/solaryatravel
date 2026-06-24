@@ -65,19 +65,39 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Check if the user is an admin.
+     * Check if the user is an admin (accede all'area admin).
+     * Include system_admin: ha tutti i poteri admin più la sezione Sistema.
      */
     public function isAdmin(): bool
     {
-        return in_array($this->role, ['admin', 'super_admin']);
+        return in_array($this->role, ['admin', 'super_admin', 'system_admin']);
     }
 
     /**
-     * Check if the user is a super admin.
+     * Check if the user is a super admin (poteri gestionali completi).
+     * NB: il system_admin ha gli stessi poteri gestionali — vedi hasSuperAdminPowers().
      */
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
+    }
+
+    /**
+     * Ruolo tecnico: vede Sistema (log, deploy, migrazioni), che il super_admin non vede.
+     */
+    public function isSystemAdmin(): bool
+    {
+        return $this->role === 'system_admin';
+    }
+
+    /**
+     * Ha i poteri gestionali da super admin? Vero sia per super_admin sia per
+     * system_admin (il tecnico può fare tutto ciò che fa il super admin).
+     * Usare questo al posto di isSuperAdmin() per gating dei poteri gestionali.
+     */
+    public function hasSuperAdminPowers(): bool
+    {
+        return in_array($this->role, ['super_admin', 'system_admin']);
     }
 
     /**

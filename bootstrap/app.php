@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'system' => \App\Http\Middleware\SystemAdminMiddleware::class,
         ]);
         // Modalità "coming soon": blocca il sito ai non-admin (tranne il login).
         $middleware->appendToGroup('web', \App\Http\Middleware\ComingSoonMiddleware::class);

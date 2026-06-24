@@ -27,17 +27,17 @@ class BookingLog
 
     public static function info(string $context, string $message, ?Booking $booking = null, array $extra = []): void
     {
-        Log::channel(self::CHANNEL)->info($message, self::context($context, $booking, $extra));
+        self::write('info', $context, $message, $booking, $extra);
     }
 
     public static function warning(string $context, string $message, ?Booking $booking = null, array $extra = []): void
     {
-        Log::channel(self::CHANNEL)->warning($message, self::context($context, $booking, $extra));
+        self::write('warning', $context, $message, $booking, $extra);
     }
 
     public static function error(string $context, string $message, ?Booking $booking = null, array $extra = []): void
     {
-        Log::channel(self::CHANNEL)->error($message, self::context($context, $booking, $extra));
+        self::write('error', $context, $message, $booking, $extra);
     }
 
     /**
@@ -53,7 +53,36 @@ class BookingLog
     }
 
     /**
-     * Normalizza il contesto: context + booking_number (se presente) + extra.
+     * Scrive l'evento sul file di log (canale "bookings") E sulla tabella
+     * booking_events (per la dashboard). La scrittura su DB è protetta: un suo
+     * errore non deve mai propagarsi al flusso prenotazione/pagamento.
+     */
+    private static function write(string $level, string $context, string $message, ?Booking $booking, array $extra): void
+    {
+        Log::channel(self::CHANNEL)->{$level}($message, self::context($context, $booking, $extra));
+
+        try {
+            \App\Models\BookingEvent::create([
+                'occurred_at' => now(),
+                'level' => $level,
+                'context' => $context,
+                'booking_number' => $booking?->booking_number,
+                'booking_id' => $booking?->id,
+                'status' => $booking?->status?->value,
+                'message' => mb_substr($message, 0, 255),
+                'meta' => $extra ?: null,
+            ]);
+        } catch (\Throwable $e) {
+            // DB non disponibile / tabella non ancora migrata: il log su file resta.
+            Log::channel(self::CHANNEL)->warning('BookingEvent non salvato su DB', [
+                'context' => $context,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Normalizza il contesto per il file di log: context + booking_number + extra.
      */
     private static function context(string $context, ?Booking $booking, array $extra): array
     {

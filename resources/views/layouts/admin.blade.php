@@ -129,11 +129,21 @@
                             <i class="bi bi-gear-fill me-2"></i>Impostazioni
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.deploy.index') }}" class="nav-link {{ request()->routeIs('admin.deploy*') ? 'active' : '' }}">
-                            <i class="bi bi-rocket-takeoff-fill me-2"></i>Deploy & Migrazioni
-                        </a>
-                    </li>
+
+                    @if(auth()->user()->isSystemAdmin())
+                        {{-- Sezione tecnica: visibile solo al ruolo system_admin --}}
+                        <li class="px-2 pt-3 pb-1"><div class="section-title text-uppercase fw-bold">Tecnico</div></li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.system.logs') }}" class="nav-link {{ request()->routeIs('admin.system.logs') ? 'active' : '' }}">
+                                <i class="bi bi-activity me-2"></i>Log &amp; Diagnostica
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.deploy.index') }}" class="nav-link {{ request()->routeIs('admin.deploy*') ? 'active' : '' }}">
+                                <i class="bi bi-rocket-takeoff-fill me-2"></i>Deploy &amp; Migrazioni
+                            </a>
+                        </li>
+                    @endif
                 </ul>
             </nav>
 

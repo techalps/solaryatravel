@@ -4,6 +4,7 @@
 
 @php
     $roleConfig = [
+        'system_admin' => ['icon' => 'bi-cpu-fill', 'class' => 'bg-dark-subtle text-dark border-dark', 'desc' => 'Tecnico: poteri super admin + log, deploy e migrazioni', 'color' => 'dark'],
         'super_admin' => ['icon' => 'bi-shield-fill-check', 'class' => 'bg-warning-subtle text-warning border-warning', 'desc' => 'Accesso completo a tutte le funzionalità', 'color' => 'warning'],
         'admin'       => ['icon' => 'bi-shield-fill',       'class' => 'bg-info-subtle text-info border-info',         'desc' => 'Gestisce prenotazioni e contenuti', 'color' => 'info'],
         'customer'    => ['icon' => 'bi-person-fill',       'class' => 'bg-light text-secondary border',               'desc' => 'Cliente standard della piattaforma', 'color' => 'secondary'],

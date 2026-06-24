@@ -167,10 +167,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/impostazioni', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('/impostazioni/test-mail', [SettingsController::class, 'sendTestMail'])->name('settings.mail-test');
 
-    // Deploy & Migrations
-    Route::get('/deploy', [DeployController::class, 'index'])->name('deploy.index');
-    Route::post('/deploy/migrate', [DeployController::class, 'migrate'])->name('deploy.migrate');
-    Route::post('/deploy/artisan', [DeployController::class, 'artisan'])->name('deploy.artisan');
+    // Sezione "Sistema": riservata al ruolo tecnico system_admin (log, deploy, migrazioni).
+    Route::middleware('system')->group(function () {
+        Route::get('/deploy', [DeployController::class, 'index'])->name('deploy.index');
+        Route::post('/deploy/migrate', [DeployController::class, 'migrate'])->name('deploy.migrate');
+        Route::post('/deploy/artisan', [DeployController::class, 'artisan'])->name('deploy.artisan');
+
+        // Log diagnostici (grafici + filtri sugli eventi prenotazioni/pagamenti/email).
+        Route::get('/sistema/log', [\App\Http\Controllers\Admin\LogController::class, 'index'])->name('system.logs');
+    });
 
     // Users
     Route::resource('users', AdminUserController::class)->except(['show']);
