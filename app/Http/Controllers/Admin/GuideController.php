@@ -42,9 +42,9 @@ class GuideController extends Controller
             'desc' => 'Stati della prenotazione, acconto, bonifico, link Stripe.',
         ],
         'report' => [
-            'title' => 'Report e ricavi',
+            'title' => 'Report e statistiche',
             'icon' => 'bi-bar-chart',
-            'desc' => 'Come vengono calcolati ricavi e statistiche.',
+            'desc' => 'Cosa mostra ogni scheda e voce: ricavi, prenotazioni, occupazione.',
         ],
         'impostazioni' => [
             'title' => 'Impostazioni',
