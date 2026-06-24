@@ -12,6 +12,7 @@ use App\Mail\BookingRefunded;
 use App\Mail\BookingTickets;
 use App\Mail\AdminBookingCancelled;
 use App\Mail\AdminBookingRefunded;
+use App\Support\BookingLog;
 use App\Support\Settings;
 use App\Models\Booking;
 use App\Models\BookingSeat;
@@ -614,10 +615,16 @@ class BookingController extends Controller
                 $message = 'Prenotazione creata con stato "' . $status->label() . '".';
             }
 
+            BookingLog::info('booking_admin_create', 'Prenotazione creata da admin', $booking, [
+                'payment_method' => $paymentMethod ?? null,
+                'total_amount' => (float) $booking->total_amount,
+            ]);
+
             return redirect()
                 ->route('admin.bookings.show', $booking)
                 ->with('success', $message);
         } catch (\Exception $e) {
+            BookingLog::failure('booking_admin_create', 'Creazione prenotazione admin fallita', null, $e);
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
@@ -916,6 +923,14 @@ class BookingController extends Controller
         }
 
         $removedCount = count($seats) + count($addons);
+
+        BookingLog::info('booking_remove_items', 'Rimossi partecipanti/extra', $booking->fresh(), [
+            'seats_removed' => count($seats),
+            'addons_removed' => count($addons),
+            'refund_mode' => $mode,
+            'refund_amount' => round((float) $refundAmount, 2),
+        ]);
+
         return redirect()->route('admin.bookings.show', $booking)
             ->with('success', "Rimossi {$removedCount} element" . ($removedCount === 1 ? 'o' : 'i') . "." . $refundMsg);
     }
@@ -1156,6 +1171,7 @@ class BookingController extends Controller
             return back()->with('error', 'Solo le prenotazioni in attesa possono essere confermate.');
         }
         $booking->update(['status' => BookingStatus::CONFIRMED, 'confirmed_at' => now()]);
+        BookingLog::info('booking_confirm', 'Prenotazione confermata da admin', $booking);
         return back()->with('success', 'Prenotazione confermata.');
     }
 
@@ -1193,6 +1209,12 @@ class BookingController extends Controller
             'amount_paid' => (float) $booking->amount_paid + $amount,
             'status' => $newStatus,
             'confirmed_at' => $booking->confirmed_at ?? now(),
+        ]);
+
+        BookingLog::info('booking_transfer_confirm', 'Incasso bonifico confermato', $booking->fresh(), [
+            'amount' => $amount,
+            'is_deposit' => $isDeposit,
+            'new_status' => $newStatus->value,
         ]);
 
         // L'Observer su CONFIRMED invia biglietti + notifica admin.
@@ -1260,8 +1282,16 @@ class BookingController extends Controller
                     : ' Rimborso di €' . number_format($refund['amount'], 2, ',', '.') . ' eseguito su Stripe.';
             }
 
+            BookingLog::info('booking_admin_cancel', 'Prenotazione annullata da admin', $booking->fresh(), [
+                'reason' => $reason,
+                'refund_mode' => $mode,
+                'refund_amount' => round((float) $refundAmount, 2),
+                'refund_manual' => (bool) ($refund['manual'] ?? false),
+            ]);
+
             return back()->with('success', $msg);
         } catch (\Exception $e) {
+            BookingLog::failure('booking_admin_cancel', 'Annullamento admin fallito', $booking, $e);
             return back()->with('error', $e->getMessage());
         }
     }
@@ -1322,6 +1352,11 @@ class BookingController extends Controller
             ]);
             return back()->with('error', 'Rimborso registrato sulla prenotazione, ma l\'invio email è fallito (controlla il log).');
         }
+
+        BookingLog::info('booking_refund', 'Rimborso registrato da admin', $booking->fresh(), [
+            'amount' => round($amount, 2),
+            'note' => $note,
+        ]);
 
         try {
             \App\Support\AdminMailer::send(new AdminBookingRefunded($booking->fresh(), $amount, $note));

@@ -73,6 +73,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Canale dedicato al ciclo prenotazioni/pagamenti/email: file separato
+        // e rotazione giornaliera, per diagnosticare cosa succede senza dover
+        // filtrare il rumore del laravel.log. Vedi App\Support\BookingLog.
+        'bookings' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/bookings.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_BOOKINGS_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

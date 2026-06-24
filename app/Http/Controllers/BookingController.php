@@ -123,6 +123,11 @@ class BookingController extends Controller
             $booking = $this->bookingService->create($validated, 'website');
             return redirect()->route('payment.show', $booking->uuid);
         } catch (\Exception $e) {
+            \App\Support\BookingLog::failure('booking_create', 'Creazione prenotazione dal sito fallita', null, $e, [
+                'tour_id' => $validated['tour_id'] ?? null,
+                'departure_id' => $validated['tour_departure_id'] ?? null,
+                'email' => $validated['customer_email'] ?? null,
+            ]);
             return back()->withInput()->with('error', $e->getMessage());
         }
     }

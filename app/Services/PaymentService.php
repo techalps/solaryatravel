@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Support\BookingLog;
 use App\Support\Settings;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
@@ -261,6 +262,12 @@ class PaymentService
                 ),
             ]);
 
+            BookingLog::info('payment_refund', 'Rimborso Stripe eseguito', $booking, [
+                'refund_id' => $refund->id,
+                'amount' => $refundedAmount,
+                'full' => $isFullRefund,
+            ]);
+
             return [
                 'success' => true,
                 'refund_id' => $refund->id,
@@ -269,6 +276,7 @@ class PaymentService
             ];
         } catch (\Exception $e) {
             report($e);
+            BookingLog::failure('payment_refund', 'Rimborso Stripe fallito', $booking, $e);
             return [
                 'success' => false,
                 'message' => 'Errore durante il rimborso: ' . $e->getMessage(),

@@ -6,8 +6,8 @@ use App\Enums\BookingStatus;
 use App\Mail\AdminNewBooking;
 use App\Mail\BookingTickets;
 use App\Models\Booking;
+use App\Support\BookingLog;
 use App\Support\Settings;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class BookingObserver
@@ -35,21 +35,21 @@ class BookingObserver
         try {
             Mail::to($booking->customer_email)->send(new BookingTickets($booking));
             $booking->updateQuietly(['tickets_sent_at' => now()]);
+            BookingLog::info('email_send', 'Biglietti inviati al cliente', $booking, [
+                'to' => $booking->customer_email,
+            ]);
         } catch (\Throwable $e) {
-            Log::error('Invio biglietti fallito (observer)', [
-                'booking' => $booking->booking_number,
-                'error' => $e->getMessage(),
+            BookingLog::failure('email_send', 'Invio biglietti fallito (observer)', $booking, $e, [
+                'to' => $booking->customer_email,
             ]);
         }
 
         // Notifica all'amministratore: nuova prenotazione confermata.
         try {
             \App\Support\AdminMailer::send(new AdminNewBooking($booking));
+            BookingLog::info('email_send', 'Notifica admin nuova prenotazione inviata', $booking);
         } catch (\Throwable $e) {
-            Log::error('Notifica admin nuova prenotazione fallita', [
-                'booking' => $booking->booking_number,
-                'error' => $e->getMessage(),
-            ]);
+            BookingLog::failure('email_send', 'Notifica admin nuova prenotazione fallita', $booking, $e);
         }
     }
 }

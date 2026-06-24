@@ -143,6 +143,14 @@ class BookingService
 
             $assignment = $this->distributeSeats($tour, $departure, $countingSeats, $forcedCatamaranIds, $exclusive);
             if ($assignment === null) {
+                \App\Support\BookingLog::warning('booking_create', 'Posti insufficienti: distribuzione fallita', null, [
+                    'source' => $source,
+                    'tour_id' => $tour->id,
+                    'departure_id' => $departure->id,
+                    'seats_requested' => $countingSeats,
+                    'forced_catamaran_ids' => $forcedCatamaranIds,
+                    'exclusive' => $exclusive,
+                ]);
                 throw new \Exception($forcedCatamaranIds !== null
                     ? 'I catamarani selezionati non hanno posti sufficienti (o non sono disponibili) per questa partenza.'
                     : 'Posti insufficienti per questa partenza. Contattaci via email o WhatsApp per le alternative.');
@@ -274,6 +282,15 @@ class BookingService
             if ($pricing['discount_code_id']) {
                 DiscountCode::find($pricing['discount_code_id'])?->increment('times_used');
             }
+
+            \App\Support\BookingLog::info('booking_create', 'Prenotazione creata', $booking, [
+                'source' => $source,
+                'tour_id' => $tour->id,
+                'departure_id' => $departure->id,
+                'seats' => $booking->seats,
+                'total_amount' => (float) $booking->total_amount,
+                'payment_type' => $booking->payment_type,
+            ]);
 
             return $booking->fresh(['seatRecords.catamaran', 'tour', 'departure']);
         });
@@ -426,6 +443,14 @@ class BookingService
             ]);
             $newTotal = $booking->fresh()->recalculateTotals();
 
+            \App\Support\BookingLog::info('booking_reschedule', 'Prenotazione riprogrammata', $booking, [
+                'new_departure_id' => $newDeparture->id,
+                'new_date' => $newDeparture->departure_date?->toDateString(),
+                'old_total' => round($oldTotal, 2),
+                'new_total' => round($newTotal, 2),
+                'difference' => round($newTotal - $oldTotal, 2),
+            ]);
+
             return [
                 'old_total' => round($oldTotal, 2),
                 'new_total' => round($newTotal, 2),
@@ -456,6 +481,11 @@ class BookingService
             if ($booking->discount_code_id) {
                 DiscountCode::find($booking->discount_code_id)?->decrement('times_used');
             }
+
+            \App\Support\BookingLog::info('booking_cancel', 'Prenotazione annullata (posti liberati)', $booking, [
+                'reason' => $reason,
+                'seats' => $booking->seats,
+            ]);
 
             return true;
         });

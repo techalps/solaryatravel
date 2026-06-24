@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Services\PaymentService;
+use App\Support\BookingLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -61,9 +62,14 @@ class PaymentController extends Controller
 
             $session = $this->paymentService->createCheckoutSession($booking, $intent);
             $booking->update(['checkout_url' => $session['url']]);
+            BookingLog::info('payment_checkout', 'Sessione Stripe creata', $booking, [
+                'intent' => $intent,
+                'session_id' => $session['session_id'] ?? null,
+            ]);
             return redirect($session['url']);
         } catch (\Exception $e) {
             report($e);
+            BookingLog::failure('payment_checkout', 'Creazione sessione Stripe fallita', $booking, $e);
             return redirect()
                 ->back()
                 ->with('error', 'Si è verificato un errore durante la creazione del pagamento. Riprova.');
@@ -91,6 +97,9 @@ class PaymentController extends Controller
                 }
             } catch (\Exception $e) {
                 report($e);
+                BookingLog::failure('payment_return', 'Verifica pagamento al ritorno fallita', $booking, $e, [
+                    'session_id' => $sessionId,
+                ]);
             }
         }
 
@@ -138,7 +147,7 @@ class PaymentController extends Controller
     protected function applySuccessfulPayment(Payment $payment, ?string $paymentIntentId = null): void
     {
         if ($payment->status === PaymentStatus::SUCCEEDED) {
-            return; // già elaborato
+            return; // già elaborato (idempotenza: webhook + ritorno possono arrivare entrambi)
         }
 
         $payment->update([
@@ -156,6 +165,13 @@ class PaymentController extends Controller
 
         // Aggiorna l'importo effettivamente incassato.
         $booking->update(['amount_paid' => (float) $booking->amount_paid + (float) $payment->amount]);
+
+        BookingLog::info('payment_succeeded', 'Pagamento Stripe registrato', $booking, [
+            'intent' => $intent,
+            'amount' => (float) $payment->amount,
+            'amount_paid_tot' => (float) $booking->amount_paid,
+            'payment_intent' => $paymentIntentId,
+        ]);
 
         if ($intent === 'deposit' && (float) $booking->balance_amount > 0) {
             // Acconto versato: confermato con saldo in sospeso.
@@ -196,8 +212,14 @@ class PaymentController extends Controller
         try {
             $event = Webhook::constructEvent($payload, $sigHeader, $webhookSecret);
         } catch (\Exception $e) {
+            BookingLog::failure('payment_webhook', 'Verifica firma webhook Stripe fallita', null, $e);
             return response()->json(['error' => 'Webhook verification failed'], 400);
         }
+
+        BookingLog::info('payment_webhook', 'Webhook Stripe ricevuto', null, [
+            'event_type' => $event->type,
+            'event_id' => $event->id ?? null,
+        ]);
 
         switch ($event->type) {
             case 'checkout.session.completed':
@@ -233,6 +255,10 @@ class PaymentController extends Controller
 
         if ($payment && $session->payment_status === 'paid') {
             $this->applySuccessfulPayment($payment, $session->payment_intent);
+        } elseif (! $payment) {
+            BookingLog::warning('payment_webhook', 'checkout.completed: nessun Payment per la sessione', null, [
+                'session_id' => $session->id,
+            ]);
         }
     }
 
@@ -260,6 +286,10 @@ class PaymentController extends Controller
                 'status' => PaymentStatus::FAILED,
                 'failure_message' => $paymentIntent->last_payment_error?->message,
             ]);
+            BookingLog::warning('payment_failed', 'Pagamento Stripe fallito', $payment->booking, [
+                'payment_intent' => $paymentIntent->id,
+                'reason' => $paymentIntent->last_payment_error?->message,
+            ]);
         }
     }
 
@@ -285,6 +315,10 @@ class PaymentController extends Controller
                     'refunded_amount' => $refundedAmount,
                 ]);
             }
+            BookingLog::info('payment_refund', 'Rimborso Stripe ricevuto (webhook)', $payment->booking, [
+                'refunded_amount' => $refundedAmount,
+                'fully_refunded' => (bool) $charge->refunded,
+            ]);
         }
     }
 }

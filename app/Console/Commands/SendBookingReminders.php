@@ -8,10 +8,10 @@ use App\Mail\BookingReminder48h;
 use App\Mail\BookingBalanceReminder;
 use App\Mail\BookingAwaitingTransfer;
 use App\Models\Booking;
+use App\Support\BookingLog;
 use App\Support\Settings;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SendBookingReminders extends Command
@@ -22,12 +22,21 @@ class SendBookingReminders extends Command
 
     public function handle(): int
     {
+        BookingLog::info('reminders_cron', 'Avvio invio reminder');
         $this->sendReminder48h();
         $this->sendReminder24h();
         $this->sendBalanceReminders();
         $this->sendBankTransferReminders();
+        BookingLog::info('reminders_cron', 'Invio reminder completato', null, [
+            'sent' => $this->sentCount,
+            'failed' => $this->failedCount,
+        ]);
         return self::SUCCESS;
     }
+
+    /** Contatori per il riepilogo a fine run (utili a verificare che il cron giri). */
+    private int $sentCount = 0;
+    private int $failedCount = 0;
 
     /**
      * Reminder a 48h: solo se mancano i dati di qualche partecipante.
@@ -47,11 +56,11 @@ class SendBookingReminders extends Command
                 Mail::to($booking->customer_email)->send(new BookingReminder48h($booking));
                 $booking->update(['reminder_48h_sent_at' => now()]);
                 $this->info("Reminder 48h inviato per {$booking->booking_number}");
+                BookingLog::info('reminder_48h', 'Reminder 48h inviato', $booking);
+                $this->sentCount++;
             } catch (\Throwable $e) {
-                Log::error('Reminder 48h fallito', [
-                    'booking' => $booking->booking_number,
-                    'error' => $e->getMessage(),
-                ]);
+                BookingLog::failure('reminder_48h', 'Reminder 48h fallito', $booking, $e);
+                $this->failedCount++;
             }
         }
     }
@@ -75,11 +84,11 @@ class SendBookingReminders extends Command
                 Mail::to($booking->customer_email)->send(new BookingReminder24h($booking));
                 $booking->update(['reminder_24h_sent_at' => now()]);
                 $this->info("Reminder 24h inviato per {$booking->booking_number}");
+                BookingLog::info('reminder_24h', 'Reminder 24h inviato', $booking);
+                $this->sentCount++;
             } catch (\Throwable $e) {
-                Log::error('Reminder 24h fallito', [
-                    'booking' => $booking->booking_number,
-                    'error' => $e->getMessage(),
-                ]);
+                BookingLog::failure('reminder_24h', 'Reminder 24h fallito', $booking, $e);
+                $this->failedCount++;
             }
         }
     }
@@ -105,11 +114,11 @@ class SendBookingReminders extends Command
                 Mail::to($booking->customer_email)->send(new BookingBalanceReminder($booking));
                 $booking->update(['balance_reminder_sent_at' => now()]);
                 $this->info("Reminder saldo inviato per {$booking->booking_number}");
+                BookingLog::info('reminder_balance', 'Reminder saldo inviato', $booking);
+                $this->sentCount++;
             } catch (\Throwable $e) {
-                Log::error('Reminder saldo fallito', [
-                    'booking' => $booking->booking_number,
-                    'error' => $e->getMessage(),
-                ]);
+                BookingLog::failure('reminder_balance', 'Reminder saldo fallito', $booking, $e);
+                $this->failedCount++;
             }
         }
     }
@@ -135,11 +144,11 @@ class SendBookingReminders extends Command
                 Mail::to($booking->customer_email)->send(new BookingAwaitingTransfer($booking, $amountDue));
                 $booking->update(['bank_transfer_reminder_sent_at' => now()]);
                 $this->info("Reminder bonifico inviato per {$booking->booking_number}");
+                BookingLog::info('reminder_transfer', 'Reminder bonifico inviato', $booking);
+                $this->sentCount++;
             } catch (\Throwable $e) {
-                Log::error('Reminder bonifico fallito', [
-                    'booking' => $booking->booking_number,
-                    'error' => $e->getMessage(),
-                ]);
+                BookingLog::failure('reminder_transfer', 'Reminder bonifico fallito', $booking, $e);
+                $this->failedCount++;
             }
         }
     }
