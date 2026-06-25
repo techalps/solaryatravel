@@ -98,6 +98,7 @@
                                         'byCatamaran' => $block['byCatamaran'],
                                         'stats' => $block['stats'],
                                         'unassignedCount' => $block['unassignedCount'],
+                                        'exclusiveByCatamaran' => $block['exclusiveByCatamaran'] ?? [],
                                     ])
                                 </div>
                             </div>

@@ -128,19 +128,89 @@ class DepartureAssignmentController extends Controller
         $allSeats = $seats->concat($spanningSeats);
         $byCatamaran = $allSeats->groupBy(fn ($s) => $s->catamaran_id ?? 0);
 
+        // Catamarani riservati a USO ESCLUSIVO per questa partenza (blocco che copre
+        // il giorno + numero prenotazione nel reason). Vale anche per i catamarani
+        // SENZA posti assegnati (es. il 2° scafo di una riserva multi-catamarano):
+        // devono comunque risultare riservati e non disponibili.
+        $exclusiveByCatamaran = $this->exclusiveReservationsByCatamaran($departure);
+
         $stats = [];
         foreach ($catamarans as $cat) {
             $count = $byCatamaran->get($cat->id)?->count() ?? 0;
+            $isExclusive = isset($exclusiveByCatamaran[$cat->id]);
             $stats[$cat->id] = [
                 'count' => $count,
                 'capacity' => (int) $cat->capacity,
-                'free' => max(0, (int) $cat->capacity - $count),
+                // Un catamarano in uso esclusivo non è disponibile per nuove assegnazioni.
+                'free' => $isExclusive ? 0 : max(0, (int) $cat->capacity - $count),
+                'exclusive' => $isExclusive,
             ];
         }
 
         $unassignedCount = $byCatamaran->get(0)?->count() ?? 0;
 
-        return compact('catamarans', 'byCatamaran', 'stats', 'unassignedCount');
+        return compact('catamarans', 'byCatamaran', 'stats', 'unassignedCount', 'exclusiveByCatamaran');
+    }
+
+    /**
+     * Mappa catamaran_id => info riserva esclusiva per la data della partenza.
+     * Una riserva esclusiva è un TourCatamaranBlock che copre il giorno e il cui
+     * reason contiene il numero prenotazione ("... #SLY-..."). Restituisce numero
+     * prenotazione e intestatario, così la vista mostra una riga sintetica anche
+     * per i catamarani senza posti fisicamente assegnati.
+     *
+     * @return array<int, array{booking_number: string, holder: string, booking: \App\Models\Booking|null}>
+     */
+    protected function exclusiveReservationsByCatamaran(TourDeparture $departure): array
+    {
+        $day = $departure->departure_date instanceof \DateTimeInterface
+            ? $departure->departure_date->format('Y-m-d')
+            : (string) $departure->departure_date;
+
+        $blocks = \App\Models\TourCatamaranBlock::query()
+            ->whereDate('start_date', '<=', $day)
+            ->whereDate('end_date', '>=', $day)
+            ->get();
+
+        if ($blocks->isEmpty()) {
+            return [];
+        }
+
+        // catamaran_id => booking_number (dal reason).
+        $numberByCatamaran = [];
+        $numbers = [];
+        foreach ($blocks as $b) {
+            if (preg_match('/#(\S+)/', (string) $b->reason, $m)) {
+                $numberByCatamaran[(int) $b->catamaran_id] = $m[1];
+                $numbers[] = $m[1];
+            }
+        }
+
+        if (empty($numbers)) {
+            return [];
+        }
+
+        // Intestatari delle prenotazioni coinvolte (escluse annullate/rimborsate/no-show).
+        $bookings = \App\Models\Booking::query()
+            ->whereIn('booking_number', array_unique($numbers))
+            ->whereNotIn('status', [BookingStatus::CANCELLED, BookingStatus::REFUNDED, BookingStatus::NO_SHOW])
+            ->get()
+            ->keyBy('booking_number');
+
+        $result = [];
+        foreach ($numberByCatamaran as $catId => $number) {
+            $booking = $bookings->get($number);
+            if (! $booking) {
+                continue; // prenotazione annullata: il blocco non è più una riserva attiva
+            }
+            $result[$catId] = [
+                'booking_number' => $number,
+                'holder' => $booking->customer_full_name,
+                'booking' => $booking,
+            ];
+        }
+
+        return $result;
     }
 
     /**

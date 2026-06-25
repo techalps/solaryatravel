@@ -43,6 +43,7 @@
         'byCatamaran' => $byCatamaran,
         'stats' => $stats,
         'unassignedCount' => $unassignedCount,
+        'exclusiveByCatamaran' => $exclusiveByCatamaran ?? [],
     ])
 
 @push('scripts')
