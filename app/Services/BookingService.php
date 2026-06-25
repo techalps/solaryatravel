@@ -1113,6 +1113,22 @@ class BookingService
                 throw new \Exception("Catamarano {$catamaran->name} non disponibile nella data.");
             }
 
+            // Difesa server-side: non si può spostare un posto su un catamarano
+            // riservato in USO ESCLUSIVO da un'ALTRA prenotazione (la UI già non lo
+            // offre tra le destinazioni, qui blocchiamo anche le richieste dirette).
+            $day = $departure->departure_date instanceof \DateTimeInterface
+                ? $departure->departure_date->format('Y-m-d')
+                : (string) $departure->departure_date;
+            $exclusiveBlock = TourCatamaranBlock::whereDate('start_date', '<=', $day)
+                ->whereDate('end_date', '>=', $day)
+                ->where('catamaran_id', $catamaran->id)
+                ->where('reason', 'not like', '%#' . $booking->booking_number . '%')
+                ->where('reason', 'like', '%#%')
+                ->exists();
+            if ($exclusiveBlock) {
+                throw new \Exception("Catamarano {$catamaran->name} riservato in uso esclusivo: non disponibile.");
+            }
+
             $seat->catamaran_id = $catamaran->id;
             $seat->save();
             return $seat->fresh('catamaran');

@@ -46,12 +46,17 @@
                 class="form-select form-select-sm"
                 data-initial="{{ $currentCatId }}"
                 style="min-width: 200px;">
+            @php $exclusiveByCatamaran = $exclusiveByCatamaran ?? []; @endphp
             @foreach ($catamarans as $cat)
                 @php
                     $cs = $stats[$cat->id] ?? ['count' => 0, 'capacity' => (int) $cat->capacity, 'free' => (int) $cat->capacity];
                     $isCurrent = $currentCatId === (int) $cat->id;
+                    $isExclusive = isset($exclusiveByCatamaran[$cat->id]);
                     $isFull = $cs['free'] === 0 && !$isCurrent;
                 @endphp
+                {{-- I catamarani a uso esclusivo non sono una destinazione valida: si escludono
+                     dalle opzioni (tranne quello attuale, per non perdere il valore selezionato). --}}
+                @continue($isExclusive && !$isCurrent)
                 <option value="{{ $cat->id }}"
                         data-full="{{ $isFull ? '1' : '0' }}"
                         @selected($isCurrent)>

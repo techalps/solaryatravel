@@ -74,6 +74,7 @@
                                     'seat' => $seat,
                                     'catamarans' => $catamarans,
                                     'stats' => $stats,
+                                    'exclusiveByCatamaran' => $exclusiveByCatamaran,
                                 ])
                             @endforeach
                         </ul>
@@ -103,6 +104,7 @@
                                 'seat' => $seat,
                                 'catamarans' => $catamarans,
                                 'stats' => $stats,
+                                'exclusiveByCatamaran' => $exclusiveByCatamaran,
                             ])
                         @endforeach
                     </ul>
