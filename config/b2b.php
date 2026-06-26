@@ -19,4 +19,12 @@ return [
 
     'host' => env('B2B_HOST', 'b2b.solaryatravel:8890'),
 
+    /*
+    | Solo hostname senza porta. È quanto serve a Route::domain() e al confronto
+    | host: Laravel matcha contro request()->getHost(), che NON include la porta.
+    | La porta (in 'host') serve solo a comporre gli URL assoluti di redirect.
+    */
+    'domain' => \Illuminate\Support\Str::before(env('B2B_HOST', 'b2b.solaryatravel:8890'), ':'),
+
 ];
+

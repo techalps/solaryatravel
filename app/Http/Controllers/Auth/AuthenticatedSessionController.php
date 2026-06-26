@@ -28,6 +28,13 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Un utente b2b non opera sul dominio principale: lo rispediamo al suo
+        // portale (la pagina di login del B2B è separata, su b2b.solaryatravel).
+        if ($request->user()->isB2b()) {
+            $scheme = $request->getScheme();
+            return redirect()->away($scheme.'://'.config('b2b.host'));
+        }
+
         // Redirect esplicito (es. ritorno alla pagina di pagamento dopo login),
         // accettato solo se è un percorso interno per evitare open-redirect.
         $redirect = $request->input('redirect');
