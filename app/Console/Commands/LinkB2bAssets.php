@@ -28,6 +28,9 @@ class LinkB2bAssets extends Command
         'assets' => '../public/assets',
         'fonts' => '../public/fonts',
         'images' => '../public/images',
+        // Asset pubblicati dei pacchetti (es. Livewire serve /vendor/livewire/livewire.js
+        // come file statico): senza questo link il portale b2b dà 404 e l'interattività si rompe.
+        'vendor' => '../public/vendor',
         'storage' => '../storage/app/public',
     ];
 
