@@ -677,24 +677,34 @@ class BookingForm extends Component
         $useDeposit = \App\Support\Settings::depositEnabled() && $this->paymentChoice === 'deposit';
         $paymentType = $useBankTransfer ? 'bank_transfer' : ($useDeposit ? 'deposit' : 'full');
 
+        $payload = [
+            'tour_id' => $this->tour->id,
+            'tour_departure_id' => $this->departure->id,
+            'adults_count' => $this->adultsCount,
+            'children' => $resolvedChildren,
+            'addons' => $this->selectedAddons,
+            'discount_code' => $this->discountValid ? $this->discountCode : null,
+            'customer_first_name' => $this->customer_first_name,
+            'customer_last_name' => $this->customer_last_name,
+            'customer_email' => $this->customer_email,
+            'customer_phone' => $this->customer_phone,
+            'customer_tax_code' => strtoupper(trim($this->customer_tax_code)),
+            'special_requests' => $this->special_requests,
+            'guests' => $guests,
+            'payment_type' => $paymentType,
+            'use_deposit' => $useDeposit,
+        ];
+
+        // In modalità B2B chi è loggato è l'AGENZIA, non il cliente: la
+        // prenotazione deve far capo al cliente finale. Passiamo user_id esplicito
+        // = account cliente con quella email (se esiste), altrimenti null (ospite).
+        // Senza questo, BookingService userebbe auth()->id() = l'agenzia.
+        if ($this->b2bMode) {
+            $payload['user_id'] = User::where('email', $this->customer_email)->value('id');
+        }
+
         try {
-            $booking = $bookingService->create([
-                'tour_id' => $this->tour->id,
-                'tour_departure_id' => $this->departure->id,
-                'adults_count' => $this->adultsCount,
-                'children' => $resolvedChildren,
-                'addons' => $this->selectedAddons,
-                'discount_code' => $this->discountValid ? $this->discountCode : null,
-                'customer_first_name' => $this->customer_first_name,
-                'customer_last_name' => $this->customer_last_name,
-                'customer_email' => $this->customer_email,
-                'customer_phone' => $this->customer_phone,
-                'customer_tax_code' => strtoupper(trim($this->customer_tax_code)),
-                'special_requests' => $this->special_requests,
-                'guests' => $guests,
-                'payment_type' => $paymentType,
-                'use_deposit' => $useDeposit,
-            ], $this->b2bMode ? 'b2b' : 'website');
+            $booking = $bookingService->create($payload, $this->b2bMode ? 'b2b' : 'website');
 
             // Modalità B2B: attribuisci la prenotazione all'agenzia effettiva
             // (reale o impersonata) e calcola/snapshotta la commissione.

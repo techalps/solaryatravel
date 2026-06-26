@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\B2B;
 
+use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\Tour;
-use App\Models\TourDeparture;
 use App\Support\B2bContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,5 +73,55 @@ class BookingController extends Controller
             'availableDates' => $availableDates,
             'agency' => B2bContext::actingAgency(),
         ]);
+    }
+
+    /** Lista delle prenotazioni dell'agenzia effettiva (isolamento per b2b_user_id). */
+    public function index(Request $request): View
+    {
+        $agency = B2bContext::actingAgency();
+
+        $query = Booking::query()
+            ->where('b2b_user_id', $agency->getKey())
+            ->with(['tour', 'departure']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('booking_number', 'like', "%{$s}%")
+                    ->orWhere('customer_first_name', 'like', "%{$s}%")
+                    ->orWhere('customer_last_name', 'like', "%{$s}%")
+                    ->orWhere('customer_email', 'like', "%{$s}%");
+            });
+        }
+
+        $bookings = $query->latest()->paginate(15)->withQueryString();
+
+        return view('b2b.bookings.index', [
+            'bookings' => $bookings,
+            'statuses' => BookingStatus::cases(),
+        ]);
+    }
+
+    /**
+     * Dettaglio di una prenotazione dell'agenzia. L'isolamento è garantito qui:
+     * un'agenzia può vedere SOLO le proprie prenotazioni (403 altrimenti).
+     */
+    public function show(Booking $booking): View
+    {
+        $this->authorizeAgency($booking);
+
+        $booking->load(['tour', 'departure', 'payments', 'seatRecords.ageBracket', 'activeAddons.addon']);
+
+        return view('b2b.bookings.show', ['booking' => $booking]);
+    }
+
+    /** Verifica che la prenotazione appartenga all'agenzia effettiva della sessione. */
+    private function authorizeAgency(Booking $booking): void
+    {
+        $agency = B2bContext::actingAgency();
+        abort_if($agency === null || $booking->b2b_user_id !== $agency->getKey(), 403);
     }
 }

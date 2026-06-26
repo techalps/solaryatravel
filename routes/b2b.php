@@ -41,13 +41,9 @@ Route::middleware('b2b')->group(function () {
     Route::get('/prenotazioni/nuova', [BookingController::class, 'create'])->name('b2b.bookings.create');
     Route::get('/prenotazioni/nuova/prenota', [BookingController::class, 'start'])->name('b2b.bookings.start');
 
-    // Le mie prenotazioni — Fase 9.
-    Route::get('/prenotazioni', function () {
-        return view('b2b.placeholder', ['titolo' => 'Le mie prenotazioni']);
-    })->name('b2b.bookings.index');
-    Route::get('/prenotazioni/{booking:uuid}', function () {
-        return view('b2b.placeholder', ['titolo' => 'Dettaglio prenotazione']);
-    })->name('b2b.bookings.show');
+    // Le mie prenotazioni: lista + dettaglio (isolamento per agenzia).
+    Route::get('/prenotazioni', [BookingController::class, 'index'])->name('b2b.bookings.index');
+    Route::get('/prenotazioni/{booking:uuid}', [BookingController::class, 'show'])->name('b2b.bookings.show');
 
     // Link & QR referral — Fase 7.
     Route::get('/referral', function () {
