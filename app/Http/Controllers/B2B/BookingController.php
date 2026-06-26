@@ -4,8 +4,6 @@ namespace App\Http\Controllers\B2B;
 
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
-use App\Mail\BookingAwaitingTransfer;
-use App\Mail\BookingPaymentLink;
 use App\Models\Booking;
 use App\Models\Tour;
 use App\Services\PaymentService;
@@ -15,7 +13,6 @@ use App\Support\BookingLog;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 /**
@@ -142,21 +139,7 @@ class BookingController extends Controller
         }
 
         try {
-            if ($booking->payment_type === 'bank_transfer') {
-                $amountDue = $booking->payment_type === 'deposit' && $booking->deposit_amount
-                    ? (float) $booking->deposit_amount
-                    : (float) $booking->total_amount;
-                Mail::to($booking->customer_email)->send(new BookingAwaitingTransfer($booking, $amountDue));
-            } else {
-                $url = $booking->checkout_url;
-                if (! $url) {
-                    $url = $this->paymentService->createCheckoutSession($booking)['url'];
-                    $booking->update(['checkout_url' => $url]);
-                }
-                Mail::to($booking->customer_email)->send(new BookingPaymentLink($booking, $url));
-            }
-
-            $booking->update(['payment_link_sent_at' => now()]);
+            $this->paymentService->sendPaymentInstructions($booking);
             BookingLog::info('b2b_payment_resend', 'Estremi di pagamento reinviati al cliente (portale agenzie)', $booking, [
                 'agency_id' => $booking->b2b_user_id,
                 'to' => $booking->customer_email,

@@ -398,6 +398,38 @@ class PaymentService
     }
 
     /**
+     * Invia al cliente finale gli estremi di pagamento: link Stripe se carta,
+     * istruzioni bonifico se payment_type=bank_transfer. Riusa checkout_url se già
+     * presente e segna payment_link_sent_at. Idempotente sul link (non ne crea uno
+     * nuovo ogni volta). Lancia eccezione in caso di errore (chiamante decide).
+     *
+     * Usato sia alla creazione di una prenotazione B2B (il cliente non è presente,
+     * va avvisato via email) sia dal pulsante "Reinvia estremi" del portale.
+     */
+    public function sendPaymentInstructions(Booking $booking): bool
+    {
+        if ($booking->payment_type === 'bank_transfer') {
+            $amountDue = $booking->deposit_amount && $booking->payment_type === 'deposit'
+                ? (float) $booking->deposit_amount
+                : (float) $booking->total_amount;
+            \Illuminate\Support\Facades\Mail::to($booking->customer_email)
+                ->send(new \App\Mail\BookingAwaitingTransfer($booking, $amountDue));
+        } else {
+            $url = $booking->checkout_url;
+            if (! $url) {
+                $url = $this->createCheckoutSession($booking)['url'];
+                $booking->update(['checkout_url' => $url]);
+            }
+            \Illuminate\Support\Facades\Mail::to($booking->customer_email)
+                ->send(new \App\Mail\BookingPaymentLink($booking, $url));
+        }
+
+        $booking->update(['payment_link_sent_at' => now()]);
+
+        return true;
+    }
+
+    /**
      * Metodo di pagamento "prevalente" della prenotazione: il gateway dell'ultimo
      * pagamento riuscito; fallback su booking.payment_type, poi 'manual'.
      * Valori: 'stripe' | 'bank_transfer' | 'manual'.

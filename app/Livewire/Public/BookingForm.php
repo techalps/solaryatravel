@@ -712,8 +712,25 @@ class BookingForm extends Component
                 app(\App\Services\CommissionService::class)
                     ->attributeToAgency($booking, \App\Support\B2bContext::actingAgency(), 'b2b_portal');
 
-                // Resta nel portale b2b: il pagamento si gestisce dal dettaglio
-                // prenotazione (link Stripe / istruzioni bonifico riusabili).
+                // Il cliente NON è presente (ha prenotato l'agenzia per lui): inviamo
+                // subito al cliente gli estremi di pagamento (link Stripe o bonifico),
+                // come farebbe il checkout sul sito. Best-effort: se fallisce, l'agenzia
+                // può sempre usare "Reinvia estremi" dal dettaglio.
+                $sent = false;
+                try {
+                    app(\App\Services\PaymentService::class)->sendPaymentInstructions($booking);
+                    $sent = true;
+                } catch (\Throwable $e) {
+                    \App\Support\BookingLog::failure('b2b_payment_send', 'Invio automatico estremi pagamento al cliente fallito', $booking, $e, [
+                        'to' => $booking->customer_email,
+                    ]);
+                }
+
+                session()->flash($sent ? 'success' : 'warning', $sent
+                    ? 'Prenotazione creata. Gli estremi di pagamento sono stati inviati a '.$booking->customer_email.'.'
+                    : 'Prenotazione creata, ma l\'invio degli estremi al cliente non è riuscito: usa "Reinvia estremi" qui sotto.');
+
+                // Resta nel portale b2b: il pagamento si gestisce dal dettaglio.
                 return redirect()->route('b2b.bookings.show', $booking->uuid);
             }
 
