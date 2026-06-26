@@ -164,7 +164,14 @@ class BookingController extends Controller
 
             return back()->with('success', 'Estremi di pagamento reinviati a '.$booking->customer_email.'.');
         } catch (\Throwable $e) {
-            return back()->with('error', 'Invio non riuscito. Riprova tra poco.');
+            // L'errore reale (es. auth SMTP 535) va tracciato per diagnosi; all'agenzia
+            // mostriamo un messaggio generico.
+            BookingLog::failure('b2b_payment_resend', 'Reinvio estremi pagamento fallito (portale agenzie)', $booking, $e, [
+                'agency_id' => $booking->b2b_user_id,
+                'to' => $booking->customer_email,
+            ]);
+
+            return back()->with('error', 'Invio non riuscito. Riprova tra poco o verifica la configurazione email.');
         }
     }
 
