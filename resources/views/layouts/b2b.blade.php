@@ -56,6 +56,19 @@
         .booking-widget h4 { font-size: 1.15rem; font-weight: 700; color: #1e293b; }
         .booking-widget .tg-tour-about-sidebar-title { font-size: .82rem; font-weight: 700; color: #334155; }
 
+        /* Il wrapper del datepicker (tema pubblico) riserva un'altezza enorme
+           pensata per le label flottanti della barra di ricerca: azzeriamola,
+           qui ci serve solo contenere l'input. */
+        .booking-widget .tg-booking-form-parent-inner {
+            min-height: 0; height: auto; padding: 0; margin-bottom: .9rem;
+        }
+
+        /* Spaziatura più compatta: i margini mb-15/mb-10 del tema sono troppo
+           larghi per la card del portale. */
+        .booking-widget .mb-15 { margin-bottom: .9rem !important; }
+        .booking-widget .mb-10 { margin-bottom: .6rem !important; }
+        .booking-widget .mb-5  { margin-bottom: .35rem !important; }
+
         /* Campo data (usa la classe .input del tema, non .bk-*) */
         .booking-widget .tg-tour-about-date { position: relative; }
         .booking-widget .tg-tour-about-date .input {
