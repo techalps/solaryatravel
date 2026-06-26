@@ -90,6 +90,17 @@
         .booking-widget .tg-tour-about-border-doted { border-top: 1px dashed #e2e8f0; }
         .booking-widget .tg-tour-about-tickets { display: flex; align-items: center; justify-content: space-between; }
         .booking-widget .tg-tour-about-coast .total-price { color: var(--bs-primary); font-weight: 800; }
+
+        /* Pulsante "Prenota ora": a pillola e blu pieno, coerente con gli altri
+           controlli del widget (input, stepper, "Applica" sono tutti arrotondati). */
+        .booking-widget .tg-btn {
+            border-radius: 50px;
+            background: var(--bs-primary);
+            border: none;
+            color: #fff;
+            font-weight: 600;
+        }
+        .booking-widget .tg-btn:hover { background: var(--bs-primary); filter: brightness(.92); color: #fff; }
     </style>
 
     @stack('styles')
