@@ -46,12 +46,15 @@
                     <h3 class="h6 fw-bold mb-3"><i class="bi bi-qr-code me-2 text-primary"></i>QR code</h3>
                     <img src="{{ route('b2b.referral.qr') }}" alt="QR referral"
                          style="width:220px;height:220px;max-width:100%;border:1px solid #eef0f3;border-radius:14px;padding:8px;background:#fff">
-                    <div class="mt-3">
-                        <a href="{{ route('b2b.referral.qr') }}" download="solarya-referral.png" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-download me-1"></i>Scarica QR
+                    <div class="mt-3 d-flex flex-column gap-2 align-items-center">
+                        <a href="{{ route('b2b.referral.flyer') }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Scarica volantino A4 (PDF)
+                        </a>
+                        <a href="{{ route('b2b.referral.qr') }}" download="solarya-referral.png" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-download me-1"></i>Scarica solo il QR (PNG)
                         </a>
                     </div>
-                    <p class="text-muted small mt-3 mb-0">Stampalo o mostralo: chi lo inquadra apre il tuo link.</p>
+                    <p class="text-muted small mt-3 mb-0">Il volantino è pronto da stampare ed esporre in vetrina.</p>
                 </div>
             </div>
         </div>

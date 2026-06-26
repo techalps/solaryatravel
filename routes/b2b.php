@@ -53,4 +53,5 @@ Route::middleware('b2b')->group(function () {
     // Link & QR referral (Flusso B).
     Route::get('/referral', [ReferralController::class, 'index'])->name('b2b.referral');
     Route::get('/referral/qr', [ReferralController::class, 'qr'])->name('b2b.referral.qr');
+    Route::get('/referral/volantino', [ReferralController::class, 'flyer'])->name('b2b.referral.flyer');
 });

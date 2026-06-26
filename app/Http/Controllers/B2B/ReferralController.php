@@ -5,6 +5,7 @@ namespace App\Http\Controllers\B2B;
 use App\Http\Controllers\Controller;
 use App\Services\QrCodeService;
 use App\Support\B2bContext;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -42,6 +43,24 @@ class ReferralController extends Controller
             'Content-Type' => 'image/png',
             'Content-Disposition' => 'inline; filename="referral-'.$token.'.png"',
         ]);
+    }
+
+    /**
+     * Volantino A4 stampabile (PDF) con QR grande e claim, da esporre in vetrina.
+     */
+    public function flyer(QrCodeService $qr)
+    {
+        $agency = B2bContext::actingAgency();
+        $token = $agency->ensureReferralToken();
+
+        $pdf = Pdf::loadView('pdf.referral-flyer', [
+            'agency' => $agency,
+            'referralUrl' => $this->referralUrl($token),
+            // QR ad alta risoluzione embeddato come data-uri (DomPDF non risolve URL).
+            'qrDataUri' => $qr->pngDataUri($this->referralUrl($token), 900, 1),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('solarya-prenota-qui.pdf');
     }
 
     /**
