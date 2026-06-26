@@ -24,6 +24,17 @@ class BookingObserver
         if (! $booking->wasChanged('status')) {
             return;
         }
+
+        // Canale B2B: se la prenotazione esce dagli stati "validi" (annullata,
+        // rimborsata, no-show), la commissione va stornata. La penale è ricavo di
+        // Solarya, non base provvigionale. Punto unico: copre annullamenti da
+        // admin, da cliente e da qualsiasi altro flusso. Idempotente.
+        if ($booking->b2b_user_id
+            && in_array($booking->status, [BookingStatus::CANCELLED, BookingStatus::REFUNDED, BookingStatus::NO_SHOW], true)) {
+            app(\App\Services\CommissionService::class)
+                ->reverse($booking, 'Prenotazione '.$booking->status->value);
+        }
+
         if ($booking->status !== BookingStatus::CONFIRMED) {
             return;
         }
