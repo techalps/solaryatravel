@@ -734,6 +734,22 @@ class BookingForm extends Component
                 return redirect()->route('b2b.bookings.show', $booking->uuid);
             }
 
+            // Flusso B (referral): se il cliente è arrivato da un link agenzia
+            // (?ref=TOKEN → cookie b2b_ref impostato dal middleware), attribuiamo
+            // la vendita all'agenzia. Solo per QUESTA prenotazione: consumiamo il
+            // cookie. La commissione si calcola sul totale finale (sconti inclusi).
+            $refAgencyId = request()->cookie(\App\Http\Middleware\CaptureReferralMiddleware::COOKIE);
+            if ($refAgencyId) {
+                $agency = User::where('role', 'b2b')->find($refAgencyId);
+                if ($agency) {
+                    app(\App\Services\CommissionService::class)
+                        ->attributeToAgency($booking, $agency, 'b2b_referral');
+                }
+                \Illuminate\Support\Facades\Cookie::queue(
+                    \Illuminate\Support\Facades\Cookie::forget(\App\Http\Middleware\CaptureReferralMiddleware::COOKIE)
+                );
+            }
+
             // Creazione account opzionale dell'ospite: dopo il booking, così
             // un fallimento nella prenotazione non lascia account orfani.
             if ($creatingAccount) {

@@ -4,6 +4,7 @@ use App\Http\Controllers\B2B\AuthController;
 use App\Http\Controllers\B2B\BookingController;
 use App\Http\Controllers\B2B\DashboardController;
 use App\Http\Controllers\B2B\ImpersonateController;
+use App\Http\Controllers\B2B\ReferralController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,8 +50,7 @@ Route::middleware('b2b')->group(function () {
     Route::post('/prenotazioni/{booking:uuid}/richiedi-annullamento', [BookingController::class, 'requestCancellation'])->name('b2b.bookings.request-cancellation');
     Route::post('/prenotazioni/{booking:uuid}/richiedi-modifica', [BookingController::class, 'requestModification'])->name('b2b.bookings.request-modification');
 
-    // Link & QR referral — Fase 7.
-    Route::get('/referral', function () {
-        return view('b2b.placeholder', ['titolo' => 'Link & QR']);
-    })->name('b2b.referral');
+    // Link & QR referral (Flusso B).
+    Route::get('/referral', [ReferralController::class, 'index'])->name('b2b.referral');
+    Route::get('/referral/qr', [ReferralController::class, 'qr'])->name('b2b.referral.qr');
 });

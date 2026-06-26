@@ -47,6 +47,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\ComingSoonMiddleware::class);
         // Lega host ↔ canale per il sito cliente/admin (vedi HostGateMiddleware).
         $middleware->appendToGroup('web', \App\Http\Middleware\HostGateMiddleware::class);
+        // Cattura ?ref=TOKEN sul sito pubblico per l'attribuzione referral B2B.
+        $middleware->appendToGroup('web', \App\Http\Middleware\CaptureReferralMiddleware::class);
         $middleware->validateCsrfTokens(except: [
             'webhooks/stripe',
         ]);
