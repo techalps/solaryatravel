@@ -58,6 +58,8 @@ class ReferralController extends Controller
             'referralUrl' => $this->referralUrl($token),
             // QR ad alta risoluzione embeddato come data-uri (DomPDF non risolve URL).
             'qrDataUri' => $qr->pngDataUri($this->referralUrl($token), 900, 1),
+            // Logo bianco come data-uri (DomPDF non rende gli SVG; usiamo il PNG).
+            'logoDataUri' => $this->logoDataUri(),
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download('solarya-prenota-qui.pdf');
@@ -70,5 +72,16 @@ class ReferralController extends Controller
     private function referralUrl(string $token): string
     {
         return rtrim(config('app.url'), '/').'/prenota?ref='.$token;
+    }
+
+    /** Logo bianco come data-uri PNG per l'embed nel PDF (null se mancante). */
+    private function logoDataUri(): ?string
+    {
+        $path = public_path('images/logo_white.png');
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return 'data:image/png;base64,'.base64_encode(file_get_contents($path));
     }
 }

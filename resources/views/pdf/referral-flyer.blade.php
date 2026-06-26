@@ -20,6 +20,7 @@
         text-transform: uppercase; color: #ffffff;
     }
     .brand .sea { color: #ffd166; }
+    .brand-logo { width: 78mm; height: auto; }
     .tagline {
         font-size: 11pt; letter-spacing: 5px; text-transform: uppercase;
         color: #cfe8ff; margin-top: 4mm;
@@ -61,7 +62,11 @@
 <body>
     <div class="topband"></div>
     <div class="inner">
-        <div class="brand">Solarya<span class="sea"> Travel</span></div>
+        @if(!empty($logoDataUri))
+            <img src="{{ $logoDataUri }}" alt="Solarya Travel" class="brand-logo">
+        @else
+            <div class="brand">Solarya<span class="sea"> Travel</span></div>
+        @endif
         <div class="tagline">Escursioni in catamarano</div>
 
         <div class="claim">
