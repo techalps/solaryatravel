@@ -35,64 +35,48 @@
             .admin-sidebar.show { left: 0; }
         }
 
-        /* ===== Form di prenotazione (componente condiviso col frontend) =====
-           Diamo al widget l'aspetto del portale: variabili tema mappate al
-           colore primario Bootstrap, controlli con look coerente all'admin. */
+        /* ===== Form di prenotazione (componente Livewire condiviso col frontend) =====
+           Il componente porta GIÀ i suoi stili .booking-widget .bk-* completi.
+           Qui forniamo solo: (1) le variabili del tema mappate al colore del
+           portale, così il widget si tinge del blu Bootstrap invece del viola
+           del frontend; (2) lo stile del solo campo data (.input), che il
+           componente non copre. Tutto il resto lo fa il componente stesso. */
         .booking-widget {
             --tg-theme-primary: var(--bs-primary, #0d6efd);
             --tg-theme-secondary: var(--bs-primary, #0d6efd);
+            --tg-theme-secondary-rgb: 13, 110, 253;
+            min-width: 0;
         }
+        /* Il widget nasce per una sidebar stretta: nella card del portale
+           evitiamo che input/righe sforino il bordo. */
+        .booking-widget, .booking-widget * { box-sizing: border-box; }
+        .booking-widget img { max-width: 100%; height: auto; }
+        .booking-widget .row { --bs-gutter-x: .5rem; margin-left: 0; margin-right: 0; }
         .booking-widget .tg-tour-about-title,
         .booking-widget h4 { font-size: 1.15rem; font-weight: 700; color: #1e293b; }
-        .booking-widget .tg-tour-about-sidebar-title,
-        .booking-widget .time,
-        .booking-widget label { font-size: .8rem; font-weight: 600; color: #475569; }
-        /* Input testo/data del widget → stile form-control Bootstrap */
-        .booking-widget .input,
-        .booking-widget input[type="text"]:not(.form-check-input),
-        .booking-widget input[type="email"],
-        .booking-widget input[type="tel"],
-        .booking-widget input[type="number"],
-        .booking-widget textarea,
-        .booking-widget select {
-            width: 100%;
-            padding: .5rem .75rem;
-            font-size: .95rem;
-            line-height: 1.5;
-            color: #212529;
-            background-color: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: .5rem;
-            transition: border-color .15s ease, box-shadow .15s ease;
-        }
-        .booking-widget .input:focus,
-        .booking-widget input:focus:not(.form-check-input),
-        .booking-widget textarea:focus,
-        .booking-widget select:focus {
-            border-color: var(--bs-primary, #0d6efd);
-            box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
-            outline: 0;
-        }
+        .booking-widget .tg-tour-about-sidebar-title { font-size: .82rem; font-weight: 700; color: #334155; }
+
+        /* Campo data (usa la classe .input del tema, non .bk-*) */
         .booking-widget .tg-tour-about-date { position: relative; }
+        .booking-widget .tg-tour-about-date .input {
+            width: 100%; padding: .55rem 2.25rem .55rem 2.25rem;
+            border: 1.5px solid #eef0f3; border-radius: 50px; background: #fff;
+            font-size: .9rem; cursor: pointer;
+        }
+        .booking-widget .tg-tour-about-date .input:focus {
+            outline: none; border-color: var(--bs-primary);
+            box-shadow: 0 0 0 3px rgba(13,110,253,.12);
+        }
         .booking-widget .tg-tour-about-date .calender,
         .booking-widget .tg-tour-about-date .angle {
             position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none;
         }
-        .booking-widget .tg-tour-about-date .calender { left: .75rem; }
-        .booking-widget .tg-tour-about-date .angle { right: .75rem; color: #94a3b8; }
-        .booking-widget .tg-tour-about-date .input { padding-left: 2.25rem; cursor: pointer; }
+        .booking-widget .tg-tour-about-date .calender { left: .85rem; }
+        .booking-widget .tg-tour-about-date .angle { right: .95rem; color: #94a3b8; }
+
         .booking-widget .tg-tour-about-border-doted { border-top: 1px dashed #e2e8f0; }
-        /* Pulsante principale del widget → btn-primary del portale */
-        .booking-widget .tg-btn,
-        .booking-widget button[type="submit"] {
-            display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
-            width: 100%; padding: .65rem 1rem; font-weight: 600; color: #fff;
-            background: var(--bs-primary, #0d6efd); border: none; border-radius: .5rem;
-            transition: filter .15s ease;
-        }
-        .booking-widget .tg-btn:hover,
-        .booking-widget button[type="submit"]:hover { filter: brightness(.93); color: #fff; }
-        .booking-widget .price, .booking-widget .total { color: #1e293b; }
+        .booking-widget .tg-tour-about-tickets { display: flex; align-items: center; justify-content: space-between; }
+        .booking-widget .tg-tour-about-coast .total-price { color: var(--bs-primary); font-weight: 800; }
     </style>
 
     @stack('styles')
