@@ -58,9 +58,18 @@ class BookingController extends Controller
             $departure = $tour->departures()->find($departureId);
         }
 
+        // Date/orari disponibili nei prossimi 180 giorni (stessa fonte della
+        // pagina tour del frontend), per alimentare il calendario del form.
+        $departures = app(\App\Services\DepartureGeneratorService::class)->upcoming($tour, 180);
+        $availableDates = $departures
+            ->groupBy('date')
+            ->map(fn ($items) => $items->pluck('time')->unique()->values()->all())
+            ->all();
+
         return view('b2b.bookings.start', [
             'tour' => $tour,
             'departure' => $departure,
+            'availableDates' => $availableDates,
             'agency' => B2bContext::actingAgency(),
         ]);
     }

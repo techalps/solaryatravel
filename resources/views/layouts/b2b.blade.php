@@ -16,6 +16,10 @@
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
     @livewireStyles
 
+    {{-- Flatpickr: necessario per il calendario del form di prenotazione,
+         identico al frontend cliente (vedi layouts/public). --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.css">
+
     <style>
         .admin-sidebar { width: 280px; flex-shrink: 0; min-height: 100vh; }
         .admin-sidebar .nav-link { color: rgba(255,255,255,.7); border-radius: .75rem; padding: .65rem 1rem; transition: all .15s ease; }
@@ -179,6 +183,8 @@
             </footer>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.js"></script>
 
     @livewireScripts
     @stack('scripts')

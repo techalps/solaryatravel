@@ -21,7 +21,7 @@
         <div class="col-xl-6 col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-3 p-md-4">
-                    <livewire:public.booking-form :tour="$tour" :departure="$departure" :b2bMode="true" />
+                    <livewire:public.booking-form :tour="$tour" :departure="$departure" :available-dates="$availableDates" :b2bMode="true" />
                 </div>
             </div>
         </div>
