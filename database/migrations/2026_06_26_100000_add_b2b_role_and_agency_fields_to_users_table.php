@@ -19,7 +19,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'super_admin', 'system_admin', 'b2b') NOT NULL DEFAULT 'customer'");
+        // L'ALTER ENUM è MySQL-only. Su SQLite (test) la colonna role è TEXT senza
+        // vincolo enum, quindi 'b2b' è già valido: saltiamo lo statement.
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'super_admin', 'system_admin', 'b2b') NOT NULL DEFAULT 'customer'");
+        }
 
         Schema::table('users', function (Blueprint $table) {
             // Valorizzato SOLO per il ruolo b2b. Es. 20.00 = 20%.
@@ -38,6 +42,8 @@ return new class extends Migration
 
         // Riporta eventuali utenti b2b a customer prima di restringere l'enum.
         DB::statement("UPDATE users SET role = 'customer' WHERE role = 'b2b'");
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'super_admin', 'system_admin') NOT NULL DEFAULT 'customer'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'super_admin', 'system_admin') NOT NULL DEFAULT 'customer'");
+        }
     }
 };
