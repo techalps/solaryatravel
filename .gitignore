@@ -2,6 +2,7 @@
 /node_modules
 /public/hot
 /public/storage
+/b2b/storage
 /storage/*.key
 /storage/pail
 /vendor
