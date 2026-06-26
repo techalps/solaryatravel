@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\B2B\AuthController;
+use App\Http\Controllers\B2B\DashboardController;
 use App\Http\Controllers\B2B\ImpersonateController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,10 +33,8 @@ Route::middleware('b2b')->group(function () {
     Route::post('/scegli-agenzia', [ImpersonateController::class, 'store'])->name('b2b.impersonate.store');
     Route::post('/cambia-agenzia', [ImpersonateController::class, 'stop'])->name('b2b.impersonate.stop');
 
-    // Dashboard — placeholder Fase 4, sostituita in Fase 5.
-    Route::get('/', function () {
-        return view('b2b.placeholder', ['titolo' => 'Dashboard']);
-    })->name('b2b.dashboard');
+    // Dashboard
+    Route::get('/', [DashboardController::class, 'index'])->name('b2b.dashboard');
 
     // Nuova prenotazione — Fase 6.
     Route::get('/prenotazioni/nuova', function () {
