@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\B2B\AuthController;
+use App\Http\Controllers\B2B\ImpersonateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,8 +24,14 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('b2b.logout');
 
-// --- Area riservata agenzie (solo ruolo b2b) ---
+// --- Area riservata agenzie (ruolo b2b o admin in impersonificazione) ---
 Route::middleware('b2b')->group(function () {
+    // Impersonificazione agenzia (solo admin gestionali). La schermata di scelta
+    // è raggiungibile anche senza agenzia attiva (vedi B2bMiddleware).
+    Route::get('/scegli-agenzia', [ImpersonateController::class, 'select'])->name('b2b.impersonate.select');
+    Route::post('/scegli-agenzia', [ImpersonateController::class, 'store'])->name('b2b.impersonate.store');
+    Route::post('/cambia-agenzia', [ImpersonateController::class, 'stop'])->name('b2b.impersonate.stop');
+
     // Dashboard — placeholder Fase 4, sostituita in Fase 5.
     Route::get('/', function () {
         return view('b2b.placeholder', ['titolo' => 'Dashboard']);

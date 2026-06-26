@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\B2bContext;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -9,9 +10,13 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Gating dell'area B2B (dominio b2b.solaryatravel.com).
  *
- * Consente l'accesso SOLO agli utenti con ruolo b2b. Un utente con altro ruolo
- * (customer/admin/...) loggato sul dominio b2b viene negato: i due canali hanno
- * sessioni separate (cookie host-only), quindi qui di norma non c'è sessione.
+ * Possono accedere:
+ *  - gli utenti con ruolo b2b (l'agenzia è sé stesso);
+ *  - gli admin con poteri gestionali (super_admin/system_admin), che operano
+ *    "per conto di" un'agenzia scelta (impersonificazione).
+ *
+ * Un admin che non ha ancora scelto l'agenzia viene mandato alla schermata di
+ * selezione: senza un'agenzia attiva non può vedere dati né prenotare.
  *
  * La coppia speculare è HostGateMiddleware, che impedisce all'utente b2b di
  * operare sul dominio principale/admin.
@@ -24,8 +29,14 @@ class B2bMiddleware
             return redirect()->route('b2b.login');
         }
 
-        if (! auth()->user()->isB2b()) {
+        if (! B2bContext::canAccess()) {
             abort(403, 'Area riservata alle agenzie.');
+        }
+
+        // Admin senza agenzia selezionata → schermata di scelta.
+        if (B2bContext::isImpersonator() && B2bContext::actingAgency() === null
+            && ! $request->routeIs('b2b.impersonate.*')) {
+            return redirect()->route('b2b.impersonate.select');
         }
 
         return $next($request);

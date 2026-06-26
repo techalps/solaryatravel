@@ -121,6 +121,26 @@
                 </div>
             </header>
 
+            {{-- Banner impersonificazione (admin che opera per conto di un'agenzia) --}}
+            @if(\App\Support\B2bContext::isImpersonator() && ($acting = \App\Support\B2bContext::actingAgency()))
+                <div class="bg-warning-subtle border-bottom border-warning-subtle px-3 px-lg-4 py-2">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 small">
+                        <span class="text-dark">
+                            <i class="bi bi-person-badge me-1"></i>
+                            Stai operando come <strong>{{ $acting->agency_name ?: $acting->name }}</strong>
+                            (commissione {{ rtrim(rtrim(number_format($acting->commission_rate, 2), '0'), '.') }}%) ·
+                            <span class="text-muted">admin {{ auth()->user()->name }}</span>
+                        </span>
+                        <form method="POST" action="{{ route('b2b.impersonate.stop') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-dark py-0 px-2">
+                                <i class="bi bi-arrow-repeat me-1"></i>Cambia agenzia
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @endif
+
             {{-- Content --}}
             <main class="flex-grow-1 p-3 p-lg-4">
                 @if (session('success'))

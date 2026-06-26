@@ -28,10 +28,11 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        // Verifichiamo PRIMA che l'utente sia un'agenzia: non vogliamo nemmeno
-        // tentare il login di customer/admin sull'host b2b.
+        // Verifichiamo PRIMA che l'utente possa accedere al portale: un'agenzia
+        // (opera per sé) o un admin gestionale (opererà per conto di un'agenzia
+        // scelta). Customer e altri ruoli sono rifiutati sull'host b2b.
         $user = \App\Models\User::where('email', $credentials['email'])->first();
-        if (! $user || ! $user->isB2b()) {
+        if (! $user || ! \App\Support\B2bContext::canAccess($user)) {
             throw ValidationException::withMessages([
                 'email' => 'Credenziali non valide per l\'area agenzie.',
             ]);
