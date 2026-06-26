@@ -57,6 +57,20 @@ if [ ! -L public/storage ] || [ "$(readlink public/storage)" != "../storage/app/
     ln -s ../storage/app/public public/storage
 fi
 
+# --- 5b. Symlink storage della cartella b2b/ (canale agenzie) -------------
+# La cartella b2b/ (secondo document root del sottodominio b2b.solaryatravel.com)
+# arriva da git con index.php, .htaccess e i symlink degli asset (build, assets,
+# fonts, images, vendor → ../public/*, già committati come symlink mode 120000).
+# L'UNICO symlink mancante è storage, gitignorato come public/storage: lo creiamo
+# qui, RELATIVO (OVH non attraversa /home in assoluto, vedi punto 5).
+if [ -d b2b ]; then
+    if [ ! -L b2b/storage ] || [ "$(readlink b2b/storage)" != "../storage/app/public" ]; then
+        echo "▶ Ricreo symlink b2b/storage relativo"
+        rm -rf b2b/storage
+        ln -s ../storage/app/public b2b/storage
+    fi
+fi
+
 # --- 6. Cache: clear poi rebuild ------------------------------------------
 # NB: niente config:cache automatico (un .env malformato causerebbe 500 a tappeto).
 $PHP artisan config:clear
