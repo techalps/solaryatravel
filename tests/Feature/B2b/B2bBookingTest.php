@@ -91,4 +91,27 @@ class B2bBookingTest extends TestCase
         $this->assertSame('reversed', $booking->commission_status);
         $this->assertEquals(0.0, (float) $booking->commission_amount);
     }
+
+    /**
+     * Regressione: la vista commissioni admin non deve riportare commissioni
+     * "pagate" inesistenti. (Bug: l'alias SUM 'commission_paid' veniva castato a
+     * boolean dal modello → (float)true = 1€ fantasma. Fix: alias paid_sum.)
+     */
+    public function test_vista_commissioni_non_inventa_pagate(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $agency = $this->agency(20.0);
+        // Due prenotazioni earned, NESSUNA pagata, nel mese corrente.
+        $this->bookingFor($agency, 100.0);
+        $this->bookingFor($agency, 50.0);
+
+        $res = $this->actingAs($admin)
+            ->get('/admin/commissioni?month='.now()->format('Y-m'))
+            ->assertOk();
+
+        $totals = $res->viewData('totals');
+        $this->assertEquals(0.0, $totals->paid, 'Le commissioni pagate devono essere 0');
+        $this->assertEquals(30.0, $totals->earned, 'Maturate = 20% di 150');
+        $this->assertEquals(30.0, $totals->due, 'Da liquidare = maturate - pagate');
+    }
 }

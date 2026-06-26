@@ -41,22 +41,25 @@ class CommissionController extends Controller
         $end = $start->copy()->endOfMonth();
 
         // Aggregato per agenzia nel mese (sulla data di prenotazione).
+        // NB: gli alias NON devono coincidere con colonne del modello castate
+        // (es. commission_paid è cast 'boolean'): Eloquent applicherebbe il cast
+        // al risultato della SUM, trasformando un decimale in true/false.
         $rows = Booking::query()
             ->b2b()
             ->whereBetween('booking_date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw('b2b_user_id')
             ->selectRaw('COUNT(*) as bookings_count')
             ->selectRaw('SUM(total_amount) as total_generated')
-            ->selectRaw("SUM(CASE WHEN commission_status != 'reversed' THEN commission_amount ELSE 0 END) as commission_earned")
-            ->selectRaw('SUM(CASE WHEN commission_paid = 1 THEN commission_amount ELSE 0 END) as commission_paid')
+            ->selectRaw("SUM(CASE WHEN commission_status != 'reversed' THEN commission_amount ELSE 0 END) as earned_sum")
+            ->selectRaw('SUM(CASE WHEN commission_paid = 1 THEN commission_amount ELSE 0 END) as paid_sum')
             ->groupBy('b2b_user_id')
             ->get();
 
         $agencies = User::whereIn('id', $rows->pluck('b2b_user_id'))->get()->keyBy('id');
 
         $report = $rows->map(function ($r) use ($agencies) {
-            $earned = (float) $r->commission_earned;
-            $paid = (float) $r->commission_paid;
+            $earned = (float) $r->earned_sum;
+            $paid = (float) $r->paid_sum;
             return (object) [
                 'agency' => $agencies[$r->b2b_user_id] ?? null,
                 'bookings_count' => (int) $r->bookings_count,
