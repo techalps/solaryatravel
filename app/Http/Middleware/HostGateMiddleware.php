@@ -27,8 +27,12 @@ class HostGateMiddleware
         // Confronto sull'host SENZA porta (come fa il routing di Laravel).
         $isB2bHost = $request->getHost() === config('b2b.domain');
 
-        // Regola 1: sul dominio b2b il sito cliente/admin non esiste.
-        if ($isB2bHost) {
+        // Regola 1: sul dominio b2b il sito cliente/admin non esiste → 404.
+        // ECCEZIONE: gli endpoint tecnici di Livewire (asset JS + /livewire/update)
+        // vivono nel gruppo web senza vincolo host, ma devono funzionare anche sul
+        // portale b2b, che monta componenti Livewire. Senza questa eccezione il
+        // browser riceve 404 su livewire.js e tutta l'interattività si blocca.
+        if ($isB2bHost && ! $request->is('livewire/*', 'vendor/livewire/*')) {
             abort(404);
         }
 
