@@ -73,7 +73,7 @@
                     <div class="card-body d-flex align-items-center gap-3">
                         <i class="bi bi-plus-circle-fill fs-1"></i>
                         <div>
-                            <div class="h5 fw-bold mb-1">Nuova prenotazione</div>
+                            <div class="h5 fw-bold mb-1 text-white">Nuova prenotazione</div>
                             <div class="small opacity-75">Crea una prenotazione per il tuo cliente.</div>
                         </div>
                         <i class="bi bi-arrow-right ms-auto fs-3"></i>

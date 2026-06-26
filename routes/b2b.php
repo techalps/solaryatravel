@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\B2B\AuthController;
+use App\Http\Controllers\B2B\BookingController;
 use App\Http\Controllers\B2B\DashboardController;
 use App\Http\Controllers\B2B\ImpersonateController;
 use Illuminate\Support\Facades\Route;
@@ -36,10 +37,9 @@ Route::middleware('b2b')->group(function () {
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('b2b.dashboard');
 
-    // Nuova prenotazione — Fase 6.
-    Route::get('/prenotazioni/nuova', function () {
-        return view('b2b.placeholder', ['titolo' => 'Nuova prenotazione']);
-    })->name('b2b.bookings.create');
+    // Nuova prenotazione (Flusso A): scelta tour → form identico al cliente.
+    Route::get('/prenotazioni/nuova', [BookingController::class, 'create'])->name('b2b.bookings.create');
+    Route::get('/prenotazioni/nuova/prenota', [BookingController::class, 'start'])->name('b2b.bookings.start');
 
     // Le mie prenotazioni — Fase 9.
     Route::get('/prenotazioni', function () {

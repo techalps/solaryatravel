@@ -85,14 +85,24 @@ class BookingForm extends Component
 
     public ?string $errorMessage = null;
 
+    /**
+     * Modalità Portale Agenzie: stesso form del cliente, ma la prenotazione è
+     * compilata da un'agenzia PER un suo cliente. Cambia: niente pre-popolamento
+     * dei dati con l'utente loggato (è l'agenzia, non il cliente), attribuzione
+     * all'agenzia (source=b2b, attribution_source=b2b_portal) e redirect verso
+     * il portale b2b invece del checkout pubblico.
+     */
+    public bool $b2bMode = false;
+
     /** Mostra il modale di avviso "il gruppo verrà diviso su più catamarani". */
     public bool $showSplitModal = false;
 
-    public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = []): void
+    public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = [], bool $b2bMode = false): void
     {
         $this->tour = $tour;
         $this->departure = $departure;
         $this->availableDates = $availableDates;
+        $this->b2bMode = $b2bMode;
 
         // Se la partenza è già passata (es. /prenota?date=...), pre-popola data/orario per consistenza
         if ($departure) {
@@ -100,7 +110,9 @@ class BookingForm extends Component
             $this->selectedTime = \Carbon\Carbon::parse($departure->start_time)->format('H:i');
         }
 
-        if (auth()->check()) {
+        // In modalità B2B l'utente loggato è l'agenzia, NON il cliente: i dati
+        // cliente vanno inseriti dall'operatore, non pre-popolati.
+        if (auth()->check() && ! $this->b2bMode) {
             $u = auth()->user();
             $parts = explode(' ', $u->name ?? '', 2);
             $this->customer_first_name = $parts[0] ?? '';
@@ -596,7 +608,8 @@ class BookingForm extends Component
         ]);
 
         // Validazione password solo se l'ospite ha scelto di creare un account.
-        $creatingAccount = $this->wantsAccount && ! Auth::check();
+        // In modalità B2B l'agenzia non crea account per il cliente.
+        $creatingAccount = ! $this->b2bMode && $this->wantsAccount && ! Auth::check();
         if ($creatingAccount) {
             if (User::where('email', $this->customer_email)->exists()) {
                 $this->errorMessage = 'Esiste già un account con questa email. Accedi prima di proseguire, oppure deseleziona "Crea un account".';
@@ -681,7 +694,18 @@ class BookingForm extends Component
                 'guests' => $guests,
                 'payment_type' => $paymentType,
                 'use_deposit' => $useDeposit,
-            ], 'website');
+            ], $this->b2bMode ? 'b2b' : 'website');
+
+            // Modalità B2B: attribuisci la prenotazione all'agenzia effettiva
+            // (reale o impersonata) e calcola/snapshotta la commissione.
+            if ($this->b2bMode) {
+                app(\App\Services\CommissionService::class)
+                    ->attributeToAgency($booking, \App\Support\B2bContext::actingAgency(), 'b2b_portal');
+
+                // Resta nel portale b2b: il pagamento si gestisce dal dettaglio
+                // prenotazione (link Stripe / istruzioni bonifico riusabili).
+                return redirect()->route('b2b.bookings.show', $booking->uuid);
+            }
 
             // Creazione account opzionale dell'ospite: dopo il booking, così
             // un fallimento nella prenotazione non lascia account orfani.
