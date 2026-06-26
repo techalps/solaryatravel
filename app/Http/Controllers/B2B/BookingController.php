@@ -4,11 +4,18 @@ namespace App\Http\Controllers\B2B;
 
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Mail\BookingAwaitingTransfer;
+use App\Mail\BookingPaymentLink;
 use App\Models\Booking;
 use App\Models\Tour;
+use App\Services\PaymentService;
+use App\Support\AdminMailer;
 use App\Support\B2bContext;
+use App\Support\BookingLog;
+use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 /**
@@ -21,6 +28,8 @@ use Illuminate\View\View;
  */
 class BookingController extends Controller
 {
+    public function __construct(protected PaymentService $paymentService) {}
+
     /** Step 1: scelta del tour. */
     public function create(): View
     {
@@ -116,6 +125,115 @@ class BookingController extends Controller
         $booking->load(['tour', 'departure', 'payments', 'seatRecords.ageBracket', 'activeAddons.addon']);
 
         return view('b2b.bookings.show', ['booking' => $booking]);
+    }
+
+    /**
+     * Reinvia al CLIENTE FINALE gli estremi di pagamento: link Stripe se il
+     * pagamento è a carta, istruzioni bonifico se è un bonifico. L'agenzia non
+     * maneggia la carta: paga il cliente. Riusa il checkout già generato.
+     */
+    public function resendPayment(Booking $booking): RedirectResponse
+    {
+        $this->authorizeAgency($booking);
+
+        // Solo per prenotazioni ancora da saldare.
+        if (! in_array($booking->status, [BookingStatus::PENDING, BookingStatus::AWAITING_TRANSFER, BookingStatus::DEPOSIT_PAID], true)) {
+            return back()->with('warning', 'Per questa prenotazione non risultano pagamenti in sospeso.');
+        }
+
+        try {
+            if ($booking->payment_type === 'bank_transfer') {
+                $amountDue = $booking->payment_type === 'deposit' && $booking->deposit_amount
+                    ? (float) $booking->deposit_amount
+                    : (float) $booking->total_amount;
+                Mail::to($booking->customer_email)->send(new BookingAwaitingTransfer($booking, $amountDue));
+            } else {
+                $url = $booking->checkout_url;
+                if (! $url) {
+                    $url = $this->paymentService->createCheckoutSession($booking)['url'];
+                    $booking->update(['checkout_url' => $url]);
+                }
+                Mail::to($booking->customer_email)->send(new BookingPaymentLink($booking, $url));
+            }
+
+            $booking->update(['payment_link_sent_at' => now()]);
+            BookingLog::info('b2b_payment_resend', 'Estremi di pagamento reinviati al cliente (portale agenzie)', $booking, [
+                'agency_id' => $booking->b2b_user_id,
+                'to' => $booking->customer_email,
+            ]);
+
+            return back()->with('success', 'Estremi di pagamento reinviati a '.$booking->customer_email.'.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Invio non riuscito. Riprova tra poco.');
+        }
+    }
+
+    /**
+     * Richiesta di annullamento dall'agenzia: NON annulla la prenotazione. Traccia
+     * la richiesta in metadata e notifica l'admin, che confermerà/rifiuterà
+     * applicando l'eventuale penale (Fase 10). Idempotente.
+     */
+    public function requestCancellation(Request $request, Booking $booking): RedirectResponse
+    {
+        $this->authorizeAgency($booking);
+
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return $this->storeRequest($booking, 'cancellation', $data['reason'] ?? null);
+    }
+
+    /** Richiesta di modifica dall'agenzia: come sopra, va approvata da un admin. */
+    public function requestModification(Request $request, Booking $booking): RedirectResponse
+    {
+        $this->authorizeAgency($booking);
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        return $this->storeRequest($booking, 'modification', $data['reason']);
+    }
+
+    /**
+     * Registra una richiesta (annullamento/modifica) in metadata e notifica
+     * l'admin. La richiesta resta "pending" finché un admin non la lavora.
+     */
+    private function storeRequest(Booking $booking, string $type, ?string $reason): RedirectResponse
+    {
+        $existing = $booking->metadata['b2b_request'] ?? null;
+        if ($existing && ($existing['status'] ?? null) === 'pending') {
+            return back()->with('warning', 'C\'è già una richiesta in attesa di approvazione per questa prenotazione.');
+        }
+
+        $agency = B2bContext::actingAgency();
+        $booking->update([
+            'metadata' => array_merge($booking->metadata ?? [], [
+                'b2b_request' => [
+                    'type' => $type,           // cancellation | modification
+                    'status' => 'pending',     // pending | approved | rejected
+                    'reason' => $reason,
+                    'agency_id' => $agency?->getKey(),
+                    'requested_by_user_id' => auth()->id(),
+                    'requested_at' => now()->toIso8601String(),
+                ],
+            ]),
+        ]);
+
+        BookingLog::info('b2b_request', 'Richiesta '.$type.' dall\'agenzia (in attesa di approvazione)', $booking, [
+            'agency_id' => $agency?->getKey(),
+            'reason' => $reason,
+        ]);
+
+        try {
+            AdminMailer::send(new \App\Mail\AdminB2bRequest($booking, $type, $reason, $agency));
+        } catch (\Throwable $e) {
+            // La notifica è best-effort: la richiesta resta tracciata in metadata.
+        }
+
+        $label = $type === 'cancellation' ? 'annullamento' : 'modifica';
+        return back()->with('success', "Richiesta di {$label} inviata. Sarà valutata da Solarya, che ti ricontatterà.");
     }
 
     /** Verifica che la prenotazione appartenga all'agenzia effettiva della sessione. */

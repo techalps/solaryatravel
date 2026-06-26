@@ -44,6 +44,10 @@ Route::middleware('b2b')->group(function () {
     // Le mie prenotazioni: lista + dettaglio (isolamento per agenzia).
     Route::get('/prenotazioni', [BookingController::class, 'index'])->name('b2b.bookings.index');
     Route::get('/prenotazioni/{booking:uuid}', [BookingController::class, 'show'])->name('b2b.bookings.show');
+    // Azioni sul dettaglio: reinvio estremi pagamento al cliente, richieste ad admin.
+    Route::post('/prenotazioni/{booking:uuid}/reinvia-pagamento', [BookingController::class, 'resendPayment'])->name('b2b.bookings.resend-payment');
+    Route::post('/prenotazioni/{booking:uuid}/richiedi-annullamento', [BookingController::class, 'requestCancellation'])->name('b2b.bookings.request-cancellation');
+    Route::post('/prenotazioni/{booking:uuid}/richiedi-modifica', [BookingController::class, 'requestModification'])->name('b2b.bookings.request-modification');
 
     // Link & QR referral — Fase 7.
     Route::get('/referral', function () {
