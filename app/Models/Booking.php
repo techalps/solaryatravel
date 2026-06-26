@@ -22,6 +22,13 @@ class Booking extends Model
         'uuid',
         'booking_number',
         'user_id',
+        'b2b_user_id',
+        'attribution_source',
+        'commission_rate_snapshot',
+        'commission_amount',
+        'commission_status',
+        'commission_paid',
+        'commission_paid_at',
         'tour_id',
         'tour_departure_id',
         'booking_date',
@@ -94,6 +101,10 @@ class Booking extends Model
         'reminder_24h_sent_at' => 'datetime',
         'balance_reminder_sent_at' => 'datetime',
         'bank_transfer_reminder_sent_at' => 'datetime',
+        'commission_rate_snapshot' => 'decimal:2',
+        'commission_amount' => 'decimal:2',
+        'commission_paid' => 'boolean',
+        'commission_paid_at' => 'datetime',
     ];
 
     public function uniqueIds(): array
@@ -110,6 +121,12 @@ class Booking extends Model
     public function tour(): BelongsTo
     {
         return $this->belongsTo(Tour::class);
+    }
+
+    /** Agenzia (utente b2b) a cui è attribuita la prenotazione, se presente. */
+    public function b2bUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'b2b_user_id');
     }
 
     public function departure(): BelongsTo
@@ -228,6 +245,12 @@ class Booking extends Model
         return $query->whereDate('booking_date', $date);
     }
 
+    /** Prenotazioni attribuite al canale B2B (portal o referral). */
+    public function scopeB2b($query)
+    {
+        return $query->whereNotNull('b2b_user_id');
+    }
+
     public function scopeUpcoming($query)
     {
         return $query->where('booking_date', '>=', now()->toDateString())
@@ -235,6 +258,12 @@ class Booking extends Model
     }
 
     // Helpers
+    /** Prenotazione attribuita a un'agenzia (canale B2B)? */
+    public function isB2b(): bool
+    {
+        return $this->b2b_user_id !== null;
+    }
+
     public function isPending(): bool
     {
         return $this->status === BookingStatus::PENDING;

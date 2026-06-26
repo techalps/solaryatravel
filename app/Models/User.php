@@ -27,6 +27,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'tax_code',
         'locale',
         'date_of_birth',
+        'commission_rate',
+        'agency_name',
+        'referral_token',
     ];
 
     /**
@@ -50,6 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
+            'commission_rate' => 'decimal:2',
         ];
     }
 
@@ -109,11 +113,45 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the user's bookings.
+     * Agenzia rivenditrice (canale B2B). Accede SOLO all'area b2b, non al sito
+     * cliente né all'admin, e non paga (Solarya incassa, riconosce una provvigione).
+     */
+    public function isB2b(): bool
+    {
+        return $this->role === 'b2b';
+    }
+
+    /**
+     * Get the user's bookings (come cliente intestatario).
      */
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    /**
+     * Prenotazioni attribuite a questa agenzia (portal o referral).
+     */
+    public function b2bBookings()
+    {
+        return $this->hasMany(Booking::class, 'b2b_user_id');
+    }
+
+    /**
+     * Genera (se mancante) e restituisce il token di referral per i link/QR.
+     * Token opaco e univoco: usato in ?ref=... per attribuire la prenotazione.
+     */
+    public function ensureReferralToken(): string
+    {
+        if (empty($this->referral_token)) {
+            do {
+                $token = \Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(16));
+            } while (static::where('referral_token', $token)->exists());
+
+            $this->forceFill(['referral_token' => $token])->save();
+        }
+
+        return $this->referral_token;
     }
 
     /**

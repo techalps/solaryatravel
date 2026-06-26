@@ -8,6 +8,7 @@ enum UserRole: string
     case ADMIN = 'admin';
     case SUPER_ADMIN = 'super_admin';
     case SYSTEM_ADMIN = 'system_admin';
+    case B2B = 'b2b';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum UserRole: string
             self::ADMIN => 'Amministratore',
             self::SUPER_ADMIN => 'Super Amministratore',
             self::SYSTEM_ADMIN => 'System Admin (tecnico)',
+            self::B2B => 'Agenzia (B2B)',
         };
     }
 
