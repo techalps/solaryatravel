@@ -7,6 +7,7 @@
         'system_admin' => ['icon' => 'bi-cpu-fill',          'class' => 'bg-dark-subtle text-dark border-dark'],
         'super_admin' => ['icon' => 'bi-shield-fill-check', 'class' => 'bg-warning-subtle text-warning border-warning'],
         'admin'       => ['icon' => 'bi-shield-fill',       'class' => 'bg-info-subtle text-info border-info'],
+        'b2b'         => ['icon' => 'bi-briefcase-fill',    'class' => 'bg-primary-subtle text-primary border-primary'],
         'customer'    => ['icon' => 'bi-person-fill',       'class' => 'bg-light text-secondary border'],
     ];
     $countByRole = $users->getCollection()->groupBy('role')->map->count();

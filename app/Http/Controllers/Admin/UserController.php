@@ -23,6 +23,10 @@ class UserController extends Controller
             'admin'       => 'Amministratore',
             'super_admin' => 'Super Admin',
         ];
+        // Le agenzie B2B le crea/gestisce chi ha poteri gestionali completi.
+        if (auth()->user()->hasSuperAdminPowers()) {
+            $roles['b2b'] = 'Agenzia (B2B)';
+        }
         if (auth()->user()->isSystemAdmin()) {
             $roles['system_admin'] = 'System Admin (tecnico)';
         }
@@ -67,23 +71,30 @@ class UserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'email'         => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'      => ['required', 'string', 'min:8', 'confirmed'],
-            'role'          => ['required', Rule::in(array_keys($this->availableRoles()))],
-            'phone'         => ['nullable', 'string', 'max:30'],
-            'tax_code'      => ['nullable', 'string', 'min:11', 'max:16'],
-            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'name'             => ['required', 'string', 'max:255'],
+            'email'            => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'         => ['required', 'string', 'min:8', 'confirmed'],
+            'role'             => ['required', Rule::in(array_keys($this->availableRoles()))],
+            'phone'            => ['nullable', 'string', 'max:30'],
+            'tax_code'         => ['nullable', 'string', 'min:11', 'max:16'],
+            'date_of_birth'    => ['nullable', 'date', 'before:today'],
+            // Campi agenzia: obbligatori solo per il ruolo b2b.
+            'agency_name'      => ['required_if:role,b2b', 'nullable', 'string', 'max:255'],
+            'commission_rate'  => ['required_if:role,b2b', 'nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
+        $isB2b = $validated['role'] === 'b2b';
+
         User::create([
-            'name'          => $validated['name'],
-            'email'         => $validated['email'],
-            'password'      => Hash::make($validated['password']),
-            'role'          => $validated['role'],
-            'phone'         => $validated['phone'] ?? null,
-            'tax_code'      => !empty($validated['tax_code']) ? strtoupper(trim($validated['tax_code'])) : null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'name'              => $validated['name'],
+            'email'             => $validated['email'],
+            'password'          => Hash::make($validated['password']),
+            'role'              => $validated['role'],
+            'phone'             => $validated['phone'] ?? null,
+            'tax_code'          => !empty($validated['tax_code']) ? strtoupper(trim($validated['tax_code'])) : null,
+            'date_of_birth'     => $validated['date_of_birth'] ?? null,
+            'agency_name'       => $isB2b ? $validated['agency_name'] : null,
+            'commission_rate'   => $isB2b ? $validated['commission_rate'] : null,
             'email_verified_at' => now(),
         ]);
 
@@ -107,13 +118,15 @@ class UserController extends Controller
         abort_if($user->role === 'system_admin' && ! auth()->user()->isSystemAdmin(), 403);
 
         $validated = $request->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'email'         => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password'      => ['nullable', 'string', 'min:8', 'confirmed'],
-            'role'          => ['required', Rule::in(array_keys($this->availableRoles()))],
-            'phone'         => ['nullable', 'string', 'max:30'],
-            'tax_code'      => ['nullable', 'string', 'min:11', 'max:16'],
-            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'name'             => ['required', 'string', 'max:255'],
+            'email'            => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password'         => ['nullable', 'string', 'min:8', 'confirmed'],
+            'role'             => ['required', Rule::in(array_keys($this->availableRoles()))],
+            'phone'            => ['nullable', 'string', 'max:30'],
+            'tax_code'         => ['nullable', 'string', 'min:11', 'max:16'],
+            'date_of_birth'    => ['nullable', 'date', 'before:today'],
+            'agency_name'      => ['required_if:role,b2b', 'nullable', 'string', 'max:255'],
+            'commission_rate'  => ['required_if:role,b2b', 'nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         // Prevent demoting the only super_admin
@@ -131,13 +144,17 @@ class UserController extends Controller
             }
         }
 
+        $isB2b = $validated['role'] === 'b2b';
         $data = [
-            'name'          => $validated['name'],
-            'email'         => $validated['email'],
-            'role'          => $validated['role'],
-            'phone'         => $validated['phone'] ?? null,
-            'tax_code'      => !empty($validated['tax_code']) ? strtoupper(trim($validated['tax_code'])) : null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'name'            => $validated['name'],
+            'email'           => $validated['email'],
+            'role'            => $validated['role'],
+            'phone'           => $validated['phone'] ?? null,
+            'tax_code'        => !empty($validated['tax_code']) ? strtoupper(trim($validated['tax_code'])) : null,
+            'date_of_birth'   => $validated['date_of_birth'] ?? null,
+            // Campi agenzia valorizzati solo per b2b; azzerati se cambia ruolo.
+            'agency_name'     => $isB2b ? $validated['agency_name'] : null,
+            'commission_rate' => $isB2b ? $validated['commission_rate'] : null,
         ];
 
         if (!empty($validated['password'])) {

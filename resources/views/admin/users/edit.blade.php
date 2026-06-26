@@ -7,6 +7,7 @@
         'system_admin' => ['icon' => 'bi-cpu-fill', 'class' => 'bg-dark-subtle text-dark border-dark', 'desc' => 'Tecnico: poteri super admin + log, deploy e migrazioni', 'color' => 'dark'],
         'super_admin' => ['icon' => 'bi-shield-fill-check', 'class' => 'bg-warning-subtle text-warning border-warning', 'desc' => 'Accesso completo a tutte le funzionalità', 'color' => 'warning'],
         'admin'       => ['icon' => 'bi-shield-fill',       'class' => 'bg-info-subtle text-info border-info',         'desc' => 'Gestisce prenotazioni e contenuti', 'color' => 'info'],
+        'b2b'         => ['icon' => 'bi-briefcase-fill',    'class' => 'bg-primary-subtle text-primary border-primary', 'desc' => 'Agenzia rivenditrice: prenota dal portale, riceve una provvigione', 'color' => 'primary'],
         'customer'    => ['icon' => 'bi-person-fill',       'class' => 'bg-light text-secondary border',               'desc' => 'Cliente standard della piattaforma', 'color' => 'secondary'],
     ];
     $rc = $roleConfig[$user->role] ?? $roleConfig['customer'];
@@ -187,6 +188,33 @@
                         </div>
                     </div>
 
+                    {{-- Dati agenzia: visibili solo per il ruolo b2b --}}
+                    <div class="dash-card mb-3" id="b2bFields" style="{{ old('role', $user->role) === 'b2b' ? '' : 'display:none' }}">
+                        <div class="dash-card-header">
+                            <h3><i class="bi bi-briefcase me-2 text-primary"></i>Dati agenzia</h3>
+                        </div>
+                        <div class="dash-card-body">
+                            <div class="mb-3">
+                                <label for="agency_name" class="form-label fw-semibold">Ragione sociale <span class="text-danger">*</span></label>
+                                <input type="text" id="agency_name" name="agency_name" value="{{ old('agency_name', $user->agency_name) }}"
+                                       class="form-control @error('agency_name') is-invalid @enderror" placeholder="es. Valerio Agency">
+                                @error('agency_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="mb-1">
+                                <label for="commission_rate" class="form-label fw-semibold">Provvigione % <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" id="commission_rate" name="commission_rate"
+                                           value="{{ old('commission_rate', $user->commission_rate !== null ? rtrim(rtrim(number_format((float) $user->commission_rate, 2, '.', ''), '0'), '.') : '') }}"
+                                           step="0.01" min="0" max="100"
+                                           class="form-control @error('commission_rate') is-invalid @enderror" placeholder="es. 20">
+                                    <span class="input-group-text">%</span>
+                                    @error('commission_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                </div>
+                                <div class="form-text"><i class="bi bi-info-circle me-1"></i>% sul totale (IVA inclusa). Modificarla NON cambia le commissioni già maturate (snapshot sulla prenotazione).</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="dash-card mb-3">
                         <div class="dash-card-header">
                             <h3><i class="bi bi-info-circle me-2 text-primary"></i>Informazioni</h3>
@@ -278,5 +306,16 @@
             icon.classList.replace('bi-eye-slash', 'bi-eye');
         }
     }
+
+    // Mostra i campi agenzia solo quando si seleziona il ruolo b2b.
+    (function () {
+        const box = document.getElementById('b2bFields');
+        if (!box) return;
+        document.querySelectorAll('input[name="role"]').forEach(r => {
+            r.addEventListener('change', () => {
+                box.style.display = (document.querySelector('input[name="role"]:checked')?.value === 'b2b') ? '' : 'none';
+            });
+        });
+    })();
 </script>
 @endpush

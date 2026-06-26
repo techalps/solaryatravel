@@ -144,6 +144,7 @@
                                         'system_admin' => ['icon' => 'bi-cpu-fill', 'desc' => 'Tecnico: poteri super admin + log, deploy e migrazioni', 'color' => 'dark'],
                                         'super_admin' => ['icon' => 'bi-shield-fill-check', 'desc' => 'Accesso completo a tutte le funzionalità', 'color' => 'warning'],
                                         'admin'       => ['icon' => 'bi-shield-fill',       'desc' => 'Gestisce prenotazioni e contenuti', 'color' => 'info'],
+                                        'b2b'         => ['icon' => 'bi-briefcase-fill',    'desc' => 'Agenzia rivenditrice: prenota dal portale, riceve una provvigione', 'color' => 'primary'],
                                         'customer'    => ['icon' => 'bi-person-fill',       'desc' => 'Cliente standard della piattaforma', 'color' => 'secondary'],
                                     ];
                                 @endphp
@@ -168,6 +169,32 @@
                                 @endforeach
                             </div>
                             @error('role') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+
+                    {{-- Dati agenzia: visibili solo per il ruolo b2b --}}
+                    <div class="dash-card mb-3" id="b2bFields" style="{{ old('role') === 'b2b' ? '' : 'display:none' }}">
+                        <div class="dash-card-header">
+                            <h3><i class="bi bi-briefcase me-2 text-primary"></i>Dati agenzia</h3>
+                        </div>
+                        <div class="dash-card-body">
+                            <div class="mb-3">
+                                <label for="agency_name" class="form-label fw-semibold">Ragione sociale <span class="text-danger">*</span></label>
+                                <input type="text" id="agency_name" name="agency_name" value="{{ old('agency_name') }}"
+                                       class="form-control @error('agency_name') is-invalid @enderror" placeholder="es. Valerio Agency">
+                                @error('agency_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="mb-1">
+                                <label for="commission_rate" class="form-label fw-semibold">Provvigione % <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" id="commission_rate" name="commission_rate" value="{{ old('commission_rate') }}"
+                                           step="0.01" min="0" max="100"
+                                           class="form-control @error('commission_rate') is-invalid @enderror" placeholder="es. 20">
+                                    <span class="input-group-text">%</span>
+                                    @error('commission_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                </div>
+                                <div class="form-text"><i class="bi bi-info-circle me-1"></i>% sul totale (IVA inclusa) di ogni prenotazione dell'agenzia.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -200,5 +227,16 @@
             icon.classList.replace('bi-eye-slash', 'bi-eye');
         }
     }
+
+    // Mostra i campi agenzia solo quando si seleziona il ruolo b2b.
+    (function () {
+        const box = document.getElementById('b2bFields');
+        if (!box) return;
+        document.querySelectorAll('input[name="role"]').forEach(r => {
+            r.addEventListener('change', () => {
+                box.style.display = (document.querySelector('input[name="role"]:checked')?.value === 'b2b') ? '' : 'none';
+            });
+        });
+    })();
 </script>
 @endpush
