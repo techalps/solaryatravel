@@ -157,6 +157,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     // Export Excel completo: un file .xlsx con un foglio per ogni report.
     Route::get('/reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
 
+    // Commissioni agenzie B2B (rendicontazione + liquidazione)
+    Route::get('/commissioni', [\App\Http\Controllers\Admin\CommissionController::class, 'index'])->name('commissions.index');
+    Route::get('/commissioni/agenzia/{agency}', [\App\Http\Controllers\Admin\CommissionController::class, 'agency'])->name('commissions.agency');
+    Route::post('/commissioni/{booking}/segna-pagata', [\App\Http\Controllers\Admin\CommissionController::class, 'markPaid'])->name('commissions.mark-paid');
+    Route::post('/commissioni/{booking}/annulla-pagata', [\App\Http\Controllers\Admin\CommissionController::class, 'unmarkPaid'])->name('commissions.unmark-paid');
+    // Risoluzione richieste agenzia (annullamento/modifica)
+    Route::post('/bookings/{booking}/richiesta-b2b', [AdminBookingController::class, 'resolveB2bRequest'])->name('bookings.resolve-b2b-request');
+
     // Payments
     Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');

@@ -99,6 +99,80 @@
         <div class="alert alert-danger rounded-3">{{ session('error') }}</div>
     @endif
 
+    {{-- Canale B2B: agenzia attribuita, commissione e richieste --}}
+    @if ($booking->b2b_user_id)
+        @php
+            $b2bReq = $booking->metadata['b2b_request'] ?? null;
+            $b2bReqPending = $b2bReq && ($b2bReq['status'] ?? null) === 'pending';
+            $attrLabel = ['b2b_portal' => 'Portale agenzia', 'b2b_referral' => 'Link referral'][$booking->attribution_source] ?? $booking->attribution_source;
+        @endphp
+        <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-primary">
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="min-w-0">
+                        <div class="fw-bold mb-1">
+                            <span class="badge rounded-pill bg-primary-subtle text-primary me-1"><i class="bi bi-briefcase-fill me-1"></i>B2B</span>
+                            {{ $booking->b2bUser?->agency_name ?: $booking->b2bUser?->name ?? 'Agenzia' }}
+                            <span class="text-muted small fw-normal">· {{ $attrLabel }}</span>
+                        </div>
+                        <div class="small text-muted">
+                            Commissione:
+                            @if($booking->commission_status === 'reversed')
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis">Stornata</span>
+                            @else
+                                <strong>€ {{ number_format((float) $booking->commission_amount, 2, ',', '.') }}</strong>
+                                ({{ rtrim(rtrim(number_format((float) $booking->commission_rate_snapshot, 2), '0'), '.') }}%)
+                                @if($booking->commission_paid)
+                                    <span class="badge bg-success-subtle text-success-emphasis ms-1"><i class="bi bi-check-circle-fill me-1"></i>Pagata</span>
+                                @else
+                                    <span class="badge bg-warning-subtle text-warning-emphasis ms-1">Da liquidare</span>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                    @if($booking->commission_status !== 'reversed' && ! $booking->commission_paid)
+                        <form method="POST" action="{{ route('admin.commissions.mark-paid', $booking) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-success rounded-pill px-3 fw-semibold btn-sm">
+                                <i class="bi bi-check-lg me-1"></i>Segna commissione pagata
+                            </button>
+                        </form>
+                    @endif
+                </div>
+
+                {{-- Richiesta dell'agenzia in attesa di valutazione --}}
+                @if($b2bReqPending)
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <div class="fw-semibold mb-1">
+                            <i class="bi bi-hourglass-split me-1"></i>
+                            L'agenzia ha richiesto: {{ $b2bReq['type'] === 'cancellation' ? 'ANNULLAMENTO' : 'MODIFICA' }}
+                        </div>
+                        @if(!empty($b2bReq['reason']))
+                            <div class="small mb-2">Motivo: {{ $b2bReq['reason'] }}</div>
+                        @endif
+                        <div class="d-flex flex-wrap gap-2">
+                            @if($b2bReq['type'] === 'cancellation')
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelBookingModal">
+                                    <i class="bi bi-x-circle me-1"></i>Procedi con l'annullamento
+                                </button>
+                            @endif
+                            <form method="POST" action="{{ route('admin.bookings.resolve-b2b-request', $booking) }}" class="d-inline">
+                                @csrf
+                                <input type="hidden" name="decision" value="approved">
+                                <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-check2 me-1"></i>Segna gestita</button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.bookings.resolve-b2b-request', $booking) }}" class="d-inline">
+                                @csrf
+                                <input type="hidden" name="decision" value="rejected">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x me-1"></i>Rifiuta richiesta</button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- Link di pagamento Stripe: presente quando la prenotazione attende il pagamento --}}
     @if ($booking->checkout_url && in_array($statusValue, ['pending', 'deposit_paid']))
         <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-primary">

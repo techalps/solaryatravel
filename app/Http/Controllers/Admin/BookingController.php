@@ -812,6 +812,7 @@ class BookingController extends Controller
             'addons.addon',
             'payments',
             'checkIns',
+            'b2bUser',
             'discountCode',
             'seatRecords.catamaran',
             'seatRecords.ageBracket',
@@ -1289,6 +1290,9 @@ class BookingController extends Controller
                 'refund_manual' => (bool) ($refund['manual'] ?? false),
             ]);
 
+            // Se c'era una richiesta di annullamento dell'agenzia, marcala accolta.
+            $this->markB2bRequestResolved($booking, 'approved');
+
             return back()->with('success', $msg);
         } catch (\Exception $e) {
             BookingLog::failure('booking_admin_cancel', 'Annullamento admin fallito', $booking, $e);
@@ -1436,5 +1440,52 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * Risolve una richiesta dell'agenzia (annullamento/modifica) senza eseguirla:
+     * la marca approvata o rifiutata. Usato per "Rifiuta" e per "Modifica gestita"
+     * (l'admin contatta l'agenzia e applica le modifiche a mano).
+     */
+    public function resolveB2bRequest(Request $request, Booking $booking): RedirectResponse
+    {
+        $data = $request->validate([
+            'decision' => 'required|in:approved,rejected',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        if (($booking->metadata['b2b_request']['status'] ?? null) !== 'pending') {
+            return back()->with('warning', 'Nessuna richiesta in attesa per questa prenotazione.');
+        }
+
+        $this->markB2bRequestResolved($booking, $data['decision'], $data['note'] ?? null);
+
+        return back()->with('success', 'Richiesta dell\'agenzia '.($data['decision'] === 'approved' ? 'approvata' : 'rifiutata').'.');
+    }
+
+    /**
+     * Aggiorna lo stato della richiesta b2b in metadata (pending → approved/rejected),
+     * tracciando chi e quando. No-op se non c'è una richiesta pending.
+     */
+    private function markB2bRequestResolved(Booking $booking, string $decision, ?string $note = null): void
+    {
+        $req = $booking->metadata['b2b_request'] ?? null;
+        if (! $req || ($req['status'] ?? null) !== 'pending') {
+            return;
+        }
+
+        $req['status'] = $decision;
+        $req['resolved_by_user_id'] = auth()->id();
+        $req['resolved_at'] = now()->toIso8601String();
+        if ($note !== null) {
+            $req['resolution_note'] = $note;
+        }
+
+        $booking->update(['metadata' => array_merge($booking->metadata ?? [], ['b2b_request' => $req])]);
+
+        BookingLog::info('b2b_request_resolved', 'Richiesta agenzia '.$decision, $booking, [
+            'agency_id' => $booking->b2b_user_id,
+            'decision' => $decision,
+        ]);
     }
 }

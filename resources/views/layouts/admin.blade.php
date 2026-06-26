@@ -116,6 +116,13 @@
                             <i class="bi bi-credit-card-fill me-2"></i>Pagamenti
                         </a>
                     </li>
+                    @if(auth()->user()->hasSuperAdminPowers())
+                        <li class="nav-item">
+                            <a href="{{ route('admin.commissions.index') }}" class="nav-link {{ request()->routeIs('admin.commissions.*') ? 'active' : '' }}">
+                                <i class="bi bi-percent me-2"></i>Commissioni Agenzie
+                            </a>
+                        </li>
+                    @endif
 
                     <li class="px-2 pt-3 pb-1"><div class="section-title text-uppercase fw-bold">Sistema</div></li>
 

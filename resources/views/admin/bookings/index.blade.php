@@ -175,6 +175,11 @@
                                 <a href="{{ route('admin.bookings.show', $booking) }}" class="font-monospace fw-semibold text-primary text-decoration-none">
                                     #{{ $booking->booking_number }}
                                 </a>
+                                @if($booking->b2b_user_id)
+                                    <span class="badge rounded-pill bg-primary-subtle text-primary ms-1" title="Prenotazione agenzia">
+                                        <i class="bi bi-briefcase-fill me-1"></i>B2B
+                                    </span>
+                                @endif
                                 <div class="small text-muted mt-1">
                                     <i class="bi bi-clock me-1"></i>{{ $booking->created_at->timezone($TZ)->format('d/m/Y H:i') }}
                                 </div>
