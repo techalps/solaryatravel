@@ -41,6 +41,11 @@ class GuideController extends Controller
             'icon' => 'bi-credit-card',
             'desc' => 'Stati della prenotazione, acconto, bonifico, link Stripe.',
         ],
+        'agenzie-b2b' => [
+            'title' => 'Agenzie B2B e commissioni',
+            'icon' => 'bi-briefcase',
+            'desc' => 'Portale agenzie, provvigioni, referral e liquidazione mensile.',
+        ],
         'report' => [
             'title' => 'Report e statistiche',
             'icon' => 'bi-bar-chart',
