@@ -89,12 +89,12 @@
     {{-- Filters --}}
     <div class="dash-filter-bar">
         <form action="{{ route('admin.bookings.index') }}" method="GET" class="row g-3 align-items-end">
-            <div class="col-md-6 col-xl-4">
+            <div class="col-md-6 col-xl-2">
                 <label for="search" class="form-label">Cerca</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" name="search" id="search" value="{{ request('search') }}"
-                           placeholder="Nome, email, numero..." class="form-control">
+                           placeholder="Nome, email..." class="form-control">
                 </div>
             </div>
             <div class="col-md-6 col-xl-2">
