@@ -36,13 +36,21 @@ class BookingController extends Controller
 
     public function index(Request $request): View
     {
-        $query = Booking::with(['tour', 'departure', 'payments']);
+        $query = Booking::with(['tour', 'departure', 'payments', 'b2bUser']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
         if ($request->filled('tour')) {
             $query->where('tour_id', $request->tour);
+        }
+        // Filtro per agenzia (canale B2B). 'none' = solo vendite dirette (senza agenzia).
+        if ($request->filled('agency')) {
+            if ($request->agency === 'none') {
+                $query->whereNull('b2b_user_id');
+            } else {
+                $query->where('b2b_user_id', $request->agency);
+            }
         }
         if ($request->filled('date_from')) {
             $query->whereDate('booking_date', '>=', $request->date_from);
@@ -105,8 +113,13 @@ class BookingController extends Controller
         $statuses = BookingStatus::cases();
         $stats = Booking::selectRaw('status, COUNT(*) as count')
             ->groupBy('status')->pluck('count', 'status')->toArray();
+        // Agenzie B2B per il filtro (solo quelle che hanno almeno una prenotazione).
+        $agencies = \App\Models\User::where('role', 'b2b')
+            ->whereIn('id', Booking::whereNotNull('b2b_user_id')->distinct()->pluck('b2b_user_id'))
+            ->orderBy('agency_name')
+            ->get(['id', 'agency_name', 'name']);
 
-        return view('admin.bookings.index', compact('bookings', 'tours', 'statuses', 'stats', 'sort', 'dir', 'blockByBooking'));
+        return view('admin.bookings.index', compact('bookings', 'tours', 'statuses', 'stats', 'sort', 'dir', 'blockByBooking', 'agencies'));
     }
 
     /**

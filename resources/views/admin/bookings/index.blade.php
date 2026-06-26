@@ -15,7 +15,7 @@
             'no_show'    => ['label' => 'No show',    'icon' => 'bi-eye-slash',      'color' => 'secondary'],
         ];
         $currentStatus = request('status');
-        $hasFilters = request()->hasAny(['search', 'status', 'tour', 'date_from', 'date_to']);
+        $hasFilters = request()->hasAny(['search', 'status', 'tour', 'agency', 'date_from', 'date_to']);
 
         // Card di riepilogo: includi "Acconto versato" solo se l'acconto è attivo.
         $miniStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
@@ -117,6 +117,20 @@
                     @endforeach
                 </select>
             </div>
+            @if($agencies->isNotEmpty())
+                <div class="col-md-6 col-xl-2">
+                    <label for="agency" class="form-label">Agenzia</label>
+                    <select name="agency" id="agency" class="form-select">
+                        <option value="">Tutte</option>
+                        <option value="none" {{ request('agency') === 'none' ? 'selected' : '' }}>— Solo vendite dirette</option>
+                        @foreach($agencies as $ag)
+                            <option value="{{ $ag->id }}" {{ (string) request('agency') === (string) $ag->id ? 'selected' : '' }}>
+                                {{ $ag->agency_name ?: $ag->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
             <div class="col-md-6 col-xl-2">
                 <label for="date_from" class="form-label">Da</label>
                 <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}" class="form-control">
@@ -179,6 +193,9 @@
                                     <span class="badge rounded-pill bg-primary-subtle text-primary ms-1" title="Prenotazione agenzia">
                                         <i class="bi bi-briefcase-fill me-1"></i>B2B
                                     </span>
+                                    <div class="small text-primary mt-1 text-truncate" style="max-width:200px" title="{{ $booking->b2bUser?->agency_name ?: $booking->b2bUser?->name }}">
+                                        <i class="bi bi-building me-1"></i>{{ $booking->b2bUser?->agency_name ?: $booking->b2bUser?->name ?? '—' }}
+                                    </div>
                                 @endif
                                 <div class="small text-muted mt-1">
                                     <i class="bi bi-clock me-1"></i>{{ $booking->created_at->timezone($TZ)->format('d/m/Y H:i') }}
