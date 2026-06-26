@@ -161,6 +161,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/commissioni', [\App\Http\Controllers\Admin\CommissionController::class, 'index'])->name('commissions.index');
     Route::get('/commissioni/agenzia/{agency}', [\App\Http\Controllers\Admin\CommissionController::class, 'agency'])->name('commissions.agency');
     Route::post('/commissioni/{booking}/segna-pagata', [\App\Http\Controllers\Admin\CommissionController::class, 'markPaid'])->name('commissions.mark-paid');
+    Route::post('/commissioni/segna-pagate', [\App\Http\Controllers\Admin\CommissionController::class, 'markPaidBulk'])->name('commissions.mark-paid-bulk');
     Route::post('/commissioni/{booking}/annulla-pagata', [\App\Http\Controllers\Admin\CommissionController::class, 'unmarkPaid'])->name('commissions.unmark-paid');
     // Risoluzione richieste agenzia (annullamento/modifica)
     Route::post('/bookings/{booking}/richiesta-b2b', [AdminBookingController::class, 'resolveB2bRequest'])->name('bookings.resolve-b2b-request');

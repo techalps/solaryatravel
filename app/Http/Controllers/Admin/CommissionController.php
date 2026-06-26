@@ -137,6 +137,45 @@ class CommissionController extends Controller
         return back()->with('success', 'Commissione segnata come pagata.');
     }
 
+    /**
+     * Marca pagate insieme più prenotazioni selezionate (liquidazione in blocco).
+     * Salta quelle stornate o già pagate; conta solo quelle effettivamente marcate.
+     */
+    public function markPaidBulk(Request $request): RedirectResponse
+    {
+        $this->guard();
+
+        $data = $request->validate([
+            'booking_ids'   => ['required', 'array', 'min:1'],
+            'booking_ids.*' => ['integer'],
+        ]);
+
+        $bookings = Booking::b2b()
+            ->whereIn('id', $data['booking_ids'])
+            ->where('commission_status', '!=', 'reversed')
+            ->where('commission_paid', false)
+            ->get();
+
+        $count = 0;
+        $total = 0.0;
+        foreach ($bookings as $booking) {
+            $booking->update(['commission_paid' => true, 'commission_paid_at' => now()]);
+            $total += (float) $booking->commission_amount;
+            $count++;
+            BookingLog::info('b2b_commission_paid', 'Commissione segnata come pagata (in blocco)', $booking, [
+                'agency_id' => $booking->b2b_user_id,
+                'amount' => $booking->commission_amount,
+            ]);
+        }
+
+        if ($count === 0) {
+            return back()->with('warning', 'Nessuna commissione da liquidare tra quelle selezionate.');
+        }
+
+        return back()->with('success', $count.' '.($count === 1 ? 'commissione segnata' : 'commissioni segnate')
+            .' come pagate (totale € '.number_format($total, 2, ',', '.').').');
+    }
+
     /** Annulla la marcatura "pagata" (in caso di errore). */
     public function unmarkPaid(Request $request, Booking $booking): RedirectResponse
     {
