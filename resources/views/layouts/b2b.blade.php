@@ -16,9 +16,11 @@
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
     @livewireStyles
 
-    {{-- Flatpickr: necessario per il calendario del form di prenotazione,
-         identico al frontend cliente (vedi layouts/public). --}}
+    {{-- Flatpickr + Font Awesome: il form di prenotazione (componente condiviso
+         col frontend) usa il datepicker e le icone fa-*. Li carichiamo qui senza
+         importare l'intero tema pubblico, per non confliggere con Bootstrap. --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/template/css/fontawesome-all.min.css') }}">
 
     <style>
         .admin-sidebar { width: 280px; flex-shrink: 0; min-height: 100vh; }
@@ -32,6 +34,65 @@
             .admin-sidebar { position: fixed; left: -280px; top: 0; bottom: 0; z-index: 1045; transition: left .3s ease; }
             .admin-sidebar.show { left: 0; }
         }
+
+        /* ===== Form di prenotazione (componente condiviso col frontend) =====
+           Diamo al widget l'aspetto del portale: variabili tema mappate al
+           colore primario Bootstrap, controlli con look coerente all'admin. */
+        .booking-widget {
+            --tg-theme-primary: var(--bs-primary, #0d6efd);
+            --tg-theme-secondary: var(--bs-primary, #0d6efd);
+        }
+        .booking-widget .tg-tour-about-title,
+        .booking-widget h4 { font-size: 1.15rem; font-weight: 700; color: #1e293b; }
+        .booking-widget .tg-tour-about-sidebar-title,
+        .booking-widget .time,
+        .booking-widget label { font-size: .8rem; font-weight: 600; color: #475569; }
+        /* Input testo/data del widget → stile form-control Bootstrap */
+        .booking-widget .input,
+        .booking-widget input[type="text"]:not(.form-check-input),
+        .booking-widget input[type="email"],
+        .booking-widget input[type="tel"],
+        .booking-widget input[type="number"],
+        .booking-widget textarea,
+        .booking-widget select {
+            width: 100%;
+            padding: .5rem .75rem;
+            font-size: .95rem;
+            line-height: 1.5;
+            color: #212529;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: .5rem;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .booking-widget .input:focus,
+        .booking-widget input:focus:not(.form-check-input),
+        .booking-widget textarea:focus,
+        .booking-widget select:focus {
+            border-color: var(--bs-primary, #0d6efd);
+            box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+            outline: 0;
+        }
+        .booking-widget .tg-tour-about-date { position: relative; }
+        .booking-widget .tg-tour-about-date .calender,
+        .booking-widget .tg-tour-about-date .angle {
+            position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none;
+        }
+        .booking-widget .tg-tour-about-date .calender { left: .75rem; }
+        .booking-widget .tg-tour-about-date .angle { right: .75rem; color: #94a3b8; }
+        .booking-widget .tg-tour-about-date .input { padding-left: 2.25rem; cursor: pointer; }
+        .booking-widget .tg-tour-about-border-doted { border-top: 1px dashed #e2e8f0; }
+        /* Pulsante principale del widget → btn-primary del portale */
+        .booking-widget .tg-btn,
+        .booking-widget button[type="submit"] {
+            display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+            width: 100%; padding: .65rem 1rem; font-weight: 600; color: #fff;
+            background: var(--bs-primary, #0d6efd); border: none; border-radius: .5rem;
+            transition: filter .15s ease;
+        }
+        .booking-widget .tg-btn:hover,
+        .booking-widget button[type="submit"]:hover { filter: brightness(.93); color: #fff; }
+        .booking-widget .price, .booking-widget .total { color: #1e293b; }
     </style>
 
     @stack('styles')
