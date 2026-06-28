@@ -5,6 +5,13 @@
 
     RewriteEngine On
 
+    # Forza HTTPS sul portale agenzie (il login usa cookie "secure": senza HTTPS
+    # non si autentica). Dietro il proxy OVH la connessione originale si rileva da
+    # X-Forwarded-Proto, non da %{HTTPS}. Esclude il challenge ACME di Let's Encrypt.
+    RewriteCond %{HTTP:X-Forwarded-Proto} =http [NC]
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
