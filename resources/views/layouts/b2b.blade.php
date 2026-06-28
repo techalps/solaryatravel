@@ -145,6 +145,12 @@
                             <i class="bi bi-qr-code me-2"></i>Link &amp; QR
                         </a>
                     </li>
+
+                    <li class="nav-item mt-2 pt-2 border-top border-secondary border-opacity-25">
+                        <a href="#" class="nav-link" onclick="event.preventDefault(); document.getElementById('b2bLogoutForm').submit();">
+                            <i class="bi bi-box-arrow-right me-2"></i>Esci
+                        </a>
+                    </li>
                 </ul>
             </nav>
 
@@ -160,14 +166,16 @@
                             <div class="text-white-50 small text-truncate">{{ auth()->user()->email }}</div>
                         </div>
                     </div>
-                    <form method="POST" action="{{ route('b2b.logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="btn btn-sm btn-link text-white-50 p-2" title="Esci" data-bs-toggle="tooltip">
-                            <i class="bi bi-box-arrow-right fs-5"></i>
-                        </button>
-                    </form>
+                    <button type="submit" form="b2bLogoutForm" class="btn btn-sm btn-link text-white-50 p-2" title="Esci" data-bs-toggle="tooltip">
+                        <i class="bi bi-box-arrow-right fs-5"></i>
+                    </button>
                 </div>
             </div>
+
+            {{-- Form di logout condiviso (usato dalla voce di menu "Esci" e dall'icona). --}}
+            <form method="POST" action="{{ route('b2b.logout') }}" id="b2bLogoutForm" class="d-none">
+                @csrf
+            </form>
         </aside>
 
         {{-- Main wrapper --}}
