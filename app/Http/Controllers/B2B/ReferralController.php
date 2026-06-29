@@ -31,6 +31,24 @@ class ReferralController extends Controller
         ]);
     }
 
+    /**
+     * Pagina "Widget": codice agenzia (token) + snippet <iframe> pronto da
+     * incollare sul sito dell'agenzia. Stesso meccanismo del link referral
+     * (attribuzione via ?ref=TOKEN), incorporato direttamente nel sito.
+     */
+    public function widget(): View
+    {
+        $agency = B2bContext::actingAgency();
+        $token = $agency->ensureReferralToken();
+
+        return view('b2b.widget', [
+            'agency' => $agency,
+            'token' => $token,
+            'widgetUrl' => rtrim(config('app.url'), '/').'/widget?ref='.$token,
+            'embedJsUrl' => rtrim(config('app.url'), '/').'/embed.js',
+        ]);
+    }
+
     /** PNG del QR code del link referral (per anteprima e download). */
     public function qr(QrCodeService $qr): Response
     {

@@ -145,6 +145,11 @@
                             <i class="bi bi-qr-code me-2"></i>Link &amp; QR
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('b2b.widget') }}" class="nav-link {{ request()->routeIs('b2b.widget') ? 'active' : '' }}">
+                            <i class="bi bi-code-square me-2"></i>Widget per il sito
+                        </a>
+                    </li>
 
                     <li class="nav-item mt-2 pt-2 border-top border-secondary border-opacity-25">
                         <a href="#" class="nav-link" onclick="event.preventDefault(); document.getElementById('b2bLogoutForm').submit();">

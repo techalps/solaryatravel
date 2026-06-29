@@ -50,6 +50,9 @@ Route::middleware('b2b')->group(function () {
     Route::post('/prenotazioni/{booking:uuid}/richiedi-annullamento', [BookingController::class, 'requestCancellation'])->name('b2b.bookings.request-cancellation');
     Route::post('/prenotazioni/{booking:uuid}/richiedi-modifica', [BookingController::class, 'requestModification'])->name('b2b.bookings.request-modification');
 
+    // Widget incorporabile (iframe) — codice agenzia + snippet.
+    Route::get('/widget', [ReferralController::class, 'widget'])->name('b2b.widget');
+
     // Link & QR referral (Flusso B).
     Route::get('/referral', [ReferralController::class, 'index'])->name('b2b.referral');
     Route::get('/referral/qr', [ReferralController::class, 'qr'])->name('b2b.referral.qr');
