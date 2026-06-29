@@ -41,11 +41,20 @@ class ReferralController extends Controller
         $agency = B2bContext::actingAgency();
         $token = $agency->ensureReferralToken();
 
+        // Base URL del SITO PUBBLICO (dove vive il widget), non del portale b2b.
+        // Forziamo https se la richiesta corrente è sicura: APP_URL può essere
+        // http in locale, ma un iframe http dentro una pagina https sarebbe
+        // bloccato dal browser come mixed-content.
+        $base = rtrim(config('app.url'), '/');
+        if (request()->isSecure() && str_starts_with($base, 'http://')) {
+            $base = 'https://'.substr($base, 7);
+        }
+
         return view('b2b.widget', [
             'agency' => $agency,
             'token' => $token,
-            'widgetUrl' => rtrim(config('app.url'), '/').'/widget?ref='.$token,
-            'embedJsUrl' => rtrim(config('app.url'), '/').'/embed.js',
+            'widgetUrl' => $base.'/widget?ref='.$token,
+            'embedJsUrl' => $base.'/embed.js',
         ]);
     }
 
