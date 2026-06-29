@@ -49,6 +49,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\HostGateMiddleware::class);
         // Cattura ?ref=TOKEN sul sito pubblico per l'attribuzione referral B2B.
         $middleware->appendToGroup('web', \App\Http\Middleware\CaptureReferralMiddleware::class);
+        // Rende incorporabili (iframe cross-origin) SOLO le route del widget:
+        // cookie SameSite=None; Secure + CSP frame-ancestors. Inerte altrove.
+        // Prepend: il suo "dopo" (riscrittura cookie/header) deve girare per
+        // ultimo, fuori dai cookie/session middleware.
+        $middleware->prependToGroup('web', \App\Http\Middleware\WidgetEmbeddableMiddleware::class);
         $middleware->validateCsrfTokens(except: [
             'webhooks/stripe',
         ]);
