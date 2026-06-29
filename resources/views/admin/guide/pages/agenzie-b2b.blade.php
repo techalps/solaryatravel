@@ -23,8 +23,24 @@
         come sul sito. Il cliente riceve via email gli estremi di pagamento (link carta o bonifico) e paga lui.</li>
     <li><strong>Con link / QR referral</strong> — l'agenzia condivide il proprio link (o il volantino
         con QR): il cliente prenota da solo sul sito e la vendita risulta comunque dell'agenzia.</li>
+    <li><strong>Con il widget sul proprio sito</strong> — l'agenzia incorpora il modulo di prenotazione
+        Solarya direttamente nelle proprie pagine: il cliente prenota e paga senza uscire dal sito
+        dell'agenzia, e la vendita risulta dell'agenzia.</li>
 </ul>
-<p>In entrambi i casi <strong>il prezzo è quello standard</strong>: l'agenzia non può modificarlo.</p>
+<p>In tutti i casi <strong>il prezzo è quello standard</strong>: l'agenzia non può modificarlo.</p>
+
+<h2>Il widget per il sito dell'agenzia</h2>
+<p>
+    Dal portale, in <strong>Widget per il sito</strong>, l'agenzia trova un piccolo codice da incollare
+    nel proprio sito. Da quel momento i suoi visitatori prenotano le crociere senza lasciare le sue pagine;
+    il pagamento (carta o bonifico) lo fa il cliente, Solarya incassa e l'agenzia matura la commissione,
+    esattamente come con il link referral.
+</p>
+<div class="guide-tip">
+    Il widget usa lo <strong>stesso codice agenzia</strong> del link/QR (il <em>referral_token</em>): è solo
+    un altro modo di proporre la prenotazione. Non serve fare nulla lato admin per attivarlo — l'agenzia è
+    autonoma. Facoltativamente l'agenzia può limitare i <strong>domini</strong> su cui il widget funziona.
+</div>
 
 <h2>Gli admin nel portale agenzie</h2>
 <p>
@@ -62,5 +78,5 @@
 <h2>Riconoscere le prenotazioni B2B</h2>
 <p>
     Nelle prenotazioni admin, quelle di un'agenzia hanno il badge <strong>B2B</strong> accanto al numero;
-    nel dettaglio trovi un riquadro con l'agenzia, il canale (portale o referral) e la commissione.
+    nel dettaglio trovi un riquadro con l'agenzia, il canale (portale, referral o widget) e la commissione.
 </p>

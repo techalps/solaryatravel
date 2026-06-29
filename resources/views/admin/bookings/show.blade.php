@@ -104,7 +104,7 @@
         @php
             $b2bReq = $booking->metadata['b2b_request'] ?? null;
             $b2bReqPending = $b2bReq && ($b2bReq['status'] ?? null) === 'pending';
-            $attrLabel = ['b2b_portal' => 'Portale agenzia', 'b2b_referral' => 'Link referral'][$booking->attribution_source] ?? $booking->attribution_source;
+            $attrLabel = ['b2b_portal' => 'Portale agenzia', 'b2b_referral' => 'Link referral', 'b2b_widget' => 'Widget sul sito'][$booking->attribution_source] ?? $booking->attribution_source;
         @endphp
         <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-primary">
             <div class="card-body p-3">
