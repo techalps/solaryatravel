@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\WidgetController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\PageController;
@@ -37,6 +38,10 @@ Route::get('/api/departures/{departure}/availability', [TourController::class, '
 
 // Redirect compatibilità: vecchio /catamarani -> /tour
 Route::redirect('/catamarani', '/tour');
+
+// Widget di prenotazione incorporabile per le agenzie (iframe su siti terzi).
+// Riusa il flusso pubblico + referral (?ref=TOKEN) con layout "nudo".
+Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');
 
 // Booking flow
 Route::get('/prenota', [BookingController::class, 'start'])->name('booking.start');
