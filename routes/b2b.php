@@ -52,6 +52,7 @@ Route::middleware('b2b')->group(function () {
 
     // Widget incorporabile (iframe) — codice agenzia + snippet.
     Route::get('/widget', [ReferralController::class, 'widget'])->name('b2b.widget');
+    Route::post('/widget/domini', [ReferralController::class, 'saveWidgetDomains'])->name('b2b.widget.domains');
 
     // Link & QR referral (Flusso B).
     Route::get('/referral', [ReferralController::class, 'index'])->name('b2b.referral');

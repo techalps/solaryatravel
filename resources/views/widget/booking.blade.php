@@ -10,5 +10,5 @@
         </a>
     </div>
 
-    <livewire:public.booking-form :tour="$tour" :available-dates="$availableDates" />
+    <livewire:public.booking-form :tour="$tour" :available-dates="$availableDates" :widget-mode="true" />
 @endsection

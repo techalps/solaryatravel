@@ -94,15 +94,23 @@ class BookingForm extends Component
      */
     public bool $b2bMode = false;
 
+    /**
+     * Modalità Widget: il form è caricato nel widget incorporato sul sito di
+     * un'agenzia (iframe). È un normale flusso cliente referenziato (?ref=TOKEN),
+     * ma serve a marcare l'attribuzione come 'b2b_widget' anziché 'b2b_referral'.
+     */
+    public bool $widgetMode = false;
+
     /** Mostra il modale di avviso "il gruppo verrà diviso su più catamarani". */
     public bool $showSplitModal = false;
 
-    public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = [], bool $b2bMode = false): void
+    public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = [], bool $b2bMode = false, bool $widgetMode = false): void
     {
         $this->tour = $tour;
         $this->departure = $departure;
         $this->availableDates = $availableDates;
         $this->b2bMode = $b2bMode;
+        $this->widgetMode = $widgetMode;
 
         // Se la partenza è già passata (es. /prenota?date=...), pre-popola data/orario per consistenza
         if ($departure) {
@@ -742,8 +750,9 @@ class BookingForm extends Component
             if ($refAgencyId) {
                 $agency = User::where('role', 'b2b')->find($refAgencyId);
                 if ($agency) {
+                    // Widget incorporato → 'b2b_widget'; link/QR referral → 'b2b_referral'.
                     app(\App\Services\CommissionService::class)
-                        ->attributeToAgency($booking, $agency, 'b2b_referral');
+                        ->attributeToAgency($booking, $agency, $this->widgetMode ? 'b2b_widget' : 'b2b_referral');
                 }
                 \Illuminate\Support\Facades\Cookie::queue(
                     \Illuminate\Support\Facades\Cookie::forget(\App\Http\Middleware\CaptureReferralMiddleware::COOKIE)

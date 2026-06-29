@@ -55,7 +55,43 @@ class ReferralController extends Controller
             'token' => $token,
             'widgetUrl' => $base.'/widget?ref='.$token,
             'embedJsUrl' => $base.'/embed.js',
+            'allowedDomains' => is_array($agency->widget_allowed_domains)
+                ? implode("\n", $agency->widget_allowed_domains)
+                : '',
         ]);
+    }
+
+    /**
+     * Salva i domini autorizzati a incorniciare il widget dell'agenzia.
+     * Lista libera (un dominio per riga); vuota = nessuna restrizione.
+     * Normalizziamo a host puro (niente schema/path), per coerenza con il CSP.
+     */
+    public function saveWidgetDomains(\Illuminate\Http\Request $request)
+    {
+        $agency = B2bContext::actingAgency();
+
+        $raw = (string) $request->input('domains', '');
+        $domains = collect(preg_split('/[\r\n,]+/', $raw))
+            ->map(fn ($d) => trim($d))
+            ->filter()
+            ->map(function ($d) {
+                if (! str_contains($d, '://')) {
+                    $d = 'https://'.$d;
+                }
+                $host = parse_url($d, PHP_URL_HOST);
+                return is_string($host) ? strtolower($host) : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $agency->forceFill(['widget_allowed_domains' => empty($domains) ? null : $domains])->save();
+
+        return redirect()->route('b2b.widget')
+            ->with('success', empty($domains)
+                ? 'Domini rimossi: il widget è incorporabile da qualunque sito.'
+                : 'Domini autorizzati salvati: '.implode(', ', $domains));
     }
 
     /** PNG del QR code del link referral (per anteprima e download). */

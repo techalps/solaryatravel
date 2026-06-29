@@ -63,6 +63,25 @@
                     </p>
                 </div>
             </div>
+
+            {{-- Domini autorizzati (sicurezza) --}}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <h3 class="h6 fw-bold mb-2"><i class="bi bi-shield-lock me-2 text-primary"></i>Domini autorizzati <span class="badge bg-light text-muted fw-normal">facoltativo</span></h3>
+                    <p class="text-muted small mb-2">
+                        Per sicurezza puoi limitare i siti su cui il widget può essere incorporato.
+                        Inserisci i tuoi domini, uno per riga. <strong>Se lasci vuoto, il widget funziona ovunque.</strong>
+                    </p>
+                    <form method="POST" action="{{ route('b2b.widget.domains') }}">
+                        @csrf
+                        <textarea name="domains" class="form-control font-monospace small mb-2" rows="3"
+                                  placeholder="www.miosito.it&#10;agenzia.example.com">{{ $allowedDomains }}</textarea>
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-save me-1"></i>Salva domini
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
 
         {{-- Anteprima live --}}

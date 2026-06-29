@@ -30,6 +30,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'commission_rate',
         'agency_name',
         'referral_token',
+        'widget_allowed_domains',
     ];
 
     /**
@@ -54,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'commission_rate' => 'decimal:2',
+            'widget_allowed_domains' => 'array',
         ];
     }
 

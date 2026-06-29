@@ -123,15 +123,78 @@ class WidgetEmbeddableMiddleware
     }
 
     /**
-     * Valore di frame-ancestors. Per ora generico ('*' più gli host noti del
-     * progetto). La restrizione ai domini autorizzati dell'agenzia (via token)
-     * arriverà con la pagina di gestione domini.
+     * Valore di frame-ancestors, ricavato dai domini autorizzati dell'agenzia
+     * referenziata (?ref=TOKEN sulla pagina /widget, oppure cookie b2b_ref sulle
+     * sotto-richieste Livewire).
+     *
+     * Sicurezza opt-in: se l'agenzia non ha impostato alcun dominio (lista vuota)
+     * → '*' (il widget funziona ovunque). Appena imposta almeno un dominio →
+     * si restringe a quelli, così solo i suoi siti possono incorniciarlo.
      */
     private function frameAncestors(Request $request): string
     {
-        // '*' permette l'embedding su qualunque dominio (le agenzie sono molte
-        // e i loro domini non sono ancora registrati). Lo stringeremo per-agenzia
-        // nella fase di gestione domini consentiti.
-        return '*';
+        $domains = $this->allowedDomainsForRequest($request);
+        if (empty($domains)) {
+            return '*';
+        }
+
+        // Ogni dominio diventa una source CSP https://dominio (più eventuale
+        // sottodominio www implicito se l'agenzia lo elenca a parte).
+        $sources = [];
+        foreach ($domains as $d) {
+            $host = $this->normalizeDomain($d);
+            if ($host === '') {
+                continue;
+            }
+            $sources[] = 'https://'.$host;
+        }
+
+        // 'self' permette l'anteprima nel portale/sito Solarya stesso.
+        $sources[] = "'self'";
+
+        return empty($sources) ? '*' : implode(' ', array_unique($sources));
+    }
+
+    /**
+     * Domini autorizzati dell'agenzia di questa richiesta widget, o [] se nessuna
+     * agenzia/nessun dominio. L'agenzia si risolve dal token referral.
+     */
+    private function allowedDomainsForRequest(Request $request): array
+    {
+        $token = $request->query('ref');
+        if (! is_string($token) || $token === '') {
+            // Sotto-richiesta Livewire: il token è nel cookie b2b_ref (id agenzia).
+            $agencyId = $request->cookie(CaptureReferralMiddleware::COOKIE);
+            if (! $agencyId) {
+                return [];
+            }
+            $agency = \App\Models\User::where('role', 'b2b')->find($agencyId);
+        } else {
+            $agency = \App\Models\User::where('role', 'b2b')
+                ->where('referral_token', $token)
+                ->first();
+        }
+
+        if (! $agency) {
+            return [];
+        }
+
+        $domains = $agency->widget_allowed_domains;
+        return is_array($domains) ? array_filter($domains) : [];
+    }
+
+    /** Estrae l'host pulito (senza schema/path/porta) da un dominio inserito a mano. */
+    private function normalizeDomain(string $domain): string
+    {
+        $domain = trim($domain);
+        if ($domain === '') {
+            return '';
+        }
+        // Se manca lo schema, parse_url non trova l'host: aggiungilo.
+        if (! str_contains($domain, '://')) {
+            $domain = 'https://'.$domain;
+        }
+        $host = parse_url($domain, PHP_URL_HOST);
+        return is_string($host) ? strtolower($host) : '';
     }
 }
