@@ -83,7 +83,30 @@
                             <i class="fa-regular fa-chair me-1"></i>
                             Posti disponibili per questa data: <strong>{{ $maxSeats }}</strong>
                         </div>
+
+                        {{-- Dettaglio posti per ogni catamarano --}}
+                        @php $cats = $this->catamaranAvailability; @endphp
+                        @if(count($cats) > 1)
+                            <div class="bk-cat-avail mb-10">
+                                @foreach($cats as $c)
+                                    <span class="bk-cat-chip {{ $c['free'] <= 0 ? 'is-full' : '' }}">
+                                        <i class="fa-solid fa-sailboat me-1"></i>{{ $c['name'] }}
+                                        <em>{{ $c['free'] }}/{{ $c['capacity'] }} posti</em>
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
                     @endif
+                @endif
+
+                {{-- Avviso: gruppo distribuito su più catamarani (sopra i partecipanti) --}}
+                @php $largestFree = $this->largestSingleFree; @endphp
+                @if($largestFree !== null && $this->totalSelected > $largestFree && (!$this->maxSeats || $this->totalSelected <= $this->maxSeats))
+                    <div class="alert alert-info small py-2 mb-10">
+                        <i class="fa-solid fa-people-group me-1"></i>
+                        Con <strong>{{ $this->totalSelected }} partecipanti</strong> il gruppo verrà diviso su più catamarani
+                        (la barca più capiente ha {{ $largestFree }} posti liberi per questa partenza).
+                    </div>
                 @endif
 
                 {{-- Adulti --}}
@@ -214,15 +237,6 @@
                             @endforeach
                         </ul>
                     </div>
-                </div>
-            @endif
-
-            {{-- Avviso: gruppo distribuito su più catamarani --}}
-            @php $largestFree = $this->largestSingleFree; @endphp
-            @if($largestFree !== null && $this->totalSelected > $largestFree && (!$this->maxSeats || $this->totalSelected <= $this->maxSeats))
-                <div class="alert alert-info small py-2 mb-15">
-                    <i class="fa-solid fa-people-group me-1"></i>
-                    Il gruppo verrà sistemato su più catamarani per la stessa partenza (non c'è un'unica imbarcazione con {{ $this->totalSelected }} posti liberi).
                 </div>
             @endif
 
@@ -480,6 +494,16 @@
         .booking-widget .tg-btn:hover { background: var(--tg-theme-secondary); filter: brightness(.85); color: #fff; }
         .booking-widget .tg-btn:disabled { opacity: .5; cursor: not-allowed; }
         .booking-widget .tg-tour-about-extra .tg-filter-list ul li { padding: .35rem 0; }
+
+        /* Disponibilità per catamarano */
+        .booking-widget .bk-cat-avail { display: flex; flex-wrap: wrap; gap: .35rem; }
+        .booking-widget .bk-cat-chip {
+            display: inline-flex; align-items: center; gap: .15rem;
+            background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0;
+            border-radius: 50px; padding: 3px 11px; font-size: .74rem; font-weight: 600;
+        }
+        .booking-widget .bk-cat-chip em { font-style: normal; font-weight: 500; opacity: .75; }
+        .booking-widget .bk-cat-chip.is-full { background: #fef2f2; color: #b91c1c; border-color: #fecaca; opacity: .8; }
 
         .booking-widget .bk-reductions-info { line-height: 1.7; }
         .booking-widget .bk-reduction-chip {

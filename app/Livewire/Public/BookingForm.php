@@ -400,6 +400,21 @@ class BookingForm extends Component
     }
 
     /**
+     * Disponibilità per singolo catamarano (nome, capienza, posti liberi), per
+     * mostrare all'utente quanti posti ci sono su ogni barca.
+     *
+     * @return array<int, array{name: string, capacity: int, free: int}>
+     */
+    #[Computed]
+    public function catamaranAvailability(): array
+    {
+        if (!$this->departure) {
+            return [];
+        }
+        return app(BookingService::class)->catamaranAvailabilityList($this->departure);
+    }
+
+    /**
      * Vero quando il gruppo selezionato NON entra in un singolo catamarano ma
      * rientra nella capienza totale della partenza: verrà diviso su più barche.
      * Serve a mostrare il modale di avviso prima del checkout.

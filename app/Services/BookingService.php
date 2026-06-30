@@ -611,6 +611,51 @@ class BookingService
     }
 
     /**
+     * Disponibilità posti per singolo catamarano operativo/disponibile nella
+     * partenza (esclusi quelli bloccati). Serve a mostrare in UI quanti posti ci
+     * sono su ogni barca, così l'utente sa in anticipo se il gruppo verrà diviso.
+     *
+     * @return array<int, array{name: string, capacity: int, free: int}>
+     */
+    public function catamaranAvailabilityList(TourDeparture $departure): array
+    {
+        $departure->loadMissing('tour');
+        $tour = $departure->tour;
+        if (!$tour) {
+            return [];
+        }
+
+        $departureDate = is_string($departure->departure_date)
+            ? $departure->departure_date
+            : $departure->departure_date->format('Y-m-d');
+
+        [$winStart, $winEnd] = $this->departureTimeWindow($departure);
+        $blockedIds = TourCatamaranBlock::blockedCatamaranIdsOn($departureDate, $winStart, $winEnd);
+
+        $list = [];
+        foreach ($tour->operatingCatamarans() as $cat) {
+            if (in_array((int) $cat->id, $blockedIds, true)) {
+                continue;
+            }
+            if (!$cat->isAvailableOn($departure->departure_date)) {
+                continue;
+            }
+            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            $free = max(0, $cat->capacity - $booked);
+            $list[] = [
+                'name' => $cat->name,
+                'capacity' => (int) $cat->capacity,
+                'free' => (int) $free,
+            ];
+        }
+
+        // Ordina dal più capiente al meno: il primo è dove "entra unito" un gruppo.
+        usort($list, fn ($a, $b) => $b['free'] <=> $a['free']);
+
+        return $list;
+    }
+
+    /**
      * Prenotazioni ATTIVE che impedirebbero di bloccare (uso esclusivo) i catamarani
      * indicati nel periodo [start..end]. Una prenotazione è in conflitto se:
      *  - è dello stesso tour ed è attiva (non annullata/rimborsata/no-show);
