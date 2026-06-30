@@ -43,12 +43,15 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
-        // Modalità "coming soon": blocca il sito ai non-admin (tranne il login).
+        // Cattura ?ref=TOKEN sul sito pubblico per l'attribuzione referral B2B.
+        // PRIMA di ComingSoon: così, quando un cliente arriva da un link/widget
+        // agenzia, il cookie b2b_ref è già impostato e ComingSoon lo lascia passare.
+        $middleware->appendToGroup('web', \App\Http\Middleware\CaptureReferralMiddleware::class);
+        // Modalità "coming soon": blocca il sito ai non-admin (tranne il login e
+        // il canale agenzie: widget + flusso prenotazione con ref attivo).
         $middleware->appendToGroup('web', \App\Http\Middleware\ComingSoonMiddleware::class);
         // Lega host ↔ canale per il sito cliente/admin (vedi HostGateMiddleware).
         $middleware->appendToGroup('web', \App\Http\Middleware\HostGateMiddleware::class);
-        // Cattura ?ref=TOKEN sul sito pubblico per l'attribuzione referral B2B.
-        $middleware->appendToGroup('web', \App\Http\Middleware\CaptureReferralMiddleware::class);
         // Rende incorporabili (iframe cross-origin) SOLO le route del widget:
         // cookie SameSite=None; Secure + CSP frame-ancestors. Inerte altrove.
         // Prepend: il suo "dopo" (riscrittura cookie/header) deve girare per

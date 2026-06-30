@@ -34,6 +34,25 @@ class ComingSoonMiddleware
         'verifica-email/*',
         'email/verification-notification',
         'webhooks/stripe',
+        // Canale agenzie: widget incorporabile + script. Sempre attivi, così i
+        // clienti delle agenzie prenotano anche col sito pubblico in "Prossimamente".
+        'widget',
+        'widget/*',
+        'embed.js',
+    ];
+
+    /**
+     * Path del flusso di prenotazione, accessibili in coming soon SOLO se la
+     * visita è attribuita a un'agenzia (cookie referral o ?ref=): il canale B2B
+     * deve funzionare anche col sito pubblico ancora chiuso.
+     */
+    private const REFERRAL_PATHS = [
+        'prenota',
+        'prenota/*',
+        'pagamento/*',
+        'prenotazione/*',
+        'tour/*',
+        'livewire/*',
     ];
 
     public function handle(Request $request, Closure $next): Response
@@ -47,13 +66,30 @@ class ComingSoonMiddleware
             return $next($request);
         }
 
-        // Consenti le pagine di autenticazione e il webhook (GET e POST).
+        // Consenti le pagine di autenticazione, il webhook e il widget agenzie.
         if ($request->is(self::ALLOWED_PATHS)) {
+            return $next($request);
+        }
+
+        // Flusso prenotazione consentito se la visita arriva da un'agenzia
+        // (cookie b2b_ref già impostato, o ?ref= valido in questa richiesta).
+        if ($this->hasAgencyReferral($request) && $request->is(self::REFERRAL_PATHS)) {
             return $next($request);
         }
 
         // Tutto il resto: pagina coming soon (503 = servizio temporaneamente non disponibile).
         return response()->view('coming-soon', [], Response::HTTP_SERVICE_UNAVAILABLE)
             ->header('Retry-After', '3600');
+    }
+
+    /**
+     * La visita è attribuita a un'agenzia? Vero se CaptureReferralMiddleware (che
+     * gira prima) ha riconosciuto un ?ref= valido in questa richiesta, oppure se
+     * è già presente il cookie referral b2b_ref di una visita precedente.
+     */
+    private function hasAgencyReferral(Request $request): bool
+    {
+        return $request->attributes->has('b2b_ref_agency_id')
+            || filled($request->cookie(CaptureReferralMiddleware::COOKIE));
     }
 }

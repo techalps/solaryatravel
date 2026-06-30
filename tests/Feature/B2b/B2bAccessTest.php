@@ -106,4 +106,55 @@ class B2bAccessTest extends TestCase
         $this->get('/prenota?ref=token-inesistente-xyz')
             ->assertCookieMissing(CaptureReferralMiddleware::COOKIE);
     }
+
+    // ===== Coming soon non blocca il canale agenzie =====
+
+    public function test_coming_soon_lascia_passare_il_widget(): void
+    {
+        $this->withMaintenance(function () {
+            // /widget resta accessibile anche col sito in "Prossimamente".
+            $this->get('/widget')->assertOk();
+        });
+    }
+
+    public function test_coming_soon_blocca_la_prenotazione_diretta(): void
+    {
+        $this->withMaintenance(function () {
+            // Senza referral agenzia, /prenota è sotto coming soon (503).
+            $this->get('/prenota')->assertStatus(503);
+        });
+    }
+
+    public function test_coming_soon_lascia_passare_la_prenotazione_con_referral(): void
+    {
+        $agency = $this->agency();
+        $token = $agency->ensureReferralToken();
+        $this->withMaintenance(function () use ($token) {
+            // Con ?ref= valido, il flusso prenotazione NON è bloccato dal coming soon
+            // (non deve dare 503; un eventuale redirect/altro stato è accettabile).
+            $this->get('/prenota?ref='.$token.'&tour=1')->assertDontSee('Prossimamente');
+        });
+    }
+
+    /** Esegue il callback con maintenance_mode attivo, ripristinando dopo. */
+    private function withMaintenance(callable $fn): void
+    {
+        $path = storage_path('app/settings.json');
+        $orig = is_file($path) ? file_get_contents($path) : null;
+        $data = $orig ? json_decode($orig, true) : [];
+        $data['maintenance_mode'] = true;
+        file_put_contents($path, json_encode($data));
+        \Illuminate\Support\Facades\Cache::forget('app_settings');
+
+        try {
+            $fn();
+        } finally {
+            if ($orig !== null) {
+                file_put_contents($path, $orig);
+            } else {
+                @unlink($path);
+            }
+            \Illuminate\Support\Facades\Cache::forget('app_settings');
+        }
+    }
 }
