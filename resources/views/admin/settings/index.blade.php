@@ -731,5 +731,38 @@
             icon.classList.replace('bi-eye-slash', 'bi-eye');
         }
     }
+
+    // Ricorda la scheda (tab) attiva tra un salvataggio e l'altro: dopo il POST
+    // la pagina si ricarica e senza questo tornerebbe sempre alla prima scheda.
+    (function () {
+        var KEY = 'settingsActiveTab';
+        var tabs = document.querySelectorAll('[data-bs-toggle="pill"][href^="#sec-"]');
+
+        // Ripristina la scheda salvata al caricamento.
+        var saved = sessionStorage.getItem(KEY);
+        if (saved && document.querySelector(saved)) {
+            tabs.forEach(function (t) {
+                var isTarget = t.getAttribute('href') === saved;
+                t.classList.toggle('active', isTarget);
+                var pane = document.querySelector(t.getAttribute('href'));
+                if (pane) pane.classList.toggle('show', isTarget), pane.classList.toggle('active', isTarget);
+            });
+            // Disattiva la prima scheda (che era active di default) se non è quella salvata.
+            document.querySelectorAll('.tab-pane').forEach(function (p) {
+                if ('#' + p.id !== saved) { p.classList.remove('show', 'active'); }
+            });
+        }
+
+        // Memorizza la scheda quando l'utente la cambia.
+        tabs.forEach(function (t) {
+            t.addEventListener('shown.bs.tab', function () {
+                sessionStorage.setItem(KEY, t.getAttribute('href'));
+            });
+            // Fallback: alcuni tema/versioni non emettono shown.bs.tab con gli <a>.
+            t.addEventListener('click', function () {
+                sessionStorage.setItem(KEY, t.getAttribute('href'));
+            });
+        });
+    })();
 </script>
 @endpush
