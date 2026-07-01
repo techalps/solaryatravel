@@ -1,6 +1,13 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Forza HTTPS. Dietro il proxy OVH la connessione originale si rileva da
+    # X-Forwarded-Proto (non da %{HTTPS}). Esclude il challenge ACME di Let's
+    # Encrypt, altrimenti i rinnovi automatici del certificato fallirebbero.
+    RewriteCond %{HTTP:X-Forwarded-Proto} =http [NC]
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     RewriteRule ^\.env - [F,L]
     RewriteRule ^\.git - [F,L]
 
