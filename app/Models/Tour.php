@@ -30,6 +30,7 @@ class Tour extends Model
         'max_capacity',
         'is_active',
         'booking_on_request',
+        'booking_cutoff_time',
         'sort_order',
         'meta_title',
         'meta_description',
@@ -48,6 +49,28 @@ class Tour extends Model
     public function uniqueIds(): array
     {
         return ['uuid'];
+    }
+
+    /**
+     * Orario limite di prenotazione effettivo del tour ("HH:MM"): quello proprio
+     * se impostato, altrimenti il default globale delle impostazioni.
+     */
+    public function effectiveCutoffTime(): string
+    {
+        $own = $this->booking_cutoff_time ? substr((string) $this->booking_cutoff_time, 0, 5) : null;
+        return $own ?: \App\Support\Settings::bookingCutoffTime();
+    }
+
+    /**
+     * Scadenza entro cui si può prenotare la partenza del giorno $departureDate:
+     * l'orario limite applicato al GIORNO PRIMA della partenza.
+     * Es. partenza 10/07 + cutoff 22:00 → prenotabile fino al 09/07 22:00.
+     */
+    public function bookingDeadlineFor(\Carbon\Carbon $departureAt): \Carbon\Carbon
+    {
+        [$h, $m] = array_map('intval', explode(':', $this->effectiveCutoffTime()));
+
+        return $departureAt->copy()->subDay()->setTime($h, $m, 0);
     }
 
     public function getRouteKeyName(): string

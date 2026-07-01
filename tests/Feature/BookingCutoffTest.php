@@ -11,32 +11,36 @@ use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /**
- * Anticipo minimo di prenotazione (booking_cutoff_hours): le partenze entro
- * il cutoff non devono essere generate (vale su sito e portale agenzie).
+ * Orario limite di prenotazione: si prenota fino a un orario del GIORNO PRIMA
+ * della partenza (globale, con override per-tour). L'admin (includePast) lo ignora.
  */
 class BookingCutoffTest extends TestCase
 {
     use DatabaseTransactions;
 
-    private function setCutoff(int $hours): void
+    private function setGlobalCutoff(string $time): void
     {
         $path = storage_path('app/settings.json');
         $data = is_file($path) ? json_decode(file_get_contents($path), true) : [];
-        $data['booking_cutoff_hours'] = $hours;
+        $data['booking_cutoff_time'] = $time;
         file_put_contents($path, json_encode($data));
         Cache::forget('app_settings');
     }
 
     protected function tearDown(): void
     {
-        $this->setCutoff(0);
+        $this->setGlobalCutoff('22:00');
         parent::tearDown();
     }
 
-    private function tourWithDailyDepartures(): Tour
+    private function tourWithDailyDepartures(?string $cutoff = null): Tour
     {
         $cat = Catamaran::create(['name' => 'Cat', 'slug' => 'cat-'.uniqid(), 'capacity' => 10, 'is_active' => true]);
-        $tour = Tour::create(['name' => 'T', 'slug' => 't-'.uniqid(), 'is_active' => true, 'booking_on_request' => false]);
+        $tour = Tour::create([
+            'name' => 'T', 'slug' => 't-'.uniqid(), 'is_active' => true,
+            'booking_on_request' => false,
+            'booking_cutoff_time' => $cutoff ? $cutoff.':00' : null,
+        ]);
         $tour->catamarans()->attach($cat->id);
         TourPeriod::create([
             'tour_id' => $tour->id,
@@ -49,32 +53,35 @@ class BookingCutoffTest extends TestCase
         return $tour;
     }
 
-    public function test_cutoff_nasconde_le_partenze_troppo_vicine(): void
+    public function test_deadline_e_lorario_del_giorno_prima(): void
     {
-        $tour = $this->tourWithDailyDepartures();
-        $svc = app(DepartureGeneratorService::class);
+        $tour = $this->tourWithDailyDepartures('22:00');
+        $depAt = now()->addDays(5)->setTime(10, 0);
+        $deadline = $tour->bookingDeadlineFor($depAt);
 
-        $this->setCutoff(0);
-        $senza = $svc->upcoming($tour, 15);
-
-        $this->setCutoff(72);
-        $con = $svc->upcoming($tour, 15);
-
-        // Con cutoff 72h ci sono meno partenze, e nessuna entro le prossime 72h.
-        $this->assertLessThan($senza->count(), $con->count());
-        $soglia = now()->addHours(72);
-        $this->assertTrue($con->every(fn ($d) => $d['departure_at']->gte($soglia)));
+        // Partenza il giorno X ore 10 → deadline il giorno X-1 alle 22:00.
+        $this->assertEquals($depAt->copy()->subDay()->format('Y-m-d').' 22:00', $deadline->format('Y-m-d H:i'));
     }
 
-    public function test_admin_retroattivo_ignora_il_cutoff(): void
+    public function test_override_per_tour_ha_priorita_sul_globale(): void
     {
-        $tour = $this->tourWithDailyDepartures();
-        $svc = app(DepartureGeneratorService::class);
-        $this->setCutoff(72);
+        $this->setGlobalCutoff('22:00');
+        $tour = $this->tourWithDailyDepartures('12:00'); // override
+        $this->assertSame('12:00', $tour->effectiveCutoffTime());
 
-        // includePast=true (flusso admin) → il cutoff non si applica.
-        $all = $svc->generate($tour, now(), now()->addDays(15), true);
-        $soglia = now()->addHours(72);
-        $this->assertTrue($all->contains(fn ($d) => $d['departure_at']->lt($soglia)));
+        $tourGlobal = $this->tourWithDailyDepartures(null); // usa globale
+        $this->assertSame('22:00', $tourGlobal->effectiveCutoffTime());
+    }
+
+    public function test_admin_ignora_il_cutoff(): void
+    {
+        $tour = $this->tourWithDailyDepartures('22:00');
+        $svc = app(DepartureGeneratorService::class);
+
+        // includePast=true (admin) → include anche partenze oltre la deadline.
+        $all = $svc->generate($tour, now(), now()->addDays(3), true);
+        $public = $svc->generate($tour, now(), now()->addDays(3), false);
+
+        $this->assertGreaterThanOrEqual($public->count(), $all->count());
     }
 }

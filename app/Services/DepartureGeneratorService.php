@@ -33,10 +33,10 @@ class DepartureGeneratorService
     {
         $tour->loadMissing(['periods', 'catamarans']);
 
-        // Anticipo minimo di prenotazione: soglia oltre la quale una partenza non
-        // è più prenotabile. Non si applica quando includePast è true (es. admin
-        // che registra prenotazioni retroattive o dell'ultimo minuto).
-        $cutoffHours = $includePast ? 0 : \App\Support\Settings::bookingCutoffHours();
+        // Orario limite di prenotazione: si prenota fino a un orario del giorno
+        // PRIMA della partenza (per-tour o globale). Non si applica quando
+        // includePast è true: è il contesto admin, che prenota senza limiti.
+        $applyCutoff = ! $includePast;
 
         // Blocco GLOBALE per catamarano (qualsiasi tour): la barca riservata è
         // fisicamente occupata. I blocchi su catamarani non usati da questo tour
@@ -102,8 +102,8 @@ class DepartureGeneratorService
                     if (!$includePast && $depAt->lt($now)) {
                         continue; // skip nel passato (salvo richiesta esplicita, es. admin retroattivo)
                     }
-                    // Anticipo minimo: scarta le partenze troppo vicine (entro cutoff ore).
-                    if ($cutoffHours > 0 && $depAt->lt($now->copy()->addHours($cutoffHours))) {
+                    // Orario limite: prenotabile fino all'orario del giorno prima.
+                    if ($applyCutoff && $now->gt($tour->bookingDeadlineFor($depAt))) {
                         continue;
                     }
                     $results->push([

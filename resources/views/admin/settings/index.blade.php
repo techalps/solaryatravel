@@ -347,29 +347,75 @@
                             </div>
                         </div>
 
-                        {{-- Anticipo minimo di prenotazione --}}
+                        {{-- Orario limite di prenotazione (globale) --}}
                         <div class="dash-card mb-3">
                             <div class="dash-card-header">
-                                <h3><i class="bi bi-hourglass-split me-2 text-primary"></i>Anticipo minimo di prenotazione</h3>
+                                <h3><i class="bi bi-hourglass-split me-2 text-primary"></i>Orario limite di prenotazione</h3>
                             </div>
                             <div class="dash-card-body">
-                                <p class="small text-muted">Entro quante ore prima della partenza si può ancora prenotare. Le partenze più vicine non vengono mostrate né accettate (vale su sito e portale agenzie).</p>
+                                <p class="small text-muted">Fino a che orario del <strong>giorno precedente</strong> si può prenotare una partenza. Vale su sito, portale agenzie e widget. Questo è il valore <strong>globale</strong>; puoi sovrascriverlo per singolo tour qui sotto.</p>
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-4">
-                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-clock me-1"></i>Ore di anticipo</label>
-                                        <div class="input-group">
-                                            <input type="number" name="booking_cutoff_hours" min="0" max="720"
-                                                   value="{{ old('booking_cutoff_hours', $settings['booking_cutoff_hours'] ?? 0) }}" class="form-control" required>
-                                            <span class="input-group-text">ore</span>
-                                        </div>
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-clock me-1"></i>Orario limite (giorno prima)</label>
+                                        <input type="time" name="booking_cutoff_time"
+                                               value="{{ old('booking_cutoff_time', $settings['booking_cutoff_time'] ?? '22:00') }}" class="form-control" required>
                                     </div>
                                     <div class="col-md-8">
                                         <div class="alert border-0 rounded-3 small mb-0" style="background:rgba(2,132,199,.08); color:#0369a1">
                                             <i class="bi bi-info-circle me-1"></i>
-                                            <strong>0</strong> = nessun limite (prenotabile fino alla partenza). Esempio: <strong>24</strong> = si prenota fino a 24 ore prima.
+                                            Esempio: <strong>22:00</strong> → una partenza del 10/07 è prenotabile fino alle 22:00 del 09/07.
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {{-- Orario limite per singolo tour (form separato: tourCutoffsForm) --}}
+                        <div class="dash-card mb-3">
+                            <div class="dash-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <h3 class="mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Orario limite per tour</h3>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="time" name="apply_all_time" form="tourCutoffsForm" class="form-control form-control-sm" style="width:auto" title="Orario da applicare a tutti">
+                                    <button type="submit" form="tourCutoffsForm" class="btn btn-sm btn-outline-primary"
+                                            onclick="return confirm('Applicare questo orario a TUTTI i tour attivi?')">
+                                        <i class="bi bi-check2-all me-1"></i>Applica a tutti
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="dash-card-body">
+                                <p class="small text-muted">Lascia vuoto un tour per usare l'orario <strong>globale</strong> qui sopra. Un orario specifico lo sovrascrive solo per quel tour.</p>
+                                @if($activeTours->isEmpty())
+                                    <div class="alert alert-light border small mb-0">Nessun tour attivo.</div>
+                                @else
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-3">
+                                            <thead class="table-light">
+                                                <tr class="small text-uppercase text-muted">
+                                                    <th>Tour</th>
+                                                    <th style="width:200px">Orario limite (giorno prima)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($activeTours as $t)
+                                                    <tr>
+                                                        <td class="fw-semibold">{{ $t->name }}</td>
+                                                        <td>
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="time" name="cutoff[{{ $t->id }}]" form="tourCutoffsForm"
+                                                                       value="{{ $t->booking_cutoff_time ? substr($t->booking_cutoff_time, 0, 5) : '' }}"
+                                                                       class="form-control" placeholder="usa globale">
+                                                                <span class="input-group-text text-muted small">{{ $t->booking_cutoff_time ? 'specifico' : 'globale' }}</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                        <button type="submit" form="tourCutoffsForm" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-save me-1"></i>Salva orari per tour
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -663,6 +709,12 @@
                 </div>
             </div>
         </div>
+    </form>
+
+    {{-- Form separato per gli orari limite per-tour (non annidabile nel form
+         principale). Gli input stanno nel tab "Prenotazioni" via attributo form=. --}}
+    <form action="{{ route('admin.settings.tour-cutoffs') }}" method="POST" id="tourCutoffsForm">
+        @csrf
     </form>
 @endsection
 

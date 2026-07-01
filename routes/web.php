@@ -180,6 +180,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::get('/impostazioni', [SettingsController::class, 'index'])->name('settings');
     Route::post('/impostazioni', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('/impostazioni/test-mail', [SettingsController::class, 'sendTestMail'])->name('settings.mail-test');
+    Route::post('/impostazioni/orari-prenotazione', [SettingsController::class, 'updateTourCutoffs'])->name('settings.tour-cutoffs');
 
     // Sezione "Sistema": riservata al ruolo tecnico system_admin (log, deploy, migrazioni).
     Route::middleware('system')->group(function () {

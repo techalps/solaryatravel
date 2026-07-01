@@ -84,13 +84,14 @@ class Settings
     }
 
     /**
-     * Anticipo minimo di prenotazione: una partenza è prenotabile solo fino a
-     * N ore prima dell'orario di partenza. 0 = nessun limite (prenotabile
-     * fino all'ultimo, purché non già passata).
+     * Orario limite di prenotazione GLOBALE (default per i tour che non ne hanno
+     * uno proprio): si prenota fino a questo orario del giorno PRIMA della
+     * partenza. Formato "HH:MM". Default 22:00.
      */
-    public static function bookingCutoffHours(): int
+    public static function bookingCutoffTime(): string
     {
-        return max(0, (int) self::get('booking_cutoff_hours', 0));
+        $v = trim((string) self::get('booking_cutoff_time', '22:00'));
+        return preg_match('/^\d{1,2}:\d{2}/', $v) ? substr($v, 0, 5) : '22:00';
     }
 
     public static function bankTransferEnabled(): bool

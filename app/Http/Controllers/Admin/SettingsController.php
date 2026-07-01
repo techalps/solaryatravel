@@ -19,8 +19,12 @@ class SettingsController extends Controller
     public function index(): View
     {
         $settings = $this->getSettings();
+        // Tour attivi per la sezione "orari limite di prenotazione" (per-tour).
+        $activeTours = \App\Models\Tour::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'booking_cutoff_time']);
 
-        return view('admin.settings.index', compact('settings'));
+        return view('admin.settings.index', compact('settings', 'activeTours'));
     }
 
     /**
@@ -57,8 +61,8 @@ class SettingsController extends Controller
             // Minimo partecipanti per confermare la partenza
             'min_participants' => 'required|integer|min:1|max:50',
             'min_participants_deadline_label' => 'nullable|string|max:120',
-            // Anticipo minimo di prenotazione (ore prima della partenza). 0 = nessun limite.
-            'booking_cutoff_hours' => 'required|integer|min:0|max:720',
+            // Orario limite di prenotazione globale (HH:MM del giorno prima).
+            'booking_cutoff_time' => 'required|date_format:H:i',
             'default_seats' => 'required|integer|min:1|max:50',
             'payment_deadline_minutes' => 'required|integer|min:5|max:1440',
             'stripe_public_key' => 'nullable|string|max:255',
@@ -95,6 +99,36 @@ class SettingsController extends Controller
         Cache::forget('app_settings');
 
         return back()->with('success', 'Impostazioni aggiornate con successo.');
+    }
+
+    /**
+     * Salva gli orari limite di prenotazione per i singoli tour.
+     * - "applica a tutti": scrive lo stesso orario su tutti i tour attivi;
+     * - altrimenti: per ogni tour, orario proprio oppure vuoto = usa il globale.
+     */
+    public function updateTourCutoffs(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        // Modalità "applica a tutti": un unico orario per ogni tour attivo.
+        if ($request->filled('apply_all_time')) {
+            $request->validate(['apply_all_time' => 'date_format:H:i']);
+            \App\Models\Tour::where('is_active', true)
+                ->update(['booking_cutoff_time' => $request->input('apply_all_time') . ':00']);
+
+            return back()->with('success', 'Orario limite applicato a tutti i tour attivi.');
+        }
+
+        // Modalità per-tour: mappa tour_id => "HH:MM" (o vuoto = usa il globale).
+        $data = $request->validate([
+            'cutoff' => 'array',
+            'cutoff.*' => 'nullable|date_format:H:i',
+        ]);
+
+        foreach ($data['cutoff'] ?? [] as $tourId => $time) {
+            \App\Models\Tour::where('id', (int) $tourId)
+                ->update(['booking_cutoff_time' => $time ? $time . ':00' : null]);
+        }
+
+        return back()->with('success', 'Orari limite dei tour aggiornati.');
     }
 
     /**
@@ -192,8 +226,8 @@ class SettingsController extends Controller
             // Minimo partecipanti
             'min_participants' => 6,
             'min_participants_deadline_label' => '48 ore prima della partenza',
-            // Anticipo minimo di prenotazione (0 = nessun limite)
-            'booking_cutoff_hours' => 0,
+            // Orario limite di prenotazione globale (giorno prima)
+            'booking_cutoff_time' => '22:00',
             'stripe_public_key' => config('services.stripe.key', ''),
             'stripe_secret_key' => '',
             'stripe_webhook_secret' => '',
