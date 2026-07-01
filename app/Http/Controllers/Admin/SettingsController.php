@@ -57,6 +57,8 @@ class SettingsController extends Controller
             // Minimo partecipanti per confermare la partenza
             'min_participants' => 'required|integer|min:1|max:50',
             'min_participants_deadline_label' => 'nullable|string|max:120',
+            // Anticipo minimo di prenotazione (ore prima della partenza). 0 = nessun limite.
+            'booking_cutoff_hours' => 'required|integer|min:0|max:720',
             'default_seats' => 'required|integer|min:1|max:50',
             'payment_deadline_minutes' => 'required|integer|min:5|max:1440',
             'stripe_public_key' => 'nullable|string|max:255',
@@ -190,6 +192,8 @@ class SettingsController extends Controller
             // Minimo partecipanti
             'min_participants' => 6,
             'min_participants_deadline_label' => '48 ore prima della partenza',
+            // Anticipo minimo di prenotazione (0 = nessun limite)
+            'booking_cutoff_hours' => 0,
             'stripe_public_key' => config('services.stripe.key', ''),
             'stripe_secret_key' => '',
             'stripe_webhook_secret' => '',

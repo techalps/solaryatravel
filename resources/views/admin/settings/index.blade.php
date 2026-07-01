@@ -346,6 +346,32 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Anticipo minimo di prenotazione --}}
+                        <div class="dash-card mb-3">
+                            <div class="dash-card-header">
+                                <h3><i class="bi bi-hourglass-split me-2 text-primary"></i>Anticipo minimo di prenotazione</h3>
+                            </div>
+                            <div class="dash-card-body">
+                                <p class="small text-muted">Entro quante ore prima della partenza si può ancora prenotare. Le partenze più vicine non vengono mostrate né accettate (vale su sito e portale agenzie).</p>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-clock me-1"></i>Ore di anticipo</label>
+                                        <div class="input-group">
+                                            <input type="number" name="booking_cutoff_hours" min="0" max="720"
+                                                   value="{{ old('booking_cutoff_hours', $settings['booking_cutoff_hours'] ?? 0) }}" class="form-control" required>
+                                            <span class="input-group-text">ore</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="alert border-0 rounded-3 small mb-0" style="background:rgba(2,132,199,.08); color:#0369a1">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            <strong>0</strong> = nessun limite (prenotabile fino alla partenza). Esempio: <strong>24</strong> = si prenota fino a 24 ore prima.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Stripe --}}

@@ -83,6 +83,16 @@ class Settings
         return max(1, (int) self::get('balance_due_hours', 12));
     }
 
+    /**
+     * Anticipo minimo di prenotazione: una partenza è prenotabile solo fino a
+     * N ore prima dell'orario di partenza. 0 = nessun limite (prenotabile
+     * fino all'ultimo, purché non già passata).
+     */
+    public static function bookingCutoffHours(): int
+    {
+        return max(0, (int) self::get('booking_cutoff_hours', 0));
+    }
+
     public static function bankTransferEnabled(): bool
     {
         return (bool) self::get('bank_transfer_enabled', false);

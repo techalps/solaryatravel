@@ -652,6 +652,20 @@ class BookingForm extends Component
             return null;
         }
 
+        // Anticipo minimo di prenotazione (server-side, anti-manomissione):
+        // la partenza non dev'essere già passata né entro le ore di cutoff.
+        $cutoffHours = \App\Support\Settings::bookingCutoffHours();
+        $departAt = \Carbon\Carbon::parse($this->departure->departure_date->toDateString()
+            .' '.\Carbon\Carbon::parse($this->departure->start_time)->format('H:i:s'));
+        if ($departAt->isPast()) {
+            $this->errorMessage = 'Questa partenza non è più disponibile.';
+            return null;
+        }
+        if ($cutoffHours > 0 && $departAt->lt(now()->addHours($cutoffHours))) {
+            $this->errorMessage = 'Le prenotazioni per questa partenza sono chiuse (è richiesto un anticipo di '.$cutoffHours.' ore).';
+            return null;
+        }
+
         if ($this->adultsCount < 1) {
             $this->errorMessage = 'Serve almeno un adulto.';
             return null;
