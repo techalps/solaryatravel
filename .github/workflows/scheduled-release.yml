@@ -1,0 +1,69 @@
+name: Rilascio notturno (main → production)
+
+# Merge automatico main→production nelle notti da lunedì a giovedì alle 03:00
+# (ora italiana). Il push su production fa poi partire il workflow di deploy.
+#
+# Nota fusi: GitHub cron è in UTC. Le 03:00 di Roma sono 01:00 UTC (ora legale,
+# CEST) o 02:00 UTC (ora solare, CET). Scheduliamo entrambe e lasciamo procedere
+# solo quando a Roma sono davvero le 03, così scatta una volta sola tutto l'anno.
+on:
+  schedule:
+    - cron: '0 1 * * 1-4'   # 01:00 UTC = 03:00 CEST (lun-gio)
+    - cron: '0 2 * * 1-4'   # 02:00 UTC = 03:00 CET  (lun-gio)
+  workflow_dispatch: {}      # avvio manuale (forza il rilascio quando vuoi)
+
+concurrency:
+  group: scheduled-release
+  cancel-in-progress: false
+
+# Serve per pushare su production e per avviare il workflow di deploy.
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verifica che a Roma siano le 03 (evita doppio scatto legale/solare)
+        id: gate
+        run: |
+          HOUR=$(TZ='Europe/Rome' date +%H)
+          echo "Ora a Roma: ${HOUR}"
+          # Su avvio manuale (workflow_dispatch) procedi sempre.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+          elif [ "$HOUR" = "03" ]; then
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=no" >> "$GITHUB_OUTPUT"
+            echo "Non sono le 03 a Roma: salto (scatto duplicato per il fuso)."
+          fi
+
+      - name: Checkout (storia completa, serve per il merge)
+        if: steps.gate.outputs.run == 'yes'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge main → production e push
+        if: steps.gate.outputs.run == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main production
+          git checkout production
+          # Merge; se non ci sono novità è un no-op.
+          if ! git merge --no-edit origin/main; then
+            echo "::error::Merge main→production con conflitti: rilascio notturno annullato."
+            exit 1
+          fi
+          git push origin production
+          echo "✓ main→production allineato e pushato."
+          # NB: un push fatto col GITHUB_TOKEN NON innesca altri workflow (regola
+          # anti-loop di GitHub), quindi il deploy va avviato esplicitamente.
+          gh workflow run deploy.yml --ref production
+          echo "✓ Workflow di deploy avviato."
