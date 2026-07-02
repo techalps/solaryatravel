@@ -234,6 +234,26 @@
                         <input type="text" name="discount_code" value="{{ old('discount_code') }}" class="form-control" placeholder="Es. ESTATE2026" maxlength="50">
                     </div>
                 </div>
+
+                {{-- 5. Attribuzione agenzia B2B (opzionale) --}}
+                @if($b2bAgencies->isNotEmpty())
+                    <div class="dash-card mb-3">
+                        <div class="dash-card-header">
+                            <h3><i class="bi bi-briefcase me-2 text-primary"></i>5. Agenzia B2B (opzionale)</h3>
+                        </div>
+                        <div class="dash-card-body">
+                            <p class="small text-muted mb-2">Se stai registrando una prenotazione per conto di un'agenzia, selezionala: risulterà come fatta dall'agenzia e maturerà la sua commissione.</p>
+                            <select name="b2b_user_id" class="form-select">
+                                <option value="">— Nessuna (vendita diretta)</option>
+                                @foreach($b2bAgencies as $ag)
+                                    <option value="{{ $ag->id }}" {{ old('b2b_user_id') == $ag->id ? 'selected' : '' }}>
+                                        {{ $ag->agency_name ?: $ag->name }} — commissione {{ rtrim(rtrim(number_format((float) $ag->commission_rate, 2), '0'), '.') }}%
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             {{-- RIGHT: riepilogo --}}

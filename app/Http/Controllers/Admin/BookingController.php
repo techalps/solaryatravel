@@ -149,10 +149,14 @@ class BookingController extends Controller
         $depositPercentage = \App\Support\Settings::depositPercentage();
         $bankTransferEnabled = \App\Support\Settings::bankTransferEnabled();
         $balanceDueHours = \App\Support\Settings::balanceDueHours();
+        // Agenzie B2B a cui l'admin può attribuire la prenotazione.
+        $b2bAgencies = \App\Models\User::where('role', 'b2b')
+            ->orderBy('agency_name')
+            ->get(['id', 'agency_name', 'name', 'commission_rate']);
 
         return view('admin.bookings.create', compact(
             'tours', 'selectedTour', 'departures', 'statuses',
-            'depositEnabled', 'depositPercentage', 'bankTransferEnabled', 'balanceDueHours'
+            'depositEnabled', 'depositPercentage', 'bankTransferEnabled', 'balanceDueHours', 'b2bAgencies'
         ));
     }
 
@@ -364,6 +368,9 @@ class BookingController extends Controller
             'addons' => 'nullable|array',
             'addons.*' => 'integer|exists:addons,id',
             'discount_code' => 'nullable|string|max:50',
+            // Attribuzione a un'agenzia B2B: se valorizzato, la prenotazione risulta
+            // dell'agenzia (come fatta dal portale) e matura la commissione.
+            'b2b_user_id' => 'nullable|exists:users,id',
             'customer_first_name' => 'required|string|max:100',
             'customer_last_name' => 'required|string|max:100',
             'customer_email' => 'required|email|max:255',
@@ -538,6 +545,17 @@ class BookingController extends Controller
 
         try {
             $booking = $this->bookingService->create($payload, 'admin');
+
+            // Attribuzione a un'agenzia B2B (opzionale): l'admin sta registrando una
+            // prenotazione per conto di un'agenzia. Risulta come dal portale
+            // (attribution_source=b2b_portal) e matura la commissione dell'agenzia.
+            if (!empty($validated['b2b_user_id'])) {
+                $agency = \App\Models\User::where('role', 'b2b')->find($validated['b2b_user_id']);
+                if ($agency) {
+                    app(\App\Services\CommissionService::class)
+                        ->attributeToAgency($booking, $agency, 'b2b_portal');
+                }
+            }
 
             // Scadenza saldo: se l'admin l'ha indicata a mano (acconto), sovrascrive
             // quella calcolata in automatico dal service.
