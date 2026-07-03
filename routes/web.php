@@ -124,6 +124,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/bookings/{booking}/send-balance-request', [AdminBookingController::class, 'sendBalanceRequest'])->name('bookings.send-balance-request');
     Route::get('/bookings/{booking}/export', [AdminBookingController::class, 'export'])->name('bookings.export');
     Route::post('/bookings/{booking}/seats/{seat}/move', [AdminBookingController::class, 'moveSeat'])->name('bookings.seats.move');
+    // Sposta un'intera riserva (uso esclusivo) su un altro catamarano.
+    Route::post('/bookings/{booking}/move-reservation', [AdminBookingController::class, 'moveReservation'])->name('bookings.move-reservation');
     // Disdetta di singoli partecipanti/extra con eventuale rimborso parziale.
     Route::post('/bookings/{booking}/remove-items', [AdminBookingController::class, 'removeItems'])->name('bookings.remove-items');
     // Anteprima differenza prezzo per un cambio data (JSON).

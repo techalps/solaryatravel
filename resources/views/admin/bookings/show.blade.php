@@ -351,6 +351,24 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        {{-- Sposta la riserva su un altro catamarano libero (posti + blocco). --}}
+                        @if (isset($freeCatamaransForReservation) && $freeCatamaransForReservation->isNotEmpty() && $reservedBlocks->count() === 1)
+                            <form method="POST" action="{{ route('admin.bookings.move-reservation', $booking) }}" class="d-flex align-items-center gap-2 mt-3">
+                                @csrf
+                                <label class="small fw-semibold text-muted mb-0">Sposta la riserva su:</label>
+                                <select name="catamaran_id" class="form-select form-select-sm" style="width:auto" required>
+                                    <option value="">Scegli catamarano…</option>
+                                    @foreach ($freeCatamaransForReservation as $c)
+                                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-arrow-left-right me-1"></i>Sposta
+                                </button>
+                            </form>
+                            <p class="small text-muted mt-2 mb-0">Sposta posti e riserva sul nuovo catamarano; quello attuale si libera.</p>
+                        @endif
                     </div>
                 </div>
             @endif

@@ -1179,4 +1179,85 @@ class BookingService
             return $seat->fresh('catamaran');
         });
     }
+
+    /**
+     * Sposta un'INTERA prenotazione a uso esclusivo da un catamarano all'altro:
+     * ricolloca tutti i suoi posti sul nuovo catamarano E sposta i relativi
+     * TourCatamaranBlock (la riserva). Il vecchio catamarano si libera, il nuovo
+     * risulta riservato. Il nuovo catamarano deve essere completamente libero.
+     *
+     * @throws \Exception se il nuovo catamarano non è idoneo (non libero, non
+     *                    disponibile, capienza insufficiente).
+     */
+    public function moveExclusiveReservation(Booking $booking, int $newCatamaranId): Booking
+    {
+        return DB::transaction(function () use ($booking, $newCatamaranId) {
+            $departure = $booking->departure;
+            $target = Catamaran::findOrFail($newCatamaranId);
+
+            // Catamarani attualmente riservati da QUESTA prenotazione (dai blocchi).
+            $blocks = TourCatamaranBlock::where('reason', 'like', '%#' . $booking->booking_number . '%')->get();
+            $currentCatamaranIds = $blocks->pluck('catamaran_id')->map(fn ($id) => (int) $id)->all();
+
+            if (in_array($target->id, $currentCatamaranIds, true)) {
+                return $booking; // già su questo catamarano
+            }
+
+            // Una riserva multi-catamarano non si sposta su un singolo scafo.
+            if (count(array_unique($currentCatamaranIds)) > 1) {
+                throw new \Exception('Questa riserva occupa più catamarani: spostala modificando la prenotazione.');
+            }
+
+            if (!$target->isAvailableOn($departure->departure_date)) {
+                throw new \Exception("Catamarano {$target->name} non disponibile nella data.");
+            }
+
+            // Il catamarano di destinazione deve essere COMPLETAMENTE libero in
+            // questa partenza: nessun posto di altre prenotazioni…
+            $booked = $target->seatsBookedOnDeparture($departure->id);
+            if ($booked > 0) {
+                throw new \Exception("Catamarano {$target->name} non è libero per questa partenza.");
+            }
+            // …e nessuna riserva esclusiva di ALTRE prenotazioni sul giorno.
+            $day = $departure->departure_date instanceof \DateTimeInterface
+                ? $departure->departure_date->format('Y-m-d')
+                : (string) $departure->departure_date;
+            $otherReservation = TourCatamaranBlock::whereDate('start_date', '<=', $day)
+                ->whereDate('end_date', '>=', $day)
+                ->where('catamaran_id', $target->id)
+                ->where('reason', 'not like', '%#' . $booking->booking_number . '%')
+                ->where('reason', 'like', '%#%')
+                ->exists();
+            if ($otherReservation) {
+                throw new \Exception("Catamarano {$target->name} già riservato da un'altra prenotazione.");
+            }
+
+            // Capienza sufficiente per i posti della prenotazione.
+            $seats = $booking->seatRecords()->whereNull('cancelled_at')->get();
+            if ($seats->count() > $target->capacity) {
+                throw new \Exception("Catamarano {$target->name}: capienza insufficiente per {$seats->count()} posti.");
+            }
+
+            // Sposta i posti.
+            foreach ($seats as $seat) {
+                $seat->catamaran_id = $target->id;
+                $seat->save();
+            }
+
+            // Sposta la riserva (i blocchi) sul nuovo catamarano.
+            foreach ($blocks as $block) {
+                $block->catamaran_id = $target->id;
+                $block->save();
+            }
+
+            \App\Support\BookingLog::info('reservation_move', 'Riserva catamarano spostata', $booking, [
+                'from_catamaran_ids' => $currentCatamaranIds,
+                'to_catamaran_id' => $target->id,
+                'to_catamaran' => $target->name,
+                'seats' => $seats->count(),
+            ]);
+
+            return $booking->fresh(['seatRecords.catamaran', 'departure']);
+        });
+    }
 }

@@ -857,7 +857,20 @@ class BookingController extends Controller
             ->orderBy('start_date')
             ->get();
 
-        return view('admin.bookings.show', compact('booking', 'catamarans', 'reservedBlocks'));
+        // Catamarani su cui spostare la riserva: completamente liberi nella partenza
+        // (0 posti occupati) e diversi da quelli già riservati da questa prenotazione.
+        $reservedCatIds = $reservedBlocks->pluck('catamaran_id')->map(fn ($id) => (int) $id)->all();
+        $freeCatamaransForReservation = collect();
+        if ($booking->departure && $reservedBlocks->isNotEmpty()) {
+            $avail = $this->bookingService->catamaranAvailabilityList($booking->departure);
+            $freeNames = collect($avail)->filter(fn ($c) => $c['free'] === $c['capacity'])->pluck('name');
+            $freeCatamaransForReservation = $catamarans
+                ->whereIn('name', $freeNames)
+                ->whereNotIn('id', $reservedCatIds)
+                ->values();
+        }
+
+        return view('admin.bookings.show', compact('booking', 'catamarans', 'reservedBlocks', 'freeCatamaransForReservation'));
     }
 
     public function edit(Booking $booking): View
@@ -1468,6 +1481,21 @@ class BookingController extends Controller
         try {
             $this->bookingService->moveSeat($seat, (int) $request->catamaran_id);
             return back()->with('success', 'Posto spostato.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Sposta un'intera prenotazione a uso esclusivo su un altro catamarano
+     * (posti + riserva). Il catamarano di destinazione dev'essere libero.
+     */
+    public function moveReservation(Request $request, Booking $booking): RedirectResponse
+    {
+        $request->validate(['catamaran_id' => 'required|exists:catamarans,id']);
+        try {
+            $this->bookingService->moveExclusiveReservation($booking, (int) $request->catamaran_id);
+            return back()->with('success', 'Riserva spostata sul nuovo catamarano.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }

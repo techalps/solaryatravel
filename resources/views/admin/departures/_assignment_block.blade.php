@@ -53,16 +53,41 @@
                     @endunless
 
                     @if ($exclusive)
-                        {{-- Riservato in esclusiva: nessuno spostamento, solo numero + intestatario. --}}
+                        {{-- Riservato in esclusiva. Se la riserva è di QUESTA partenza
+                             (non "spanning" da un altro giorno), si può spostare su un
+                             catamarano libero: sposta posti + riserva insieme. --}}
+                        @php
+                            $exBooking = $exclusive['booking'];
+                            $isOwnDeparture = $exBooking && (int) $exBooking->tour_departure_id === (int) $departure->id;
+                            // Catamarani destinazione validi: liberi (non esclusivi, non pieni) e diversi dall'attuale.
+                            $freeTargets = $catamarans->filter(function ($c) use ($catamaran, $stats, $exclusiveByCatamaran) {
+                                if ($c->id === $catamaran->id) return false;
+                                if (isset($exclusiveByCatamaran[$c->id])) return false;
+                                return (($stats[$c->id]['count'] ?? 0) === 0); // completamente libero
+                            });
+                        @endphp
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 px-0">
                                 <div class="me-2">
                                     <div class="fw-semibold">{{ $exclusive['holder'] ?: '—' }}</div>
                                     <div class="small text-muted">
-                                        <a href="{{ route('admin.bookings.show', $exclusive['booking']) }}" class="text-decoration-none">#{{ $exclusive['booking_number'] }}</a>
+                                        <a href="{{ route('admin.bookings.show', $exBooking) }}" class="text-decoration-none">#{{ $exclusive['booking_number'] }}</a>
                                     </div>
                                 </div>
-                                <span class="badge bg-light text-muted border">Riservato (uso esclusivo)</span>
+                                @if ($isOwnDeparture && $freeTargets->isNotEmpty())
+                                    <form method="POST" action="{{ route('admin.bookings.move-reservation', $exBooking) }}" class="d-flex align-items-center gap-1">
+                                        @csrf
+                                        <select name="catamaran_id" class="form-select form-select-sm" style="width:auto"
+                                                onchange="if(this.value) this.form.submit()">
+                                            <option value="">Sposta su…</option>
+                                            @foreach ($freeTargets as $t)
+                                                <option value="{{ $t->id }}">{{ $t->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </form>
+                                @else
+                                    <span class="badge bg-light text-muted border">Riservato (uso esclusivo)</span>
+                                @endif
                             </li>
                         </ul>
                     @elseif ($seats->isEmpty())
