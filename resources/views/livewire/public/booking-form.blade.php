@@ -122,30 +122,6 @@
                     </div>
                 </div>
 
-                {{-- Nomi degli adulti aggiuntivi (il primo coincide con l'intestatario, gestito sotto) --}}
-                @if($adultsCount > 1)
-                    <div class="bk-children-wrap mb-15">
-                        @for ($i = 1; $i < $adultsCount; $i++)
-                            <div class="bk-child-row" wire:key="adult-{{ $i }}">
-                                <div class="bk-child-row-head">
-                                    <span class="bk-child-num">Adulto {{ $i + 1 }}</span>
-                                </div>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <input type="text" wire:model.blur="adults.{{ $i }}.first_name" class="bk-input" placeholder="Nome *">
-                                        @error('adults.'.$i.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
-                                    </div>
-                                    <div class="col-6">
-                                        <input type="text" wire:model.blur="adults.{{ $i }}.last_name" class="bk-input" placeholder="Cognome *">
-                                        @error('adults.'.$i.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
-                                    </div>
-                                </div>
-                                @include('livewire.public._document-fields', ['group' => 'adults', 'idx' => $i])
-                            </div>
-                        @endfor
-                    </div>
-                @endif
-
                 @if($this->childBrackets->isNotEmpty())
                     {{-- Bambini --}}
                     <div class="tg-tour-about-tickets mb-10">
@@ -179,44 +155,6 @@
                             </span>
                         @endforeach
                     </div>
-
-                    @if(count($children) > 0)
-                        <div class="bk-children-wrap mb-15">
-                            @foreach($this->resolvedChildren as $c)
-                                @php $idx = $c['index']; @endphp
-                                <div class="bk-child-row" wire:key="child-{{ $idx }}">
-                                    <div class="bk-child-row-head">
-                                        <span class="bk-child-num">Bambino {{ $idx + 1 }}</span>
-                                        <button type="button" wire:click="removeChild({{ $idx }})" class="bk-child-remove" title="Rimuovi"><i class="fa-solid fa-xmark"></i></button>
-                                    </div>
-                                    <div class="row g-2 mb-2">
-                                        <div class="col-6">
-                                            <input type="text" wire:model.blur="children.{{ $idx }}.first_name" class="bk-input" placeholder="Nome *">
-                                            @error('children.'.$idx.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
-                                        </div>
-                                        <div class="col-6">
-                                            <input type="text" wire:model.blur="children.{{ $idx }}.last_name" class="bk-input" placeholder="Cognome *">
-                                            @error('children.'.$idx.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
-                                        </div>
-                                    </div>
-                                    <label class="bk-label">Data di nascita <span class="text-danger">*</span></label>
-                                    <input type="date" wire:model.live="children.{{ $idx }}.dob" class="bk-input" max="{{ now()->toDateString() }}">
-                                    @if($c['error'])
-                                        <small class="text-danger d-block mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ $c['error'] }}</small>
-                                    @elseif($c['ready'])
-                                        <div class="bk-child-resolved">
-                                            <i class="fa-solid fa-check-circle me-1"></i>
-                                            <strong>{{ $c['bracket']->label }}</strong> ({{ $c['age'] }} anni)
-                                            <span class="text-primary fw-bold">€{{ number_format($c['unit_price'], 0, ',', '.') }}</span>
-                                        </div>
-                                    @elseif($c['dob'] === '')
-                                        <small class="text-muted d-block mt-1"><i class="fa-regular fa-circle-info me-1"></i>Inserisci la data di nascita per vedere la riduzione.</small>
-                                    @endif
-                                    @include('livewire.public._document-fields', ['group' => 'children', 'idx' => $idx])
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
                 @endif
             </div>
 
@@ -316,6 +254,75 @@
                     @include('livewire.public._document-fields', ['group' => 'adults', 'idx' => 0])
                 </div>
             </div>
+
+            {{-- Dati degli altri passeggeri (nome/cognome + documento), dopo l'intestatario. --}}
+            @if($adultsCount > 1 || count($children) > 0)
+                <div class="tg-tour-about-border-doted mb-15"></div>
+                <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-solid fa-users text-primary me-1"></i>Dati passeggeri</span>
+
+                {{-- Adulti aggiuntivi (il primo è l'intestatario, già sopra) --}}
+                @if($adultsCount > 1)
+                    <div class="bk-children-wrap mb-15">
+                        @for ($i = 1; $i < $adultsCount; $i++)
+                            <div class="bk-child-row" wire:key="adult-{{ $i }}">
+                                <div class="bk-child-row-head">
+                                    <span class="bk-child-num">Adulto {{ $i + 1 }}</span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="text" wire:model.blur="adults.{{ $i }}.first_name" class="bk-input" placeholder="Nome *">
+                                        @error('adults.'.$i.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" wire:model.blur="adults.{{ $i }}.last_name" class="bk-input" placeholder="Cognome *">
+                                        @error('adults.'.$i.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                    </div>
+                                </div>
+                                @include('livewire.public._document-fields', ['group' => 'adults', 'idx' => $i])
+                            </div>
+                        @endfor
+                    </div>
+                @endif
+
+                {{-- Bambini (data di nascita + nome/cognome + documento) --}}
+                @if($this->childBrackets->isNotEmpty() && count($children) > 0)
+                    <div class="bk-children-wrap mb-15">
+                        @foreach($this->resolvedChildren as $c)
+                            @php $idx = $c['index']; @endphp
+                            <div class="bk-child-row" wire:key="child-{{ $idx }}">
+                                <div class="bk-child-row-head">
+                                    <span class="bk-child-num">Bambino {{ $idx + 1 }}</span>
+                                    <button type="button" wire:click="removeChild({{ $idx }})" class="bk-child-remove" title="Rimuovi"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <input type="text" wire:model.blur="children.{{ $idx }}.first_name" class="bk-input" placeholder="Nome *">
+                                        @error('children.'.$idx.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" wire:model.blur="children.{{ $idx }}.last_name" class="bk-input" placeholder="Cognome *">
+                                        @error('children.'.$idx.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
+                                    </div>
+                                </div>
+                                <label class="bk-label">Data di nascita <span class="text-danger">*</span></label>
+                                <input type="date" wire:model.live="children.{{ $idx }}.dob" class="bk-input" max="{{ now()->toDateString() }}">
+                                @if($c['error'])
+                                    <small class="text-danger d-block mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ $c['error'] }}</small>
+                                @elseif($c['ready'])
+                                    <div class="bk-child-resolved">
+                                        <i class="fa-solid fa-check-circle me-1"></i>
+                                        <strong>{{ $c['bracket']->label }}</strong> ({{ $c['age'] }} anni)
+                                        <span class="text-primary fw-bold">€{{ number_format($c['unit_price'], 0, ',', '.') }}</span>
+                                    </div>
+                                @elseif($c['dob'] === '')
+                                    <small class="text-muted d-block mt-1"><i class="fa-regular fa-circle-info me-1"></i>Inserisci la data di nascita per vedere la riduzione.</small>
+                                @endif
+                                @include('livewire.public._document-fields', ['group' => 'children', 'idx' => $idx])
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            @endif
 
             {{-- Crea account (solo ospiti non loggati) --}}
             @guest

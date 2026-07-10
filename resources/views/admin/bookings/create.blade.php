@@ -164,7 +164,7 @@
                                 </div>
                             </div>
 
-                            {{-- Adulti --}}
+                            {{-- Adulti (solo conteggio; i dati vanno più in basso) --}}
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <div class="fw-semibold">Adulti <span class="text-muted small">(prezzo pieno)</span></div>
                                 <div class="btn-group" role="group">
@@ -173,14 +173,12 @@
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="adults-plus"><i class="bi bi-plus"></i></button>
                                 </div>
                             </div>
-                            <div id="adults-list" class="mb-3"></div>
 
-                            {{-- Bambini --}}
+                            {{-- Bambini (conteggio; i dati vanno più in basso) --}}
                             <div class="d-flex justify-content-between align-items-center mb-2" id="children-header">
                                 <div class="fw-semibold">Bambini <span class="text-muted small">(con riduzione per età)</span></div>
                                 <button type="button" class="btn btn-outline-primary btn-sm" id="add-child"><i class="bi bi-plus me-1"></i>Aggiungi bambino</button>
                             </div>
-                            <div id="children-list"></div>
                             <div id="children-empty" class="text-muted small">Nessun bambino. Usa "Aggiungi bambino" e inserisci la data di nascita.</div>
                         </div>
                     </div>
@@ -221,6 +219,8 @@
                                 <label class="form-label">Richieste speciali / note interne</label>
                                 <textarea name="special_requests" rows="2" class="form-control" maxlength="1000">{{ old('special_requests') }}</textarea>
                             </div>
+                            {{-- Documento dell'intestatario (adulto 1): resta nel suo blocco. --}}
+                            <div class="col-12" id="booker-doc-slot"></div>
                         </div>
                     </div>
                 </div>
@@ -254,6 +254,18 @@
                         </div>
                     </div>
                 @endif
+
+                {{-- 6. Dati passeggeri (nome/cognome + documento), dopo l'intestatario --}}
+                <div class="dash-card mb-3" id="passenger-data-card" style="display:none">
+                    <div class="dash-card-header">
+                        <h3><i class="bi bi-person-vcard me-2 text-primary"></i>Dati passeggeri</h3>
+                    </div>
+                    <div class="dash-card-body">
+                        <p class="small text-muted mb-3">Nome, cognome e documento d'identità di ogni passeggero. Il documento è obbligatorio per tutti (intestatario compreso).</p>
+                        <div id="adults-list" class="mb-3"></div>
+                        <div id="children-list"></div>
+                    </div>
+                </div>
             </div>
 
             {{-- RIGHT: riepilogo --}}
@@ -442,6 +454,7 @@
         returnDateInput.value = '';
         dateInput.disabled = true;
         participantsArea.classList.add('d-none');
+        document.getElementById('passenger-data-card').style.display = 'none';
         participantsEmpty.classList.remove('d-none');
         renderSummary();
 
@@ -675,6 +688,7 @@
     function onDepartureChanged() {
         if (!currentDeparture) {
             participantsArea.classList.add('d-none');
+            document.getElementById('passenger-data-card').style.display = 'none';
             participantsEmpty.classList.remove('d-none');
             renderCatamarans();
             renderSummary();
@@ -682,6 +696,7 @@
         }
         participantsEmpty.classList.add('d-none');
         participantsArea.classList.remove('d-none');
+        document.getElementById('passenger-data-card').style.display = '';
         // Tour su richiesta: mostra i prezzi manuali e abilita sempre i bambini.
         onRequestPriceArea.style.display = onRequest ? '' : 'none';
         childrenHeader.querySelector('.text-muted').textContent =
@@ -748,25 +763,37 @@
         next[0] = Object.assign(emptyDoc(), adults[0] || {}, { first_name: custFirst.value || '', last_name: custLast.value || '' });
         adults = next;
 
-        adultsList.innerHTML = adults.map((a, i) => `
+        // Intestatario (adulto 1): il documento resta nel blocco "Cliente" in alto.
+        // I dati nome/cognome li fornisce già la scheda cliente (hidden qui per il submit).
+        const bookerSlot = document.getElementById('booker-doc-slot');
+        if (bookerSlot) {
+            bookerSlot.innerHTML = `
+                <input type="hidden" name="adults[0][first_name]" value="${escapeHtml(adults[0].first_name)}">
+                <input type="hidden" name="adults[0][last_name]" value="${escapeHtml(adults[0].last_name)}">
+                ${SolaryaDocFields.html('adults', 0, adults[0], { tripDate: tripDateIso() })}`;
+        }
+
+        // Nella sezione "Dati passeggeri" in fondo: solo gli adulti dal 2° in poi.
+        adultsList.innerHTML = adults.slice(1).map((a, k) => {
+            const i = k + 1;
+            return `
             <div class="ab-participant-row">
-                <div class="ab-row-head mb-2">Adulto ${i + 1}${i === 0 ? ' · intestatario' : ''}</div>
+                <div class="ab-row-head mb-2">Adulto ${i + 1}</div>
                 <div class="row g-2">
                     <div class="col-md-6">
                         <input type="text" class="form-control form-control-sm" placeholder="Nome"
-                            name="adults[${i}][first_name]" value="${escapeHtml(a.first_name)}" ${i === 0 ? 'readonly' : ''} data-adult="${i}" data-field="first_name">
+                            name="adults[${i}][first_name]" value="${escapeHtml(a.first_name)}" data-adult="${i}" data-field="first_name">
                     </div>
                     <div class="col-md-6">
                         <input type="text" class="form-control form-control-sm" placeholder="Cognome"
-                            name="adults[${i}][last_name]" value="${escapeHtml(a.last_name)}" ${i === 0 ? 'readonly' : ''} data-adult="${i}" data-field="last_name">
+                            name="adults[${i}][last_name]" value="${escapeHtml(a.last_name)}" data-adult="${i}" data-field="last_name">
                     </div>
                 </div>
-                ${i === 0 ? '<div class="form-text">Compilato dai dati cliente qui sotto.</div>' : ''}
                 ${SolaryaDocFields.html('adults', i, a, { tripDate: tripDateIso() })}
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
         // Ripristina le liste comuni per i blocchi con provincia già scelta.
-        adultsList.querySelectorAll('[data-doc-block]').forEach(b => {
+        document.querySelectorAll('#booker-doc-slot [data-doc-block], #adults-list [data-doc-block]').forEach(b => {
             if (b.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(b);
         });
     }
