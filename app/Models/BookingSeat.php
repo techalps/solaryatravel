@@ -23,6 +23,12 @@ class BookingSeat extends Model
         'guest_last_name',
         'guest_date_of_birth',
         'tax_code',
+        'doc_type',
+        'doc_number',
+        'doc_expiry',
+        'doc_issue_country',
+        'doc_issue_province',
+        'doc_issue_place',
         'is_primary',
         'qr_code',
         'boarded_at',
@@ -31,15 +37,39 @@ class BookingSeat extends Model
         'cancellation_reason',
     ];
 
+    /** Tipi di documento accettati (per validazione e label UI). */
+    public const DOC_TYPES = [
+        'carta_identita' => "Carta d'identità",
+        'passaporto' => 'Passaporto',
+        'patente' => 'Patente di guida',
+    ];
+
     public function hasGuestDetails(): bool
     {
         return !empty($this->guest_first_name) && !empty($this->guest_last_name);
+    }
+
+    /** Il documento è completo (tutti i campi obbligatori valorizzati). */
+    public function hasDocument(): bool
+    {
+        return !empty($this->doc_type)
+            && !empty($this->doc_number)
+            && !empty($this->doc_expiry)
+            && !empty($this->doc_issue_country)
+            && !empty($this->doc_issue_place);
+    }
+
+    /** Etichetta leggibile del tipo documento. */
+    public function docTypeLabel(): ?string
+    {
+        return $this->doc_type ? (self::DOC_TYPES[$this->doc_type] ?? $this->doc_type) : null;
     }
 
     protected $casts = [
         'is_primary' => 'boolean',
         'price_paid' => 'decimal:2',
         'guest_date_of_birth' => 'date',
+        'doc_expiry' => 'date',
         'created_at' => 'datetime',
         'boarded_at' => 'datetime',
         'cancelled_at' => 'datetime',

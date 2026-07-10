@@ -145,6 +145,25 @@ class Booking extends Model
         return $this->hasMany(BookingSeat::class)->whereNull('cancelled_at');
     }
 
+    /**
+     * Almeno un passeggero attivo è privo di documento d'identità completo.
+     * Usa la relazione già caricata se disponibile, per non generare query.
+     */
+    public function hasMissingDocuments(): bool
+    {
+        $seats = $this->relationLoaded('seatRecords')
+            ? $this->seatRecords->whereNull('cancelled_at')
+            : $this->activeSeats;
+
+        foreach ($seats as $seat) {
+            if (!$seat->hasDocument()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function addons(): HasMany
     {
         return $this->hasMany(BookingAddon::class);

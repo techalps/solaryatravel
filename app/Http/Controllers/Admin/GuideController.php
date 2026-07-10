@@ -51,6 +51,11 @@ class GuideController extends Controller
             'icon' => 'bi-bar-chart',
             'desc' => 'Cosa mostra ogni scheda e voce: ricavi, prenotazioni, occupazione.',
         ],
+        'documenti' => [
+            'title' => "Documenti d'identità",
+            'icon' => 'bi-person-vcard',
+            'desc' => 'Obbligo documento per ogni passeggero, scadenza, modifica.',
+        ],
         'impostazioni' => [
             'title' => 'Impostazioni',
             'icon' => 'bi-gear',

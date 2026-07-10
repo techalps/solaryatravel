@@ -41,21 +41,50 @@ class BookingForm extends Component
     public int $adultsCount = 1;
 
     /**
-     * Nome/cognome di ogni adulto. La lunghezza dell'array è sincronizzata
-     * con $adultsCount. Il primo adulto è il prenotante (intestatario).
+     * Nome/cognome + documento d'identità di ogni adulto. La lunghezza dell'array
+     * è sincronizzata con $adultsCount. Il primo adulto è il prenotante
+     * (intestatario). Ogni passeggero DEVE avere un documento valido fino alla
+     * data del viaggio (obbligo contrattuale).
      *
-     * @var array<int, array{first_name: string, last_name: string}>
+     * @var array<int, array{first_name:string,last_name:string,doc_type:string,doc_number:string,doc_expiry:string,doc_country:string,doc_province:string,doc_place:string}>
      */
     public array $adults = [
-        ['first_name' => '', 'last_name' => ''],
+        ['first_name' => '', 'last_name' => '', 'doc_type' => '', 'doc_number' => '', 'doc_expiry' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''],
     ];
 
     /**
-     * Bambini: data di nascita + nome/cognome.
+     * Bambini: data di nascita + nome/cognome + documento (obbligatorio anch'esso).
      *
-     * @var array<int, array{dob: string, first_name: string, last_name: string}>
+     * @var array<int, array{dob:string,first_name:string,last_name:string,doc_type:string,doc_number:string,doc_expiry:string,doc_country:string,doc_province:string,doc_place:string}>
      */
     public array $children = [];
+
+    /** Struttura vuota di un blocco documento (riusata per adulti e bambini). */
+    private static function emptyDocument(): array
+    {
+        return ['doc_type' => '', 'doc_number' => '', 'doc_expiry' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''];
+    }
+
+    /**
+     * Normalizza i campi documento di un passeggero nel formato atteso dal
+     * BookingService. Se lo Stato non è Italia, la provincia non si applica.
+     *
+     * @param  array<string,mixed>  $p
+     * @return array{doc_type:string,doc_number:string,doc_expiry:string,doc_issue_country:string,doc_issue_province:?string,doc_issue_place:string}
+     */
+    private function documentFor(array $p): array
+    {
+        $country = strtoupper(trim((string) ($p['doc_country'] ?? '')));
+
+        return [
+            'doc_type' => (string) ($p['doc_type'] ?? ''),
+            'doc_number' => strtoupper(trim((string) ($p['doc_number'] ?? ''))),
+            'doc_expiry' => (string) ($p['doc_expiry'] ?? ''),
+            'doc_issue_country' => $country,
+            'doc_issue_province' => $country === 'IT' ? (trim((string) ($p['doc_province'] ?? '')) ?: null) : null,
+            'doc_issue_place' => trim((string) ($p['doc_place'] ?? '')),
+        ];
+    }
 
     /** @var array<int> addon ids selezionati */
     public array $selectedAddons = [];
@@ -444,6 +473,34 @@ class BookingForm extends Component
         return is_array($assignment) ? count($assignment) : 1;
     }
 
+    /** Stati del mondo (Italia in cima) per le select del documento. */
+    #[Computed]
+    public function countries(): array
+    {
+        return \App\Support\Geo::countries();
+    }
+
+    /** Province italiane (sigla + nome) per la select a cascata. */
+    #[Computed]
+    public function provinces(): array
+    {
+        return \App\Support\Geo::provinces();
+    }
+
+    /** Tipi di documento accettati (value => label). */
+    #[Computed]
+    public function docTypes(): array
+    {
+        return \App\Models\BookingSeat::DOC_TYPES;
+    }
+
+    /** Data minima di scadenza documento (= giorno del viaggio), per l'attributo min degli input date. */
+    #[Computed]
+    public function minDocExpiry(): ?string
+    {
+        return $this->departure ? $this->departure->departure_date->toDateString() : null;
+    }
+
     #[Computed]
     public function hasChildrenWithErrors(): bool
     {
@@ -484,9 +541,17 @@ class BookingForm extends Component
         $current = is_array($this->adults) ? $this->adults : [];
         $next = [];
         for ($i = 0; $i < $this->adultsCount; $i++) {
+            $prev = is_array($current[$i] ?? null) ? $current[$i] : [];
+            $doc = self::emptyDocument();
             $next[] = [
-                'first_name' => trim((string) ($current[$i]['first_name'] ?? '')),
-                'last_name' => trim((string) ($current[$i]['last_name'] ?? '')),
+                'first_name' => trim((string) ($prev['first_name'] ?? '')),
+                'last_name' => trim((string) ($prev['last_name'] ?? '')),
+                'doc_type' => (string) ($prev['doc_type'] ?? ''),
+                'doc_number' => (string) ($prev['doc_number'] ?? ''),
+                'doc_expiry' => (string) ($prev['doc_expiry'] ?? ''),
+                'doc_country' => (string) ($prev['doc_country'] ?? 'IT'),
+                'doc_province' => (string) ($prev['doc_province'] ?? ''),
+                'doc_place' => (string) ($prev['doc_place'] ?? ''),
             ];
         }
         $this->adults = $next;
@@ -496,7 +561,7 @@ class BookingForm extends Component
     public function updatedCustomerFirstName(string $value): void
     {
         if (!isset($this->adults[0])) {
-            $this->adults[0] = ['first_name' => '', 'last_name' => ''];
+            $this->adults[0] = array_merge(['first_name' => '', 'last_name' => ''], self::emptyDocument());
         }
         $this->adults[0]['first_name'] = $value;
     }
@@ -504,9 +569,49 @@ class BookingForm extends Component
     public function updatedCustomerLastName(string $value): void
     {
         if (!isset($this->adults[0])) {
-            $this->adults[0] = ['first_name' => '', 'last_name' => ''];
+            $this->adults[0] = array_merge(['first_name' => '', 'last_name' => ''], self::emptyDocument());
         }
         $this->adults[0]['last_name'] = $value;
+    }
+
+    /**
+     * Cambio dello Stato di emissione per un passeggero: se non è Italia, la
+     * provincia non ha senso (il comune diventa testo libero). Ripulisce i campi
+     * dipendenti per evitare valori incoerenti.
+     */
+    public function updatedAdults($value, $key): void
+    {
+        // $key es. "2.doc_country". Ci interessa solo il cambio di Stato.
+        if (is_string($key) && str_ends_with($key, '.doc_country')) {
+            $idx = (int) explode('.', $key)[0];
+            if (isset($this->adults[$idx])) {
+                $this->adults[$idx]['doc_province'] = '';
+                $this->adults[$idx]['doc_place'] = '';
+            }
+        }
+        if (is_string($key) && str_ends_with($key, '.doc_province')) {
+            $idx = (int) explode('.', $key)[0];
+            if (isset($this->adults[$idx])) {
+                $this->adults[$idx]['doc_place'] = '';
+            }
+        }
+    }
+
+    public function updatedChildren($value, $key): void
+    {
+        if (is_string($key) && str_ends_with($key, '.doc_country')) {
+            $idx = (int) explode('.', $key)[0];
+            if (isset($this->children[$idx])) {
+                $this->children[$idx]['doc_province'] = '';
+                $this->children[$idx]['doc_place'] = '';
+            }
+        }
+        if (is_string($key) && str_ends_with($key, '.doc_province')) {
+            $idx = (int) explode('.', $key)[0];
+            if (isset($this->children[$idx])) {
+                $this->children[$idx]['doc_place'] = '';
+            }
+        }
     }
 
     // ===== Children stepper =====
@@ -521,7 +626,7 @@ class BookingForm extends Component
         if ($max !== null && $this->totalSelected >= $max) {
             return;
         }
-        $this->children[] = ['dob' => '', 'first_name' => '', 'last_name' => ''];
+        $this->children[] = array_merge(['dob' => '', 'first_name' => '', 'last_name' => ''], self::emptyDocument());
     }
 
     public function removeChild(int $index = -1): void
@@ -607,7 +712,18 @@ class BookingForm extends Component
         // Riallinea l'array adulti prima di validare (in caso il count sia cambiato senza che gli step abbiano sincronizzato).
         $this->syncAdults();
 
-        $this->validate([
+        // Data entro cui ogni documento deve essere valido = giorno del viaggio
+        // (i tour sono in giornata: departure_date è anche il rientro).
+        $tripDate = $this->departure ? $this->departure->departure_date->toDateString() : null;
+
+        $docTypes = implode(',', array_keys(\App\Models\BookingSeat::DOC_TYPES));
+        $expiryRule = ['required', 'date'];
+        if ($tripDate) {
+            // Deve essere valido FINO ALLA data del viaggio compresa.
+            $expiryRule[] = 'after_or_equal:'.$tripDate;
+        }
+
+        $rules = [
             'customer_first_name' => 'required|string|max:100',
             'customer_last_name' => 'required|string|max:100',
             'customer_email' => 'required|email|max:255',
@@ -620,7 +736,19 @@ class BookingForm extends Component
             'children.*.first_name' => 'required|string|max:100',
             'children.*.last_name' => 'required|string|max:100',
             'terms' => 'accepted',
-        ], [
+        ];
+        // Documento obbligatorio per OGNI passeggero (adulti + bambini).
+        foreach (['adults', 'children'] as $group) {
+            $rules[$group.'.*.doc_type'] = 'required|in:'.$docTypes;
+            $rules[$group.'.*.doc_number'] = 'required|string|max:40';
+            $rules[$group.'.*.doc_expiry'] = $expiryRule;
+            $rules[$group.'.*.doc_country'] = 'required|string|size:2';
+            // Provincia obbligatoria solo se lo Stato è Italia.
+            $rules[$group.'.*.doc_province'] = 'nullable|string|max:4';
+            $rules[$group.'.*.doc_place'] = 'required|string|max:120';
+        }
+
+        $this->validate($rules, [
             'terms.accepted' => 'Devi accettare i termini e condizioni.',
             'customer_tax_code.required' => 'Inserisci il codice fiscale dell\'intestatario.',
             'customer_tax_code.min' => 'Codice fiscale non valido.',
@@ -628,7 +756,35 @@ class BookingForm extends Component
             'adults.*.last_name.required' => 'Inserisci il cognome di ogni adulto.',
             'children.*.first_name.required' => 'Inserisci il nome di ogni bambino.',
             'children.*.last_name.required' => 'Inserisci il cognome di ogni bambino.',
+            'adults.*.doc_type.required' => 'Scegli il tipo di documento per ogni passeggero.',
+            'adults.*.doc_type.in' => 'Tipo di documento non valido.',
+            'adults.*.doc_number.required' => 'Inserisci il numero del documento di ogni passeggero.',
+            'adults.*.doc_expiry.required' => 'Inserisci la data di scadenza del documento.',
+            'adults.*.doc_expiry.after_or_equal' => 'Il documento deve essere valido fino alla data del viaggio.',
+            'adults.*.doc_country.required' => 'Indica lo Stato di emissione del documento.',
+            'adults.*.doc_place.required' => 'Indica il luogo di emissione del documento.',
+            'children.*.doc_type.required' => 'Scegli il tipo di documento per ogni passeggero.',
+            'children.*.doc_type.in' => 'Tipo di documento non valido.',
+            'children.*.doc_number.required' => 'Inserisci il numero del documento di ogni passeggero.',
+            'children.*.doc_expiry.required' => 'Inserisci la data di scadenza del documento.',
+            'children.*.doc_expiry.after_or_equal' => 'Il documento deve essere valido fino alla data del viaggio.',
+            'children.*.doc_country.required' => 'Indica lo Stato di emissione del documento.',
+            'children.*.doc_place.required' => 'Indica il luogo di emissione del documento.',
         ]);
+
+        // Provincia obbligatoria quando lo Stato è Italia (il comune è ISTAT).
+        $provinceErrors = [];
+        foreach (['adults', 'children'] as $group) {
+            foreach ($this->{$group} as $i => $p) {
+                $country = strtoupper((string) ($p['doc_country'] ?? ''));
+                if ($country === 'IT' && trim((string) ($p['doc_province'] ?? '')) === '') {
+                    $provinceErrors[$group.'.'.$i.'.doc_province'] = 'Seleziona la provincia di emissione.';
+                }
+            }
+        }
+        if ($provinceErrors) {
+            throw \Illuminate\Validation\ValidationException::withMessages($provinceErrors);
+        }
 
         // Validazione password solo se l'ospite ha scelto di creare un account.
         // In modalità B2B l'agenzia non crea account per il cliente.
@@ -688,6 +844,7 @@ class BookingForm extends Component
                 'bracket_id' => $c['bracket']->id,
                 'first_name' => trim((string) ($this->children[$i]['first_name'] ?? '')),
                 'last_name' => trim((string) ($this->children[$i]['last_name'] ?? '')),
+                'document' => $this->documentFor($this->children[$i] ?? []),
             ];
         }
 
@@ -697,17 +854,17 @@ class BookingForm extends Component
         // il primo adulto = intestatario).
         $guests = [];
         foreach ($this->adults as $i => $a) {
-            $guests[] = [
+            $guests[] = array_merge([
                 'first_name' => trim($a['first_name'] ?? ''),
                 'last_name' => trim($a['last_name'] ?? ''),
                 'tax_code' => $i === 0 ? strtoupper(trim($this->customer_tax_code)) : null,
-            ];
+            ], $this->documentFor($a));
         }
         foreach ($resolvedChildren as $c) {
-            $guests[] = [
+            $guests[] = array_merge([
                 'first_name' => $c['first_name'],
                 'last_name' => $c['last_name'],
-            ];
+            ], $c['document'] ?? []);
         }
 
         // Risolvi metodo/tipo di pagamento secondo le impostazioni attive.

@@ -386,6 +386,7 @@
                                         <th>Ospite</th>
                                         <th>Fascia</th>
                                         <th>Catamarano</th>
+                                        <th>Documento</th>
                                         <th class="text-end">Prezzo</th>
                                         <th>Imbarco</th>
                                     </tr>
@@ -409,6 +410,28 @@
                                             </td>
                                             <td>{{ $seat->ageBracket?->label ?? '—' }}</td>
                                             <td>{{ $seat->catamaran?->name ?? '—' }}</td>
+                                            <td>
+                                                @if ($seat->hasDocument())
+                                                    @php
+                                                        $docExpired = $booking->departure && $seat->doc_expiry
+                                                            && $seat->doc_expiry->lt($booking->departure->departure_date);
+                                                    @endphp
+                                                    <span class="badge {{ $docExpired ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">
+                                                        <i class="bi bi-person-vcard me-1"></i>{{ $seat->docTypeLabel() }}
+                                                    </span>
+                                                    <div class="small text-muted">
+                                                        {{ $seat->doc_number }} · scad. {{ $seat->doc_expiry?->format('d/m/Y') }}
+                                                        @if ($docExpired) <span class="text-danger">(scaduto!)</span> @endif
+                                                    </div>
+                                                @else
+                                                    <span class="badge bg-warning-subtle text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Mancante</span>
+                                                @endif
+                                                @unless ($seat->cancelled_at)
+                                                    <button type="button" class="btn btn-link btn-sm p-0 small" data-bs-toggle="collapse" data-bs-target="#doc-edit-{{ $seat->id }}">
+                                                        <i class="bi bi-pencil me-1"></i>{{ $seat->hasDocument() ? 'Modifica' : 'Inserisci' }}
+                                                    </button>
+                                                @endunless
+                                            </td>
                                             <td class="text-end">{{ $fmtMoney($seat->price_paid) }}</td>
                                             <td>
                                                 @if ($seat->cancelled_at)
@@ -422,12 +445,58 @@
                                                 @endif
                                             </td>
                                         </tr>
+                                        @unless ($seat->cancelled_at)
+                                            <tr class="collapse" id="doc-edit-{{ $seat->id }}">
+                                                <td colspan="7" class="bg-light-subtle">
+                                                    <form method="POST" action="{{ route('admin.bookings.seats.document', [$booking, $seat]) }}">
+                                                        @csrf
+                                                        <div class="fw-semibold small mb-2">
+                                                            <i class="bi bi-person-vcard me-1"></i>Documento di {{ trim($seat->guest_first_name . ' ' . $seat->guest_last_name) ?: 'passeggero' }}
+                                                        </div>
+                                                        <div id="doc-edit-fields-{{ $seat->id }}"></div>
+                                                        <div class="mt-2">
+                                                            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check2 me-1"></i>Salva documento</button>
+                                                        </div>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        @endunless
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
+
+                @push('scripts')
+                @include('admin.bookings._document-fields-js')
+                <script>
+                (function () {
+                    const tripDate = @json(optional($booking->departure)->departure_date?->toDateString());
+                    @foreach ($booking->seatRecords as $seat)
+                        @unless ($seat->cancelled_at)
+                        (function () {
+                            const slot = document.getElementById('doc-edit-fields-{{ $seat->id }}');
+                            if (!slot) return;
+                            const doc = @json([
+                                'doc_type' => $seat->doc_type,
+                                'doc_number' => $seat->doc_number,
+                                'doc_expiry' => $seat->doc_expiry?->toDateString(),
+                                'doc_issue_country' => $seat->doc_issue_country ?: 'IT',
+                                'doc_issue_province' => $seat->doc_issue_province,
+                                'doc_issue_place' => $seat->doc_issue_place,
+                            ]);
+                            // prefix vuoto → name "flat" (doc_type), atteso da updateSeatDocument().
+                            slot.innerHTML = SolaryaDocFields.html('', 0, doc, { tripDate });
+                            const block = slot.querySelector('[data-doc-block]');
+                            if (block && block.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(block);
+                        })();
+                        @endunless
+                    @endforeach
+                    SolaryaDocFields.wire(document);
+                })();
+                </script>
+                @endpush
             @endif
 
             {{-- Addons --}}

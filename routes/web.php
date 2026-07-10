@@ -36,6 +36,11 @@ Route::get('/tour', [TourController::class, 'index'])->name('tours.index');
 Route::get('/tour/{slug}', [TourController::class, 'show'])->name('tours.show');
 Route::get('/api/departures/{departure}/availability', [TourController::class, 'checkDeparture'])->name('api.departure.availability');
 
+// Comuni di una provincia (select a cascata luogo di emissione documento).
+// Statico e cacheabile; disponibile anche su widget (stesso host).
+Route::get('/api/geo/comuni/{sigla}', [\App\Http\Controllers\GeoController::class, 'comuni'])
+    ->where('sigla', '[A-Za-z]{2}')->name('api.geo.comuni');
+
 // Redirect compatibilità: vecchio /catamarani -> /tour
 Route::redirect('/catamarani', '/tour');
 
@@ -124,6 +129,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin']
     Route::post('/bookings/{booking}/send-balance-request', [AdminBookingController::class, 'sendBalanceRequest'])->name('bookings.send-balance-request');
     Route::get('/bookings/{booking}/export', [AdminBookingController::class, 'export'])->name('bookings.export');
     Route::post('/bookings/{booking}/seats/{seat}/move', [AdminBookingController::class, 'moveSeat'])->name('bookings.seats.move');
+    // Modifica del documento d'identità di un passeggero (solo admin).
+    Route::post('/bookings/{booking}/seats/{seat}/document', [AdminBookingController::class, 'updateSeatDocument'])->name('bookings.seats.document');
     // Sposta un'intera riserva (uso esclusivo) su un altro catamarano.
     Route::post('/bookings/{booking}/move-reservation', [AdminBookingController::class, 'moveReservation'])->name('bookings.move-reservation');
     // Disdetta di singoli partecipanti/extra con eventuale rimborso parziale.

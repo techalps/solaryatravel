@@ -41,6 +41,9 @@ Route::middleware('b2b')->group(function () {
     // Nuova prenotazione (Flusso A): scelta tour → form identico al cliente.
     Route::get('/prenotazioni/nuova', [BookingController::class, 'create'])->name('b2b.bookings.create');
     Route::get('/prenotazioni/nuova/prenota', [BookingController::class, 'start'])->name('b2b.bookings.start');
+    // Comuni per la select a cascata del documento (stesso endpoint del sito).
+    Route::get('/api/geo/comuni/{sigla}', [\App\Http\Controllers\GeoController::class, 'comuni'])
+        ->where('sigla', '[A-Za-z]{2}')->name('b2b.api.geo.comuni');
 
     // Le mie prenotazioni: lista + dettaglio (isolamento per agenzia).
     Route::get('/prenotazioni', [BookingController::class, 'index'])->name('b2b.bookings.index');

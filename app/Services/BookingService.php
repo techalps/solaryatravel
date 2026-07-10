@@ -954,6 +954,26 @@ class BookingService
      * @param  \Illuminate\Support\Collection  $brackets  keyBy('id')
      * @param  array<int, array{catamaran_id:int, seats:int}>  $distribution
      */
+    /**
+     * Estrae i campi documento d'identità da un array guest, normalizzati per
+     * il modello BookingSeat. Restituisce chiavi sempre presenti (null se assenti)
+     * così da poter fare merge diretto nel create().
+     *
+     * @param  array<string,mixed>  $guest
+     * @return array<string,mixed>
+     */
+    protected function documentColumns(array $guest): array
+    {
+        return [
+            'doc_type' => $guest['doc_type'] ?? null,
+            'doc_number' => isset($guest['doc_number']) ? strtoupper(trim((string) $guest['doc_number'])) : null,
+            'doc_expiry' => $guest['doc_expiry'] ?? null,
+            'doc_issue_country' => isset($guest['doc_issue_country']) ? strtoupper(trim((string) $guest['doc_issue_country'])) : null,
+            'doc_issue_province' => $guest['doc_issue_province'] ?? null,
+            'doc_issue_place' => $guest['doc_issue_place'] ?? null,
+        ];
+    }
+
     protected function createParticipantSeats(
         Booking $booking,
         int $adultsCount,
@@ -983,7 +1003,7 @@ class BookingService
             $seatPrice = $manualTotalOnFirstSeat !== null
                 ? ($a === 0 ? $manualTotalOnFirstSeat : 0.0)
                 : $adultUnitPrice;
-            BookingSeat::create([
+            BookingSeat::create(array_merge([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $catamaranQueue[$countingIdx] ?? null,
@@ -994,7 +1014,7 @@ class BookingService
                 'guest_date_of_birth' => $guest['date_of_birth'] ?? null,
                 'tax_code' => $a === 0 ? ($guest['tax_code'] ?? null) : null, // CF solo sull'intestatario
                 'is_primary' => $a === 0,
-            ]);
+            ], $this->documentColumns($guest)));
             $countingIdx++;
             $guestIdx++;
         }
@@ -1026,7 +1046,7 @@ class BookingService
             $price = $bracket
                 ? (float) $bracket->price * (float) $booking->departure->price_modifier
                 : (float) ($entry['child']['price'] ?? 0); // prezzo manuale (su richiesta)
-            BookingSeat::create([
+            BookingSeat::create(array_merge([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $catamaranQueue[$countingIdx] ?? null,
@@ -1036,7 +1056,7 @@ class BookingService
                 'guest_last_name' => $entry['guest']['last_name'] ?? ($entry['child']['last_name'] ?? null),
                 'guest_date_of_birth' => $entry['child']['dob'] ?? null,
                 'is_primary' => false,
-            ]);
+            ], $this->documentColumns($entry['guest'] ?? [])));
             $countingIdx++;
         }
 
@@ -1044,7 +1064,7 @@ class BookingService
         $defaultCatamaran = $catamaranQueue[0] ?? null;
         foreach ($nonCountingChildren as $entry) {
             $bracket = $entry['bracket'];
-            BookingSeat::create([
+            BookingSeat::create(array_merge([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $defaultCatamaran,
@@ -1054,7 +1074,7 @@ class BookingService
                 'guest_last_name' => $entry['guest']['last_name'] ?? ($entry['child']['last_name'] ?? null),
                 'guest_date_of_birth' => $entry['child']['dob'],
                 'is_primary' => false,
-            ]);
+            ], $this->documentColumns($entry['guest'] ?? [])));
         }
     }
 
@@ -1106,7 +1126,7 @@ class BookingService
         foreach ($countingList as $idx => $entry) {
             $bracket = $entry['bracket'];
             $guest = $guests[$idx] ?? [];
-            BookingSeat::create([
+            BookingSeat::create(array_merge([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $catamaranQueue[$idx] ?? null,
@@ -1115,8 +1135,9 @@ class BookingService
                 'guest_first_name' => $guest['first_name'] ?? null,
                 'guest_last_name' => $guest['last_name'] ?? null,
                 'guest_date_of_birth' => $guest['date_of_birth'] ?? null,
+                'tax_code' => $idx === 0 ? ($guest['tax_code'] ?? null) : null,
                 'is_primary' => $idx === 0,
-            ]);
+            ], $this->documentColumns($guest)));
         }
 
         // Posti non contanti (es. neonati) → seguono il catamarano del primo posto contante

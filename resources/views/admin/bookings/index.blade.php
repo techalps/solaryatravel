@@ -15,7 +15,7 @@
             'no_show'    => ['label' => 'No show',    'icon' => 'bi-eye-slash',      'color' => 'secondary'],
         ];
         $currentStatus = request('status');
-        $hasFilters = request()->hasAny(['search', 'status', 'tour', 'agency', 'date_from', 'date_to']);
+        $hasFilters = request()->hasAny(['search', 'status', 'tour', 'agency', 'date_from', 'date_to', 'missing_docs']);
 
         // Card di riepilogo: includi "Acconto versato" solo se l'acconto è attivo.
         $miniStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
@@ -85,6 +85,26 @@
             </div>
         @endforeach
     </div>
+
+    {{-- Avviso documenti mancanti su prenotazioni future (obbligo contrattuale) --}}
+    @if(!empty($missingDocsCount) && $missingDocsCount > 0)
+        <div class="alert alert-warning d-flex align-items-center justify-content-between rounded-3 mb-3">
+            <div>
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>{{ $missingDocsCount }}</strong>
+                {{ $missingDocsCount === 1 ? 'prenotazione futura ha' : 'prenotazioni future hanno' }} passeggeri senza documento d'identità completo.
+            </div>
+            @if(request()->boolean('missing_docs'))
+                <a href="{{ route('admin.bookings.index', request()->except(['missing_docs', 'page'])) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Rimuovi filtro
+                </a>
+            @else
+                <a href="{{ route('admin.bookings.index', array_merge(request()->except('page'), ['missing_docs' => 1])) }}" class="btn btn-sm btn-warning">
+                    <i class="bi bi-funnel me-1"></i>Mostra solo queste
+                </a>
+            @endif
+        </div>
+    @endif
 
     {{-- Filters --}}
     <div class="dash-filter-bar">
@@ -196,6 +216,15 @@
                                     <div class="small text-primary mt-1 text-truncate" style="max-width:200px" title="{{ $booking->b2bUser?->agency_name ?: $booking->b2bUser?->name }}">
                                         <i class="bi bi-building me-1"></i>{{ $booking->b2bUser?->agency_name ?: $booking->b2bUser?->name ?? '—' }}
                                     </div>
+                                @endif
+                                @php
+                                    $isFuture = $booking->departure && $booking->departure->departure_date >= now()->startOfDay();
+                                    $activeStatus = !in_array($booking->status, [\App\Enums\BookingStatus::CANCELLED, \App\Enums\BookingStatus::REFUNDED, \App\Enums\BookingStatus::NO_SHOW], true);
+                                @endphp
+                                @if($isFuture && $activeStatus && $booking->hasMissingDocuments())
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning ms-1" title="Documento d'identità mancante per uno o più passeggeri">
+                                        <i class="bi bi-person-vcard me-1"></i>Doc. mancante
+                                    </span>
                                 @endif
                                 <div class="small text-muted mt-1">
                                     <i class="bi bi-clock me-1"></i>{{ $booking->created_at->timezone($TZ)->format('d/m/Y H:i') }}

@@ -140,6 +140,7 @@
                                         @error('adults.'.$i.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                                     </div>
                                 </div>
+                                @include('livewire.public._document-fields', ['group' => 'adults', 'idx' => $i])
                             </div>
                         @endfor
                     </div>
@@ -211,6 +212,7 @@
                                     @elseif($c['dob'] === '')
                                         <small class="text-muted d-block mt-1"><i class="fa-regular fa-circle-info me-1"></i>Inserisci la data di nascita per vedere la riduzione.</small>
                                     @endif
+                                    @include('livewire.public._document-fields', ['group' => 'children', 'idx' => $idx])
                                 </div>
                             @endforeach
                         </div>
@@ -308,6 +310,10 @@
                 </div>
                 <div class="col-12">
                     <textarea wire:model="special_requests" class="bk-textarea" rows="2" placeholder="Richieste speciali (opzionale)"></textarea>
+                </div>
+                {{-- Documento dell'intestatario (adulto #1). Obbligatorio come per tutti. --}}
+                <div class="col-12">
+                    @include('livewire.public._document-fields', ['group' => 'adults', 'idx' => 0])
                 </div>
             </div>
 

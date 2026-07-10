@@ -61,7 +61,17 @@
                                 <tbody>
                                     @foreach($booking->seatRecords as $seat)
                                         <tr>
-                                            <td>{{ trim(($seat->first_name ?? '').' '.($seat->last_name ?? '')) ?: 'Partecipante' }}</td>
+                                            <td>
+                                                {{ trim(($seat->guest_first_name ?? '').' '.($seat->guest_last_name ?? '')) ?: 'Partecipante' }}
+                                                @if($seat->hasDocument())
+                                                    <div class="text-muted" style="font-size:.78rem">
+                                                        <i class="bi bi-person-vcard me-1"></i>{{ $seat->docTypeLabel() }}
+                                                        {{ $seat->doc_number }} · scad. {{ $seat->doc_expiry?->format('d/m/Y') }}
+                                                    </div>
+                                                @else
+                                                    <div class="text-warning" style="font-size:.78rem"><i class="bi bi-exclamation-triangle me-1"></i>Documento mancante</div>
+                                                @endif
+                                            </td>
                                             <td class="text-muted">{{ $seat->ageBracket?->label ?? 'Adulto' }}</td>
                                             <td class="text-end">{{ $eur($seat->price_paid) }}</td>
                                         </tr>
@@ -69,6 +79,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <p class="text-muted mt-2 mb-0" style="font-size:.78rem"><i class="bi bi-info-circle me-1"></i>Per modificare i dati del documento contatta Solarya.</p>
                     @endif
                 </div>
             </div>

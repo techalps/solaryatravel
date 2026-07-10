@@ -110,6 +110,21 @@
                                             · <span class="font-monospace">{{ $seat->tax_code }}</span>
                                         @endif
                                     </div>
+                                    @if($seat->hasDocument())
+                                        <div class="small text-muted mt-1">
+                                            <i class="fa-regular fa-id-card me-1"></i>{{ $seat->docTypeLabel() }}
+                                            <span class="font-monospace">{{ $seat->doc_number }}</span>
+                                            · scad. {{ $seat->doc_expiry?->format('d/m/Y') }}
+                                            @php
+                                                $place = collect([
+                                                    $seat->doc_issue_place,
+                                                    $seat->doc_issue_province ? '('.$seat->doc_issue_province.')' : null,
+                                                    $seat->doc_issue_country && $seat->doc_issue_country !== 'IT' ? \App\Support\Geo::countryName($seat->doc_issue_country) : null,
+                                                ])->filter()->implode(' ');
+                                            @endphp
+                                            @if($place) · {{ $place }} @endif
+                                        </div>
+                                    @endif
                                 </div>
                                 @if($seat->boarded_at)
                                     <span class="badge" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-check me-1"></i>Imbarcato</span>

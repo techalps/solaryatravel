@@ -349,6 +349,7 @@
 @endsection
 
 @push('scripts')
+@include('admin.bookings._document-fields-js')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4/dist/flatpickr.min.js"></script>
 <script src="https://npmcdn.com/flatpickr@4/dist/l10n/it.js"></script>
 <script>
@@ -398,8 +399,11 @@
     let byDate = {};           // 'Y-m-d' => [departure,...]
     let currentDeparture = null;
     let adultsCount = 1;
-    let adults = [{ first_name: '', last_name: '' }];
-    let children = [];         // [{dob, first_name, last_name, price?}]
+    const emptyDoc = () => ({ doc_type: '', doc_number: '', doc_expiry: '', doc_country: 'IT', doc_province: '', doc_place: '' });
+    let adults = [Object.assign({ first_name: '', last_name: '' }, emptyDoc())];
+    let children = [];         // [{dob, first_name, last_name, price?, doc_*}]
+    // Data del viaggio (partenza corrente) per il min di scadenza documento.
+    function tripDateIso() { return currentDeparture ? currentDeparture.iso_date : ''; }
     let fp = null;             // flatpickr data di partenza
     let fpReturn = null;       // flatpickr data di ritorno (uso esclusivo)
     let onRequest = false;     // tour "su richiesta": prezzo totale inserito a mano
@@ -735,13 +739,13 @@
     // ===== Adulti =====
     function renderAdults() {
         adultsCountLabel.textContent = adultsCount;
-        // sincronizza array
+        // sincronizza array (preserva anche i campi documento già inseriti)
         const next = [];
         for (let i = 0; i < adultsCount; i++) {
-            next.push(adults[i] || { first_name: '', last_name: '' });
+            next.push(Object.assign(emptyDoc(), adults[i] || {}));
         }
-        // primo adulto = intestatario
-        next[0] = { first_name: custFirst.value || '', last_name: custLast.value || '' };
+        // primo adulto = intestatario (nome/cognome dai dati cliente; documento conservato)
+        next[0] = Object.assign(emptyDoc(), adults[0] || {}, { first_name: custFirst.value || '', last_name: custLast.value || '' });
         adults = next;
 
         adultsList.innerHTML = adults.map((a, i) => `
@@ -758,8 +762,13 @@
                     </div>
                 </div>
                 ${i === 0 ? '<div class="form-text">Compilato dai dati cliente qui sotto.</div>' : ''}
+                ${SolaryaDocFields.html('adults', i, a, { tripDate: tripDateIso() })}
             </div>
         `).join('');
+        // Ripristina le liste comuni per i blocchi con provincia già scelta.
+        adultsList.querySelectorAll('[data-doc-block]').forEach(b => {
+            if (b.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(b);
+        });
     }
 
     // ===== Bambini =====
@@ -826,8 +835,12 @@
                     </div>
                 </div>
                 <div data-child-badge="${i}">${childBadgeHtml(c)}</div>
+                ${SolaryaDocFields.html('children', i, c, { tripDate: tripDateIso() })}
             </div>`;
         }).join('');
+        childrenList.querySelectorAll('[data-doc-block]').forEach(b => {
+            if (b.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(b);
+        });
     }
 
     // ===== Riepilogo =====
@@ -955,11 +968,25 @@
 
     document.getElementById('adults-plus').addEventListener('click', () => { adultsCount++; renderAdults(); renderSummary(); });
     document.getElementById('adults-minus').addEventListener('click', () => { adultsCount = Math.max(1, adultsCount - 1); renderAdults(); renderSummary(); });
-    document.getElementById('add-child').addEventListener('click', () => { children.push({ dob: '', first_name: '', last_name: '' }); renderChildren(); renderSummary(); });
+    document.getElementById('add-child').addEventListener('click', () => { children.push(Object.assign({ dob: '', first_name: '', last_name: '' }, emptyDoc())); renderChildren(); renderSummary(); });
+
+    // Cattura i campi documento nello stato (name="adults[i][doc_*]" / "children[i][doc_*]")
+    // così un re-render (add/remove passeggero) non azzera i documenti già inseriti.
+    function captureDocField(t) {
+        const block = t.closest && t.closest('[data-doc-block]');
+        if (!block) return false;
+        const m = (t.name || '').match(/^(adults|children)\[(\d+)\]\[(doc_[a-z_]+)\]$/);
+        if (!m) return false;
+        const arr = m[1] === 'adults' ? adults : children;
+        const idx = +m[2];
+        if (arr[idx]) arr[idx][m[3]] = t.value;
+        return true;
+    }
 
     // Input partecipanti (delegato)
     document.addEventListener('input', e => {
         const t = e.target;
+        if (captureDocField(t)) return;
         if (t.dataset.adult != null) {
             adults[+t.dataset.adult][t.dataset.field] = t.value;
         } else if (t.dataset.child != null) {
@@ -973,6 +1000,8 @@
             }
         }
     });
+    // Le <select> emettono 'change', non 'input': cattura anche quelle nello stato.
+    document.addEventListener('change', e => { captureDocField(e.target); });
 
     // Prezzo totale manuale (tour su richiesta)
     totalPriceInput.addEventListener('input', e => { totalPrice = e.target.value; renderSummary(); });
@@ -1010,6 +1039,7 @@
     });
 
     updateStatusHint();
+    SolaryaDocFields.wire(document);
 })();
 </script>
 @endpush
