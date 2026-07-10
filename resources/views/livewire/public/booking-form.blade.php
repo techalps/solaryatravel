@@ -404,10 +404,20 @@
             </div>
 
             {{-- Terms --}}
+            @php
+                // I link legali devono puntare SEMPRE al dominio principale: le
+                // rotte /termini-condizioni e /privacy-policy vivono solo lì.
+                // Sul portale b2b (o nel widget) route() userebbe l'host corrente
+                // (b2b.solaryatravel.com), dove quelle rotte danno 404. Costruiamo
+                // quindi l'URL assoluto sul dominio principale (config app.url).
+                $mainBase = rtrim(config('app.url'), '/');
+                $termsUrl = $mainBase.route('terms', [], false);
+                $privacyUrl = $mainBase.route('privacy', [], false);
+            @endphp
             <div class="form-check mb-15">
                 <input class="form-check-input" type="checkbox" wire:model="terms" id="bk-terms">
                 <label class="form-check-label small" for="bk-terms">
-                    Accetto i <a href="{{ route('terms') }}" target="_blank">termini</a> e la <a href="{{ route('privacy') }}" target="_blank">privacy policy</a>.
+                    Accetto i <a href="{{ $termsUrl }}" target="_blank" rel="noopener">termini</a> e la <a href="{{ $privacyUrl }}" target="_blank" rel="noopener">privacy policy</a>.
                 </label>
                 @error('terms') <small class="d-block text-danger">{{ $message }}</small> @enderror
             </div>

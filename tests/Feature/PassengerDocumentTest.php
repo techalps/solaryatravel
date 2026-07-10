@@ -309,6 +309,24 @@ class PassengerDocumentTest extends TestCase
     }
 
     /**
+     * Regressione: i link legali (termini/privacy) nel form devono puntare al
+     * DOMINIO PRINCIPALE anche in modalità b2b/widget, dove le rotte legali non
+     * esistono (404 sull'host b2b).
+     */
+    public function test_link_legali_puntano_al_dominio_principale_in_b2b(): void
+    {
+        [$tour, $dep] = $this->makeTourWithDeparture();
+
+        $mainBase = rtrim(config('app.url'), '/');
+        $html = Livewire::test(BookingForm::class, ['tour' => $tour, 'departure' => $dep, 'b2bMode' => true])->html();
+
+        // I link devono contenere l'URL sul dominio principale, non l'host b2b.
+        $this->assertStringContainsString($mainBase . '/termini-condizioni', $html);
+        $this->assertStringContainsString($mainBase . '/privacy-policy', $html);
+        $this->assertStringNotContainsString(config('b2b.domain') . '/termini-condizioni', $html);
+    }
+
+    /**
      * Regressione: la pagina di dettaglio admin deve renderizzare senza errori di
      * parsing Blade (il redirect post-creazione ci passa: un ParseError qui dava
      * 500 pur avendo già salvato la prenotazione).
