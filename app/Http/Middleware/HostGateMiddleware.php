@@ -36,8 +36,14 @@ class HostGateMiddleware
             abort(404);
         }
 
-        // Regola 2: utente b2b sul dominio principale → al suo portale.
-        if (auth()->check() && auth()->user()->isB2b()) {
+        // Regola 2: utente b2b sul DOMINIO PRINCIPALE → al suo portale.
+        // Il guard `! $isB2bHost` è essenziale: sul dominio b2b gli endpoint
+        // Livewire (/livewire/update, esentati dalla Regola 1) girano comunque nel
+        // gruppo web e passano di qui. Senza il guard, ogni update Livewire di
+        // un'agenzia (es. selezione data nel form) verrebbe reindirizzato 302 al
+        // portale → il browser Livewire segue il redirect e "rimbalza" alla dashboard.
+        // L'admin che impersona è immune perché il suo ruolo non è b2b.
+        if (! $isB2bHost && auth()->check() && auth()->user()->isB2b()) {
             return redirect()->away($this->b2bUrl());
         }
 

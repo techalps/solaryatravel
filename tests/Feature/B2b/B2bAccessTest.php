@@ -49,6 +49,39 @@ class B2bAccessTest extends TestCase
         $this->get($this->b2bHost('/tour'))->assertNotFound();
     }
 
+    public function test_livewire_update_agenzia_su_host_b2b_non_rimbalza_alla_dashboard(): void
+    {
+        // Regressione: gli update Livewire (es. selezione data nel form di
+        // prenotazione) girano nel gruppo web e passano da HostGateMiddleware.
+        // Un'agenzia sul PROPRIO host non deve essere reindirizzata al portale
+        // (bug: il redirect faceva rimbalzare il form alla dashboard).
+        $agency = $this->agency();
+
+        $res = $this->actingAs($agency)
+            ->post($this->b2bHost('/livewire/update'), [], ['X-Livewire' => '1']);
+
+        // Qualunque sia l'esito (422 per payload vuoto, 200, ecc.), NON deve essere
+        // un redirect verso il dominio b2b (la Regola 2 di HostGate).
+        if ($res->isRedirect()) {
+            $this->assertStringNotContainsString(
+                config('b2b.host'),
+                (string) $res->headers->get('Location'),
+                'La richiesta Livewire dell\'agenzia sul suo host non deve essere reindirizzata al portale.'
+            );
+        } else {
+            $this->assertTrue(true);
+        }
+    }
+
+    public function test_hostgate_reindirizza_agenzia_solo_sul_dominio_principale(): void
+    {
+        // Sul dominio PRINCIPALE, un'agenzia loggata va rimandata al portale.
+        $agency = $this->agency();
+        $res = $this->actingAs($agency)->get('/'); // host principale (default)
+        $res->assertRedirect();
+        $this->assertStringContainsString(config('b2b.host'), (string) $res->headers->get('Location'));
+    }
+
     public function test_login_b2b_rifiuta_customer(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
