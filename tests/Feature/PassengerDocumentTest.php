@@ -307,4 +307,28 @@ class PassengerDocumentTest extends TestCase
         $res->assertSee('#' . $incomplete->booking_number);
         $res->assertDontSee('#' . $complete->booking_number);
     }
+
+    /**
+     * Regressione: la pagina di dettaglio admin deve renderizzare senza errori di
+     * parsing Blade (il redirect post-creazione ci passa: un ParseError qui dava
+     * 500 pur avendo già salvato la prenotazione).
+     */
+    public function test_dettaglio_admin_si_renderizza_dopo_creazione(): void
+    {
+        [$tour, $dep] = $this->makeTourWithDeparture();
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        // Il POST di creazione redirige su admin.bookings.show: deve dare 302, non 500.
+        $this->actingAs($admin)
+            ->post('/admin/bookings', $this->adminBookingPayload($tour, $dep))
+            ->assertRedirect();
+
+        $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
+
+        // Render diretto della pagina di dettaglio (con documento presente).
+        $this->actingAs($admin)
+            ->get('/admin/bookings/' . $booking->id)
+            ->assertOk()
+            ->assertSee('doc-edit-fields-');
+    }
 }

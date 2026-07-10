@@ -470,29 +470,40 @@
 
                 @push('scripts')
                 @include('admin.bookings._document-fields-js')
+                @php
+                    // Dati documento per il JS di modifica (uno per seat non disdetto).
+                    // Costruiti qui in PHP per evitare array associativi dentro il JS
+                    // (che confondono il compilatore Blade → ParseError).
+                    $tripDateJs = optional($booking->departure)->departure_date?->toDateString();
+                    $seatDocs = [];
+                    foreach ($booking->seatRecords as $seat) {
+                        if ($seat->cancelled_at) {
+                            continue;
+                        }
+                        $seatDocs[$seat->id] = [
+                            'doc_type' => $seat->doc_type,
+                            'doc_number' => $seat->doc_number,
+                            'doc_expiry' => $seat->doc_expiry?->toDateString(),
+                            'doc_issue_country' => $seat->doc_issue_country ?: 'IT',
+                            'doc_issue_province' => $seat->doc_issue_province,
+                            'doc_issue_place' => $seat->doc_issue_place,
+                        ];
+                    }
+                @endphp
                 <script>
                 (function () {
-                    const tripDate = @json(optional($booking->departure)->departure_date?->toDateString());
-                    @foreach ($booking->seatRecords as $seat)
-                        @unless ($seat->cancelled_at)
-                        (function () {
-                            const slot = document.getElementById('doc-edit-fields-{{ $seat->id }}');
-                            if (!slot) return;
-                            const doc = @json([
-                                'doc_type' => $seat->doc_type,
-                                'doc_number' => $seat->doc_number,
-                                'doc_expiry' => $seat->doc_expiry?->toDateString(),
-                                'doc_issue_country' => $seat->doc_issue_country ?: 'IT',
-                                'doc_issue_province' => $seat->doc_issue_province,
-                                'doc_issue_place' => $seat->doc_issue_place,
-                            ]);
-                            // prefix vuoto → name "flat" (doc_type), atteso da updateSeatDocument().
-                            slot.innerHTML = SolaryaDocFields.html('', 0, doc, { tripDate });
-                            const block = slot.querySelector('[data-doc-block]');
-                            if (block && block.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(block);
-                        })();
-                        @endunless
-                    @endforeach
+                    var tripDate = @json($tripDateJs);
+                    var seatDocs = @json($seatDocs);
+                    Object.keys(seatDocs).forEach(function (seatId) {
+                        var slot = document.getElementById('doc-edit-fields-' + seatId);
+                        if (!slot) return;
+                        // prefix vuoto → name "flat" (doc_type), atteso da updateSeatDocument().
+                        slot.innerHTML = SolaryaDocFields.html('', 0, seatDocs[seatId], { tripDate: tripDate });
+                        var block = slot.querySelector('[data-doc-block]');
+                        if (block && block.querySelector('[data-doc-province]') && block.querySelector('[data-doc-province]').value) {
+                            SolaryaDocFields.loadComuniInto(block);
+                        }
+                    });
                     SolaryaDocFields.wire(document);
                 })();
                 </script>
