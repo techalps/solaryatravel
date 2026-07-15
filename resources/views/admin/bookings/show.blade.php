@@ -409,7 +409,28 @@
                                                 <div class="small text-muted">{{ $seat->qr_code }}</div>
                                             </td>
                                             <td>{{ $seat->ageBracket?->label ?? '—' }}</td>
-                                            <td>{{ $seat->catamaran?->name ?? '—' }}</td>
+                                            <td>
+                                                <div>{{ $seat->catamaran?->name ?? '—' }}</div>
+                                                @unless ($seat->cancelled_at)
+                                                    @php
+                                                        // Destinazioni valide: catamarani con posti liberi, diversi da quello attuale.
+                                                        $moveTargets = collect($catamaranSeatTargets ?? [])
+                                                            ->filter(fn ($c) => (int) $c['id'] !== (int) $seat->catamaran_id);
+                                                    @endphp
+                                                    @if ($moveTargets->isNotEmpty())
+                                                        <form method="POST" action="{{ route('admin.bookings.seats.move', [$booking, $seat]) }}" class="mt-1">
+                                                            @csrf
+                                                            <select name="catamaran_id" class="form-select form-select-sm" style="min-width:150px"
+                                                                    onchange="if(this.value){ this.form.submit(); }">
+                                                                <option value="">Sposta su…</option>
+                                                                @foreach ($moveTargets as $t)
+                                                                    <option value="{{ $t['id'] }}">{{ $t['name'] }} ({{ $t['free'] }} liberi)</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </form>
+                                                    @endif
+                                                @endunless
+                                            </td>
                                             <td>
                                                 @if ($seat->hasDocument())
                                                     @php

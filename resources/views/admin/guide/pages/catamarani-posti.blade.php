@@ -23,3 +23,29 @@
     Lo stesso catamarano può essere usato da tour diversi: la disponibilità tiene conto di tutte le
     prenotazioni e di tutti i blocchi su quella barca, indipendentemente dal tour.
 </div>
+
+<h2>Spostare un passeggero su un altro catamarano</h2>
+<p>
+    Dal <strong>dettaglio della prenotazione</strong>, nella tabella <em>Partecipanti</em>, ogni
+    passeggero attivo ha nella colonna <strong>Catamarano</strong> un menu <strong>"Sposta su…"</strong>.
+</p>
+<div class="guide-step"><span class="guide-step-num">1</span><div>Apri il dettaglio della prenotazione (elenco prenotazioni → clic sul numero).</div></div>
+<div class="guide-step"><span class="guide-step-num">2</span><div>Nella riga del passeggero, apri il menu <strong>"Sposta su…"</strong> nella colonna Catamarano.</div></div>
+<div class="guide-step"><span class="guide-step-num">3</span><div>Il menu elenca <strong>solo i catamarani con posti liberi</strong> per quella partenza, con il numero di posti disponibili. Seleziona quello desiderato: lo spostamento è immediato.</div></div>
+<div class="guide-warn">
+    Non puoi spostare un passeggero su un catamarano <strong>pieno</strong> o <strong>riservato in uso
+    esclusivo</strong> da un'altra prenotazione nella stessa fascia oraria: quelle barche non compaiono
+    tra le destinazioni e, in ogni caso, il sistema rifiuta lo spostamento.
+</div>
+<p class="text-muted small">
+    Per spostare un'<strong>intera riserva</strong> a uso esclusivo (posti + blocco) su un'altra barca
+    completamente libera, usa invece il pulsante nella sezione "Catamarani riservati" (vedi Riservare un catamarano).
+</p>
+
+<h2>Sistemare un eventuale overbooking</h2>
+<p>
+    Se per errore su una data risultano più posti prenotati della capienza (o prenotazioni su una barca
+    poi riservata), usa <strong>"Sposta su…"</strong> per ricollocare i passeggeri su un catamarano con
+    posti liberi nella stessa data. Se non c'è spazio su nessuna barca, valuta lo spostamento di data o
+    l'annullamento con il cliente.
+</p>

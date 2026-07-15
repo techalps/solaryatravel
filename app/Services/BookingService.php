@@ -643,6 +643,7 @@ class BookingService
             $booked = $cat->seatsBookedOnDeparture($departure->id);
             $free = max(0, $cat->capacity - $booked);
             $list[] = [
+                'id' => (int) $cat->id,
                 'name' => $cat->name,
                 'capacity' => (int) $cat->capacity,
                 'free' => (int) $free,

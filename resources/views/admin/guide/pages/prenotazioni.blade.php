@@ -11,6 +11,13 @@
     a uso esclusivo valgono gli orari indicati (con il badge "Uso esclusivo"). L'orario di
     registrazione della prenotazione è mostrato in ora italiana.
 </p>
+<p>
+    Puoi <strong>filtrare per stato, tour, agenzia e periodo</strong>. Le prenotazioni fatte da
+    un'agenzia mostrano il badge <strong>B2B</strong> con il nome dell'agenzia. Le prenotazioni
+    <strong>future</strong> con documenti d'identità incompleti mostrano il badge
+    <strong>"Doc. mancante"</strong>: in cima all'elenco un avviso le conta e permette di
+    <em>filtrarle</em> per completarle (vedi il capitolo Documenti d'identità).
+</p>
 
 <h2>Modificare una prenotazione (disdette)</h2>
 <p>
@@ -26,6 +33,11 @@
     <li>Posti, totale e disponibilità del catamarano si <strong>ricalcolano</strong> automaticamente.</li>
     <li>Il rimborso segue il pagamento: su carta è eseguito via Stripe, per bonifico/contanti è da effettuare manualmente.</li>
 </ul>
+<p>
+    Dallo stesso dettaglio puoi anche <strong>modificare il documento</strong> di un passeggero
+    (colonna Documento → Modifica/Inserisci) e <strong>spostare un passeggero su un altro catamarano</strong>
+    (colonna Catamarano → "Sposta su…"). Vedi i capitoli <em>Documenti d'identità</em> e <em>Catamarani e posti</em>.
+</p>
 
 <h2>Cambiare la data di una prenotazione</h2>
 <p>
@@ -59,10 +71,20 @@
 
 <div class="guide-step"><span class="guide-step-num">1</span><div><strong>Seleziona il tour.</strong> Compaiono le opzioni e le date disponibili.</div></div>
 <div class="guide-step"><span class="guide-step-num">2</span><div><strong>Scegli data e orario di partenza.</strong> Vengono mostrate solo le date prenotabili (stesse del sito), salvo l'uso esclusivo (vedi capitolo dedicato).</div></div>
-<div class="guide-step"><span class="guide-step-num">3</span><div><strong>Aggiungi i partecipanti.</strong> Adulti e bambini: per ogni bambino inserisci la data di nascita, così il sistema applica la riduzione corretta in base all'età.</div></div>
+<div class="guide-step"><span class="guide-step-num">3</span><div><strong>Indica quanti partecipanti.</strong> Adulti e bambini (per ogni bambino la data di nascita determina la riduzione). Il conteggio è in cima; i dati anagrafici e il documento di ciascuno si compilano più in basso, nella sezione <em>Dati passeggeri</em>.</div></div>
 <div class="guide-step"><span class="guide-step-num">4</span><div><strong>(Opzionale) Scegli il catamarano.</strong> Lasciando "Automatico" il sistema assegna la barca con più posti liberi.</div></div>
-<div class="guide-step"><span class="guide-step-num">5</span><div><strong>Compila i dati del cliente</strong> e, se serve, un codice sconto.</div></div>
-<div class="guide-step"><span class="guide-step-num">6</span><div><strong>Scegli lo stato</strong> della prenotazione e conferma.</div></div>
+<div class="guide-step"><span class="guide-step-num">5</span><div><strong>Compila i dati dell'intestatario</strong> (con il suo documento), un eventuale codice sconto e, se la prenotazione è per un'agenzia, associala in <em>Agenzia B2B</em> (vedi sotto).</div></div>
+<div class="guide-step"><span class="guide-step-num">6</span><div><strong>Compila i Dati passeggeri.</strong> Nome, cognome e <strong>documento d'identità obbligatorio</strong> per ogni passeggero (vedi il capitolo Documenti d'identità).</div></div>
+<div class="guide-step"><span class="guide-step-num">7</span><div><strong>Scegli lo stato</strong> della prenotazione e conferma.</div></div>
+
+<h2>Associare la prenotazione a un'agenzia</h2>
+<p>
+    Se stai registrando una prenotazione <strong>per conto di un'agenzia</strong>, nella sezione
+    <strong>Agenzia B2B</strong> selezionala dall'elenco: la prenotazione risulterà come fatta
+    dall'agenzia e <strong>maturerà la sua commissione</strong>, esattamente come se l'avesse creata
+    lei dal portale. Lasciando "Nessuna" resta una vendita diretta. Vedi il capitolo
+    <em>Agenzie B2B e commissioni</em>.
+</p>
 
 <h2>Lo stato che scegli conta</h2>
 <ul>

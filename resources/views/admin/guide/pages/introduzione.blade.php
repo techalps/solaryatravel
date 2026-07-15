@@ -12,8 +12,13 @@
     <li><strong>Imbarco</strong> — scansione QR dei biglietti per la partenza.</li>
     <li><strong>Tour / Flotta / Extra / Codici Sconto</strong> — anagrafiche e listini.</li>
     <li><strong>Report &amp; Statistiche</strong> — ricavi e andamento.</li>
+    <li><strong>Utenti / Agenzie B2B</strong> — account staff e agenzie con le loro commissioni.</li>
     <li><strong>Impostazioni</strong> — acconto, bonifico e altre opzioni che cambiano il comportamento del sistema.</li>
 </ul>
+
+<p>La guida include capitoli dedicati a: creare e modificare prenotazioni, riservare un catamarano
+(uso esclusivo), assegnare e spostare i posti, <strong>documenti d'identità dei passeggeri</strong>,
+pagamenti e stati, <strong>agenzie B2B e commissioni</strong>, report e impostazioni.</p>
 
 <div class="guide-tip">
     <strong>Suggerimento:</strong> le prenotazioni dei clienti dal sito arrivano qui automaticamente.

@@ -4,6 +4,10 @@
     anche su più giorni. Nel form di nuova prenotazione attiva l'interruttore
     <strong>"Riserva il catamarano (uso esclusivo)"</strong> subito dopo aver scelto il tour.
 </p>
+<p class="text-muted small">
+    Le riserve si creano <strong>solo da admin</strong>: il cliente sul sito non può riservare una barca intera.
+    Per questo gli orari che inserisci sono quelli che fanno fede per tutto il sistema.
+</p>
 
 <h2>Cosa cambia con l'uso esclusivo</h2>
 <div class="guide-step"><span class="guide-step-num">1</span><div>I campi diventano <strong>Data e ora di partenza</strong> e <strong>Data e ora di ritorno</strong>. Le date sono libere (non vincolate al calendario delle partenze).</div></div>
@@ -11,45 +15,58 @@
 <div class="guide-step"><span class="guide-step-num">3</span><div>Puoi superare la capienza di una singola barca: basta selezionare abbastanza catamarani da coprire tutti i passeggeri.</div></div>
 <div class="guide-step"><span class="guide-step-num">4</span><div>Alla conferma, i catamarani scelti vengono <strong>bloccati</strong> dalla partenza al ritorno (con gli orari indicati).</div></div>
 
+<h2>Come funziona il blocco (importante)</h2>
+<p>
+    Una riserva è un <strong>intervallo continuo</strong> tra due momenti precisi:
+    <em>data+ora di partenza → data+ora di ritorno</em>. Una partenza normale (sul sito, in admin,
+    b2b o widget) non è prenotabile su quella barca se il suo orario <strong>si sovrappone</strong>
+    all'intervallo della riserva.
+</p>
 <div class="guide-tip">
-    <strong>Gli orari che inserisci fanno fede:</strong> in uso esclusivo conta la fascia
-    oraria che indichi (partenza → ritorno), <u>non</u> la durata del tour. Puoi riservare lo
-    stesso catamarano in più fasce dello stesso giorno, purché non si sovrappongano.
-    Esempio: riservi una barca 09:00–12:30; dalle 12:30 resta riservabile (da admin) per un'altra
-    uscita 12:30–18:00. Due fasce che si sovrappongono (es. 11:00–14:00) sono invece in conflitto.
+    <strong>Esempio giorno singolo:</strong> riservi una barca 09:00–12:30. Un tour del pomeriggio
+    (14:00–17:00) può usarla (fasce non sovrapposte). Un tour 09:00–12:00 <u>no</u>: si sovrappone.
+    <br><strong>Esempio parziale:</strong> tour prenotabile 09:00–12:00 e barca riservata 10:00–14:00
+    → si sovrappongono (10:00–12:00) → il cliente <u>non</u> può prenotarla.
 </div>
 <div class="guide-warn">
-    <strong>Sul sito (clienti)</strong> vale invece la durata piena del tour: se una barca è
-    riservata al mattino, il cliente non riesce a prenotarla per un tour che, per durata,
-    occuperebbe anche quella fascia. La libertà di riusare la fascia successiva è solo lato admin.
+    <strong>Riserva su più giorni</strong> (es. 20/07 09:00 → 21/07 18:00): la barca è occupata
+    <u>senza interruzione</u> per tutto il periodo. Il primo giorno dall'ora di partenza in poi,
+    i giorni interi in mezzo, l'ultimo giorno <u>fino all'ora di ritorno</u> (dopo torna libera).
+    Nell'esempio, il 21/07 dalle 18:00 in poi la barca è di nuovo prenotabile.
+</div>
+
+<h2>Il blocco previene l'overbooking</h2>
+<p>
+    Un catamarano riservato è fisicamente occupato: il blocco vale per <strong>tutti i tour</strong>
+    (non solo quello della prenotazione) e su <strong>tutti i canali</strong> — sito, admin, portale
+    agenzie e widget. Finché la riserva è attiva, quella barca non viene mai offerta ad altri clienti
+    nella fascia bloccata.
+</p>
+<div class="guide-warn">
+    <strong>Attenzione agli orari:</strong> poiché tutto si basa sull'intervallo che indichi,
+    inserisci sempre <u>data e ora di partenza e di ritorno corrette</u>. Un orario di ritorno
+    sbagliato (es. uguale a quello di partenza) può lasciare la barca prenotabile quando non dovrebbe.
 </div>
 
 <h2>Catamarani occupati</h2>
 <p>
-    Se un catamarano ha già una prenotazione attiva <strong>nella stessa fascia oraria</strong>, appare come <strong>"occupato"</strong>
-    e non è selezionabile: il sistema ti mostra <em>quali prenotazioni</em> lo stanno bloccando
-    (numero, data, cliente). Per liberarlo devi annullare quelle prenotazioni o spostare i passeggeri
-    su un'altra barca.
+    Se un catamarano ha già una prenotazione attiva <strong>nella stessa fascia</strong>, appare come
+    <strong>"occupato"</strong> e non è selezionabile: il sistema ti mostra <em>quali prenotazioni</em>
+    lo stanno bloccando (numero, data, cliente). Per liberarlo devi annullare quelle prenotazioni o
+    spostare i passeggeri su un'altra barca (vedi la sezione Catamarani e posti).
 </p>
-
-<div class="guide-warn">
-    <strong>Importante:</strong> il blocco vale per <u>tutti i tour</u>, non solo per quello della prenotazione.
-    Un catamarano riservato è fisicamente occupato: nessun altro tour può usarlo in quelle date.
-    Per questo, dopo aver riservato una barca, quella data risulterà non prenotabile sul sito e in admin
-    per tutti i tour che usano quella barca.
-</div>
 
 <h2>Dove vedo i catamarani riservati</h2>
 <p>
     Nel <strong>dettaglio della prenotazione</strong> trovi la sezione
     <em>"Catamarani riservati (uso esclusivo)"</em> con l'elenco delle barche, le date e gli orari di blocco.
+    Da lì puoi anche <strong>spostare l'intera riserva</strong> su un catamarano completamente libero.
 </p>
 
 <h2>Modificare il prezzo</h2>
 <p>
     Per i tour su richiesta / catamarano riservato puoi <strong>modificare il prezzo totale</strong>
-    in un secondo momento dalla <strong>Modifica</strong> prenotazione (campo "Prezzo totale"):
-    aggiorna l'importo della prenotazione.
+    in un secondo momento dalla <strong>Modifica</strong> prenotazione (campo "Prezzo totale").
 </p>
 
 <h2>Cambiare le date di una prenotazione su più giorni</h2>
@@ -70,4 +87,3 @@
     <li><strong>Programma</strong> — l'evento copre tutti i giorni del periodo nel calendario.</li>
 </ul>
 <p class="text-muted small">Nell'<strong>Imbarco</strong>, invece, la prenotazione compare solo nel <strong>giorno di partenza</strong> (l'imbarco avviene una volta sola, all'inizio del periodo).</p>
-<p class="text-muted small">Nella pagina Imbarco vengono mostrati anche i tour che operano in giornata pur senza prenotazioni (con "0 prenot.").</p>

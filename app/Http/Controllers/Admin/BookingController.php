@@ -951,16 +951,28 @@ class BookingController extends Controller
         // (0 posti occupati) e diversi da quelli già riservati da questa prenotazione.
         $reservedCatIds = $reservedBlocks->pluck('catamaran_id')->map(fn ($id) => (int) $id)->all();
         $freeCatamaransForReservation = collect();
-        if ($booking->departure && $reservedBlocks->isNotEmpty()) {
+        // Catamarani con posti liberi su cui spostare i SINGOLI passeggeri (mappa
+        // id => ['name','free']). Esclude i bloccati/pieni; usata dalla tabella
+        // partecipanti per il menu "sposta su…" di ciascun posto.
+        $catamaranSeatTargets = collect();
+        if ($booking->departure) {
             $avail = $this->bookingService->catamaranAvailabilityList($booking->departure);
-            $freeNames = collect($avail)->filter(fn ($c) => $c['free'] === $c['capacity'])->pluck('name');
-            $freeCatamaransForReservation = $catamarans
-                ->whereIn('name', $freeNames)
-                ->whereNotIn('id', $reservedCatIds)
+            // Destinazioni per spostare la RISERVA intera: completamente liberi.
+            if ($reservedBlocks->isNotEmpty()) {
+                $freeNames = collect($avail)->filter(fn ($c) => $c['free'] === $c['capacity'])->pluck('name');
+                $freeCatamaransForReservation = $catamarans
+                    ->whereIn('name', $freeNames)
+                    ->whereNotIn('id', $reservedCatIds)
+                    ->values();
+            }
+            // Destinazioni per spostare un SINGOLO passeggero: almeno 1 posto libero.
+            $catamaranSeatTargets = collect($avail)
+                ->filter(fn ($c) => ($c['free'] ?? 0) > 0)
+                ->map(fn ($c) => ['id' => $c['id'], 'name' => $c['name'], 'free' => $c['free']])
                 ->values();
         }
 
-        return view('admin.bookings.show', compact('booking', 'catamarans', 'reservedBlocks', 'freeCatamaransForReservation'));
+        return view('admin.bookings.show', compact('booking', 'catamarans', 'reservedBlocks', 'freeCatamaransForReservation', 'catamaranSeatTargets'));
     }
 
     public function edit(Booking $booking): View
