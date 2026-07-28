@@ -43,26 +43,30 @@ class BookingForm extends Component
     /**
      * Nome/cognome + documento d'identità di ogni adulto. La lunghezza dell'array
      * è sincronizzata con $adultsCount. Il primo adulto è il prenotante
-     * (intestatario). Ogni passeggero DEVE avere un documento valido fino alla
-     * data del viaggio (obbligo contrattuale).
+     * (intestatario). Ogni passeggero DEVE avere un documento d'identità.
      *
-     * @var array<int, array{first_name:string,last_name:string,doc_type:string,doc_number:string,doc_expiry:string,doc_country:string,doc_province:string,doc_place:string}>
+     * Data di scadenza NON richiesta: dopo il periodo di test i clienti hanno
+     * segnalato troppi campi nel blocco documento, quindi scadenza e codice
+     * fiscale sono stati rimossi dai canali di vendita (sito, agenzie, widget).
+     * La colonna a DB resta e l'admin può ancora compilarla.
+     *
+     * @var array<int, array{first_name:string,last_name:string,doc_type:string,doc_number:string,doc_country:string,doc_province:string,doc_place:string}>
      */
     public array $adults = [
-        ['first_name' => '', 'last_name' => '', 'doc_type' => '', 'doc_number' => '', 'doc_expiry' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''],
+        ['first_name' => '', 'last_name' => '', 'doc_type' => '', 'doc_number' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''],
     ];
 
     /**
      * Bambini: data di nascita + nome/cognome + documento (obbligatorio anch'esso).
      *
-     * @var array<int, array{dob:string,first_name:string,last_name:string,doc_type:string,doc_number:string,doc_expiry:string,doc_country:string,doc_province:string,doc_place:string}>
+     * @var array<int, array{dob:string,first_name:string,last_name:string,doc_type:string,doc_number:string,doc_country:string,doc_province:string,doc_place:string}>
      */
     public array $children = [];
 
     /** Struttura vuota di un blocco documento (riusata per adulti e bambini). */
     private static function emptyDocument(): array
     {
-        return ['doc_type' => '', 'doc_number' => '', 'doc_expiry' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''];
+        return ['doc_type' => '', 'doc_number' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''];
     }
 
     /**
@@ -70,7 +74,7 @@ class BookingForm extends Component
      * BookingService. Se lo Stato non è Italia, la provincia non si applica.
      *
      * @param  array<string,mixed>  $p
-     * @return array{doc_type:string,doc_number:string,doc_expiry:string,doc_issue_country:string,doc_issue_province:?string,doc_issue_place:string}
+     * @return array{doc_type:string,doc_number:string,doc_issue_country:string,doc_issue_province:?string,doc_issue_place:string}
      */
     private function documentFor(array $p): array
     {
@@ -79,7 +83,6 @@ class BookingForm extends Component
         return [
             'doc_type' => (string) ($p['doc_type'] ?? ''),
             'doc_number' => strtoupper(trim((string) ($p['doc_number'] ?? ''))),
-            'doc_expiry' => (string) ($p['doc_expiry'] ?? ''),
             'doc_issue_country' => $country,
             'doc_issue_province' => $country === 'IT' ? (trim((string) ($p['doc_province'] ?? '')) ?: null) : null,
             'doc_issue_place' => trim((string) ($p['doc_place'] ?? '')),
@@ -98,6 +101,15 @@ class BookingForm extends Component
     public string $customer_last_name = '';
     public string $customer_email = '';
     public string $customer_phone = '';
+    /**
+     * Codice fiscale dell'intestatario.
+     *
+     * NON è più un campo del form nei canali di vendita: dopo il test i clienti
+     * hanno segnalato troppi campi in fase di prenotazione. La proprietà resta
+     * per non rompere il payload del BookingService (e perché l'admin può
+     * comunque valorizzare il CF su una prenotazione esistente): se vuota, a DB
+     * finisce null.
+     */
     public string $customer_tax_code = '';
     public string $special_requests = '';
     public bool $terms = false;
@@ -498,13 +510,6 @@ class BookingForm extends Component
             ->all();
     }
 
-    /** Data minima di scadenza documento (= giorno del viaggio), per l'attributo min degli input date. */
-    #[Computed]
-    public function minDocExpiry(): ?string
-    {
-        return $this->departure ? $this->departure->departure_date->toDateString() : null;
-    }
-
     #[Computed]
     public function hasChildrenWithErrors(): bool
     {
@@ -546,13 +551,11 @@ class BookingForm extends Component
         $next = [];
         for ($i = 0; $i < $this->adultsCount; $i++) {
             $prev = is_array($current[$i] ?? null) ? $current[$i] : [];
-            $doc = self::emptyDocument();
             $next[] = [
                 'first_name' => trim((string) ($prev['first_name'] ?? '')),
                 'last_name' => trim((string) ($prev['last_name'] ?? '')),
                 'doc_type' => (string) ($prev['doc_type'] ?? ''),
                 'doc_number' => (string) ($prev['doc_number'] ?? ''),
-                'doc_expiry' => (string) ($prev['doc_expiry'] ?? ''),
                 'doc_country' => (string) ($prev['doc_country'] ?? 'IT'),
                 'doc_province' => (string) ($prev['doc_province'] ?? ''),
                 'doc_place' => (string) ($prev['doc_place'] ?? ''),
@@ -716,23 +719,13 @@ class BookingForm extends Component
         // Riallinea l'array adulti prima di validare (in caso il count sia cambiato senza che gli step abbiano sincronizzato).
         $this->syncAdults();
 
-        // Data entro cui ogni documento deve essere valido = giorno del viaggio
-        // (i tour sono in giornata: departure_date è anche il rientro).
-        $tripDate = $this->departure ? $this->departure->departure_date->toDateString() : null;
-
         $docTypes = implode(',', array_keys(\App\Models\BookingSeat::DOC_TYPES));
-        $expiryRule = ['required', 'date'];
-        if ($tripDate) {
-            // Deve essere valido FINO ALLA data del viaggio compresa.
-            $expiryRule[] = 'after_or_equal:'.$tripDate;
-        }
 
         $rules = [
             'customer_first_name' => 'required|string|max:100',
             'customer_last_name' => 'required|string|max:100',
             'customer_email' => 'required|email|max:255',
             'customer_phone' => 'nullable|string|max:30',
-            'customer_tax_code' => 'required|string|min:11|max:16',
             'special_requests' => 'nullable|string|max:1000',
             'adults' => 'array|min:1',
             'adults.*.first_name' => 'required|string|max:100',
@@ -745,7 +738,6 @@ class BookingForm extends Component
         foreach (['adults', 'children'] as $group) {
             $rules[$group.'.*.doc_type'] = 'required|in:'.$docTypes;
             $rules[$group.'.*.doc_number'] = 'required|string|max:40';
-            $rules[$group.'.*.doc_expiry'] = $expiryRule;
             $rules[$group.'.*.doc_country'] = 'required|string|size:2';
             // Provincia obbligatoria solo se lo Stato è Italia.
             $rules[$group.'.*.doc_province'] = 'nullable|string|max:4';
@@ -754,8 +746,6 @@ class BookingForm extends Component
 
         $this->validate($rules, [
             'terms.accepted' => __('booking.validation.terms'),
-            'customer_tax_code.required' => __('booking.validation.tax_code_required'),
-            'customer_tax_code.min' => __('booking.validation.tax_code_invalid'),
             'adults.*.first_name.required' => __('booking.validation.adult_first_name'),
             'adults.*.last_name.required' => __('booking.validation.adult_last_name'),
             'children.*.first_name.required' => __('booking.validation.child_first_name'),
@@ -763,15 +753,11 @@ class BookingForm extends Component
             'adults.*.doc_type.required' => __('booking.validation.doc_type_required'),
             'adults.*.doc_type.in' => __('booking.validation.doc_type_invalid'),
             'adults.*.doc_number.required' => __('booking.validation.doc_number_required'),
-            'adults.*.doc_expiry.required' => __('booking.validation.doc_expiry_required'),
-            'adults.*.doc_expiry.after_or_equal' => __('booking.validation.doc_expiry_after'),
             'adults.*.doc_country.required' => __('booking.validation.doc_country_required'),
             'adults.*.doc_place.required' => __('booking.validation.doc_place_required'),
             'children.*.doc_type.required' => __('booking.validation.doc_type_required'),
             'children.*.doc_type.in' => __('booking.validation.doc_type_invalid'),
             'children.*.doc_number.required' => __('booking.validation.doc_number_required'),
-            'children.*.doc_expiry.required' => __('booking.validation.doc_expiry_required'),
-            'children.*.doc_expiry.after_or_equal' => __('booking.validation.doc_expiry_after'),
             'children.*.doc_country.required' => __('booking.validation.doc_country_required'),
             'children.*.doc_place.required' => __('booking.validation.doc_place_required'),
         ]);
@@ -860,7 +846,9 @@ class BookingForm extends Component
             $guests[] = array_merge([
                 'first_name' => trim($a['first_name'] ?? ''),
                 'last_name' => trim($a['last_name'] ?? ''),
-                'tax_code' => $i === 0 ? strtoupper(trim($this->customer_tax_code)) : null,
+                'tax_code' => $i === 0 && trim($this->customer_tax_code) !== ''
+                    ? strtoupper(trim($this->customer_tax_code))
+                    : null,
             ], $this->documentFor($a));
         }
         foreach ($resolvedChildren as $c) {
@@ -886,7 +874,9 @@ class BookingForm extends Component
             'customer_last_name' => $this->customer_last_name,
             'customer_email' => $this->customer_email,
             'customer_phone' => $this->customer_phone,
-            'customer_tax_code' => strtoupper(trim($this->customer_tax_code)),
+            'customer_tax_code' => trim($this->customer_tax_code) !== ''
+                ? strtoupper(trim($this->customer_tax_code))
+                : null,
             'special_requests' => $this->special_requests,
             'guests' => $guests,
             'payment_type' => $paymentType,

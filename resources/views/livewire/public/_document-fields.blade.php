@@ -6,7 +6,7 @@
       - $group   'adults' | 'children'   (prefisso del wire:model)
       - $idx     int                     (indice del passeggero nel gruppo)
     Contesto del componente Livewire:
-      - $this->docTypes, $this->countries, $this->provinces, $this->minDocExpiry
+      - $this->docTypes, $this->countries, $this->provinces
       - $this->{$group}[$idx]['doc_country'|'doc_province']  (stato corrente per la cascata)
 --}}
 @php
@@ -33,12 +33,6 @@
         <div class="col-6">
             <input type="text" wire:model.blur="{{ $base }}.doc_number" class="bk-input text-uppercase" placeholder="{{ __('tours.document.number') }}" maxlength="40">
             @error($base.'.doc_number') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
-        </div>
-        <div class="col-12">
-            <label class="bk-label small text-muted mb-1">{{ __('tours.document.expiry') }} <span class="text-danger">*</span></label>
-            <input type="date" wire:model.blur="{{ $base }}.doc_expiry" class="bk-input"
-                   @if($this->minDocExpiry) min="{{ $this->minDocExpiry }}" @endif>
-            @error($base.'.doc_expiry') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
         </div>
         <div class="col-12">
             <label class="bk-label small text-muted mb-1">{{ __('tours.document.issue_place') }} <span class="text-danger">*</span></label>

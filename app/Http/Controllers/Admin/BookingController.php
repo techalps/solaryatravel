@@ -59,9 +59,12 @@ class BookingController extends Controller
                 ->whereNotIn('status', [BookingStatus::CANCELLED->value, BookingStatus::REFUNDED->value, BookingStatus::NO_SHOW->value])
                 ->whereHas('seatRecords', function ($q) {
                     $q->whereNull('cancelled_at')->where(function ($q) {
+                        // NB: doc_expiry esclusa di proposito — non è più
+                        // richiesta nei canali di vendita, quindi includerla
+                        // marcherebbe come incompleta ogni nuova prenotazione.
+                        // Deve restare allineata a BookingSeat::hasDocument().
                         $q->whereNull('doc_type')->orWhere('doc_type', '')
                             ->orWhereNull('doc_number')->orWhere('doc_number', '')
-                            ->orWhereNull('doc_expiry')
                             ->orWhereNull('doc_issue_country')->orWhere('doc_issue_country', '')
                             ->orWhereNull('doc_issue_place')->orWhere('doc_issue_place', '');
                     });
@@ -134,9 +137,9 @@ class BookingController extends Controller
             ->whereNotIn('status', [BookingStatus::CANCELLED->value, BookingStatus::REFUNDED->value, BookingStatus::NO_SHOW->value])
             ->whereHas('seatRecords', function ($q) {
                 $q->whereNull('cancelled_at')->where(function ($q) {
+                    // Vedi nota sopra: doc_expiry non entra nel conteggio.
                     $q->whereNull('doc_type')->orWhere('doc_type', '')
                         ->orWhereNull('doc_number')->orWhere('doc_number', '')
-                        ->orWhereNull('doc_expiry')
                         ->orWhereNull('doc_issue_country')->orWhere('doc_issue_country', '')
                         ->orWhereNull('doc_issue_place')->orWhere('doc_issue_place', '');
                 });

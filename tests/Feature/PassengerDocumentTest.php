@@ -15,8 +15,14 @@ use Tests\TestCase;
 
 /**
  * Documento d'identità obbligatorio per OGNI passeggero (intestatario compreso).
- * Copre: validazione bloccante della scadenza (>= data del viaggio) e persistenza
- * dei campi documento sui booking_seats attraverso il flusso pubblico.
+ *
+ * Copre tipo, numero e luogo di emissione + persistenza sui booking_seats
+ * attraverso il flusso pubblico.
+ *
+ * NB: codice fiscale e data di scadenza NON sono più richiesti nei canali di
+ * vendita (sito, agenzie, widget) — troppi campi in prenotazione secondo i
+ * riscontri del periodo di test. Le colonne restano a DB e l'admin può ancora
+ * compilarle.
  */
 class PassengerDocumentTest extends TestCase
 {
@@ -50,11 +56,9 @@ class PassengerDocumentTest extends TestCase
     /** Compila i campi documento validi dell'intestatario (adulto 0) sul componente. */
     private function fillValidBookerDocument($component, TourDeparture $dep): void
     {
-        $expiry = $dep->departure_date->copy()->addYear()->toDateString();
         $component
             ->set('adults.0.doc_type', 'carta_identita')
             ->set('adults.0.doc_number', 'CA12345AB')
-            ->set('adults.0.doc_expiry', $expiry)
             ->set('adults.0.doc_country', 'IT')
             ->set('adults.0.doc_province', 'TO')
             ->set('adults.0.doc_place', 'Torino');
@@ -66,28 +70,41 @@ class PassengerDocumentTest extends TestCase
             ->set('customer_first_name', 'Mario')
             ->set('customer_last_name', 'Rossi')
             ->set('customer_email', 'mario'.uniqid().'@example.com')
-            ->set('customer_tax_code', 'RSSMRA80A01H501U')
             ->set('terms', true);
     }
 
-    public function test_documento_scaduto_prima_del_viaggio_blocca(): void
+    public function test_la_scadenza_documento_non_e_piu_richiesta(): void
+    {
+        [$tour, $dep] = $this->makeTourWithDeparture();
+
+        // Documento senza data di scadenza: la prenotazione deve andare a buon fine.
+        $component = $this->baseFilledComponent($tour, $dep);
+        $this->fillValidBookerDocument($component, $dep);
+        $component->call('submit')->assertHasNoErrors();
+
+        $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
+        $this->assertNotNull($booking, 'La prenotazione deve essere creata senza la scadenza.');
+
+        $seat = $booking->seatRecords()->where('is_primary', true)->first();
+        $this->assertNull($seat->doc_expiry, 'La scadenza non viene più raccolta: resta null.');
+
+        // Il documento è comunque considerato completo, così la prenotazione non
+        // finisce nel filtro admin "documenti mancanti".
+        $this->assertTrue($seat->hasDocument());
+    }
+
+    public function test_il_codice_fiscale_non_e_piu_richiesto(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
 
         $component = $this->baseFilledComponent($tour, $dep);
-        // Documento scaduto il giorno PRIMA del viaggio.
-        $expired = $dep->departure_date->copy()->subDay()->toDateString();
-        $component
-            ->set('adults.0.doc_type', 'carta_identita')
-            ->set('adults.0.doc_number', 'CA12345AB')
-            ->set('adults.0.doc_expiry', $expired)
-            ->set('adults.0.doc_country', 'IT')
-            ->set('adults.0.doc_province', 'TO')
-            ->set('adults.0.doc_place', 'Torino')
-            ->call('submit')
-            ->assertHasErrors(['adults.0.doc_expiry']);
+        $this->fillValidBookerDocument($component, $dep);
+        // Nessun customer_tax_code impostato: non deve bloccare.
+        $component->call('submit')->assertHasNoErrors();
 
-        $this->assertSame(0, Booking::where('tour_id', $tour->id)->count());
+        $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
+        $this->assertNotNull($booking);
+        $this->assertNull($booking->customer_tax_code, 'Senza CF il campo resta null, non stringa vuota.');
     }
 
     public function test_documento_mancante_blocca(): void
@@ -96,7 +113,9 @@ class PassengerDocumentTest extends TestCase
 
         $this->baseFilledComponent($tour, $dep)
             ->call('submit')
-            ->assertHasErrors(['adults.0.doc_type', 'adults.0.doc_number', 'adults.0.doc_expiry', 'adults.0.doc_place']);
+            ->assertHasErrors(['adults.0.doc_type', 'adults.0.doc_number', 'adults.0.doc_place'])
+            // La scadenza non è più tra i campi obbligatori.
+            ->assertHasNoErrors(['adults.0.doc_expiry']);
 
         $this->assertSame(0, Booking::where('tour_id', $tour->id)->count());
     }
@@ -104,12 +123,10 @@ class PassengerDocumentTest extends TestCase
     public function test_provincia_obbligatoria_se_italia(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
-        $expiry = $dep->departure_date->copy()->addYear()->toDateString();
 
         $this->baseFilledComponent($tour, $dep)
             ->set('adults.0.doc_type', 'passaporto')
             ->set('adults.0.doc_number', 'YA1234567')
-            ->set('adults.0.doc_expiry', $expiry)
             ->set('adults.0.doc_country', 'IT')
             ->set('adults.0.doc_province', '')   // manca la provincia
             ->set('adults.0.doc_place', 'Torino')
@@ -136,11 +153,8 @@ class PassengerDocumentTest extends TestCase
         $this->assertSame('TO', $seat->doc_issue_province);
         $this->assertSame('Torino', $seat->doc_issue_place);
         $this->assertTrue($seat->hasDocument());
-        // Scadenza salvata come data.
-        $this->assertEquals(
-            $dep->departure_date->copy()->addYear()->toDateString(),
-            $seat->doc_expiry->toDateString()
-        );
+        // La scadenza non viene più raccolta dal form pubblico: resta null.
+        $this->assertNull($seat->doc_expiry);
     }
 
     public function test_estero_senza_provincia_e_ammesso(): void

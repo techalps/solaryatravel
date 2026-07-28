@@ -9,8 +9,6 @@ return [
 
     'validation' => [
         'terms' => 'Devi accettare i termini e condizioni.',
-        'tax_code_required' => 'Inserisci il codice fiscale dell\'intestatario.',
-        'tax_code_invalid' => 'Codice fiscale non valido.',
         'adult_first_name' => 'Inserisci il nome di ogni adulto.',
         'adult_last_name' => 'Inserisci il cognome di ogni adulto.',
         'child_first_name' => 'Inserisci il nome di ogni bambino.',
@@ -18,8 +16,6 @@ return [
         'doc_type_required' => 'Scegli il tipo di documento per ogni passeggero.',
         'doc_type_invalid' => 'Tipo di documento non valido.',
         'doc_number_required' => 'Inserisci il numero del documento di ogni passeggero.',
-        'doc_expiry_required' => 'Inserisci la data di scadenza del documento.',
-        'doc_expiry_after' => 'Il documento deve essere valido fino alla data del viaggio.',
         'doc_country_required' => 'Indica lo Stato di emissione del documento.',
         'doc_place_required' => 'Indica il luogo di emissione del documento.',
         'doc_province_required' => 'Seleziona la provincia di emissione.',

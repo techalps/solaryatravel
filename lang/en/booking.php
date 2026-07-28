@@ -9,8 +9,6 @@ return [
 
     'validation' => [
         'terms' => 'You must accept the terms and conditions.',
-        'tax_code_required' => 'Enter the lead booker\'s tax code.',
-        'tax_code_invalid' => 'Invalid tax code.',
         'adult_first_name' => 'Enter the first name of every adult.',
         'adult_last_name' => 'Enter the last name of every adult.',
         'child_first_name' => 'Enter the first name of every child.',
@@ -18,8 +16,6 @@ return [
         'doc_type_required' => 'Choose the document type for every passenger.',
         'doc_type_invalid' => 'Invalid document type.',
         'doc_number_required' => 'Enter the document number of every passenger.',
-        'doc_expiry_required' => 'Enter the document expiry date.',
-        'doc_expiry_after' => 'The document must be valid until the date of travel.',
         'doc_country_required' => 'Specify the country that issued the document.',
         'doc_place_required' => 'Specify the place where the document was issued.',
         'doc_province_required' => 'Select the province of issue.',

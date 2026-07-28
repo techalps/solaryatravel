@@ -66,7 +66,7 @@
                                                 @if($seat->hasDocument())
                                                     <div class="text-muted" style="font-size:.78rem">
                                                         <i class="bi bi-person-vcard me-1"></i>{{ $seat->docTypeLabel() }}
-                                                        {{ $seat->doc_number }} · scad. {{ $seat->doc_expiry?->format('d/m/Y') }}
+                                                        {{ $seat->doc_number }}@if($seat->doc_expiry) · scad. {{ $seat->doc_expiry->format('d/m/Y') }}@endif
                                                     </div>
                                                 @else
                                                     <div class="text-warning" style="font-size:.78rem"><i class="bi bi-exclamation-triangle me-1"></i>Documento mancante</div>

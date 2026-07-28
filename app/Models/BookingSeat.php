@@ -49,12 +49,18 @@ class BookingSeat extends Model
         return !empty($this->guest_first_name) && !empty($this->guest_last_name);
     }
 
-    /** Il documento è completo (tutti i campi obbligatori valorizzati). */
+    /**
+     * Il documento è completo (tutti i campi obbligatori valorizzati).
+     *
+     * La data di scadenza NON rientra più nel controllo: non viene più chiesta
+     * nei canali di vendita (sito, agenzie, widget), quindi pretenderla qui
+     * marcherebbe come "incompleta" ogni nuova prenotazione. Resta un campo
+     * facoltativo, compilabile dall'admin e presente sui dati storici.
+     */
     public function hasDocument(): bool
     {
         return !empty($this->doc_type)
             && !empty($this->doc_number)
-            && !empty($this->doc_expiry)
             && !empty($this->doc_issue_country)
             && !empty($this->doc_issue_place);
     }

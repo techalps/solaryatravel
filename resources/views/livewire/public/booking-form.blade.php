@@ -238,10 +238,6 @@
                     @error('customer_last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-12">
-                    <input type="text" wire:model.blur="customer_tax_code" class="bk-input text-uppercase" placeholder="{{ __('tours.booking.tax_code') }}" maxlength="16">
-                    @error('customer_tax_code') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
-                </div>
-                <div class="col-12">
                     <input type="email" wire:model="customer_email" class="bk-input" placeholder="{{ __('tours.booking.email') }}">
                     @error('customer_email') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>

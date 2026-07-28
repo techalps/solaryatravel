@@ -441,7 +441,7 @@
                                                         <i class="bi bi-person-vcard me-1"></i>{{ $seat->docTypeLabel() }}
                                                     </span>
                                                     <div class="small text-muted">
-                                                        {{ $seat->doc_number }} · scad. {{ $seat->doc_expiry?->format('d/m/Y') }}
+                                                        {{ $seat->doc_number }}@if($seat->doc_expiry) · scad. {{ $seat->doc_expiry->format('d/m/Y') }}@endif
                                                         @if ($docExpired) <span class="text-danger">(scaduto!)</span> @endif
                                                     </div>
                                                 @else

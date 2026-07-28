@@ -114,7 +114,12 @@
                                         <div class="small text-muted mt-1">
                                             <i class="fa-regular fa-id-card me-1"></i>{{ $seat->docTypeLabel() }}
                                             <span class="font-monospace">{{ $seat->doc_number }}</span>
-                                            · scad. {{ $seat->doc_expiry?->format('d/m/Y') }}
+                                            {{-- Scadenza mostrata solo se presente: non è più
+                                                 richiesta in prenotazione (resta sui dati storici
+                                                 e su quanto inserito dall'admin). --}}
+                                            @if($seat->doc_expiry)
+                                                · scad. {{ $seat->doc_expiry->format('d/m/Y') }}
+                                            @endif
                                             @php
                                                 $place = collect([
                                                     $seat->doc_issue_place,
