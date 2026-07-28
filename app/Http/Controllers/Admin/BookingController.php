@@ -229,10 +229,49 @@ class BookingController extends Controller
             $byKey[$key] = ['model' => $d];
         }
 
+        // Precalcolo per evitare N+1 sul ciclo degli slot (sono ~500): senza
+        // questo ogni slot rieseguiva le query di catamarani, blocchi e posti.
+        //
+        // a) catamarani operativi: una volta sola.
+        $operatingCatamarans = $tour->operatingCatamarans();
+
+        // b) indisponibilità per catamarano (sostituisce isAvailableOn() per slot).
+        $unavailability = \App\Models\CatamaranUnavailability::query()
+            ->whereIn('catamaran_id', $operatingCatamarans->pluck('id'))
+            ->where('date_end', '>=', $from->toDateString())
+            ->where('date_start', '<=', $to->toDateString())
+            ->get(['catamaran_id', 'date_start', 'date_end']);
+
+        // c) blocchi (uso esclusivo) che intersecano la finestra.
+        $allBlocks = \App\Models\TourCatamaranBlock::query()
+            ->whereDate('end_date', '>=', $from->toDateString())
+            ->whereDate('start_date', '<=', $to->toDateString())
+            ->get(['catamaran_id', 'start_date', 'start_time', 'end_date', 'end_time']);
+
+        // d) posti occupati nella finestra, con l'orario della loro partenza.
+        //    Una sola query invece di una per (slot × catamarano).
+        $occupied = \App\Models\BookingSeat::query()
+            ->whereNull('booking_seats.cancelled_at')
+            ->whereNotNull('booking_seats.catamaran_id')
+            ->join('bookings', 'bookings.id', '=', 'booking_seats.booking_id')
+            ->leftJoin('tour_departures', 'tour_departures.id', '=', 'bookings.tour_departure_id')
+            ->leftJoin('tours', 'tours.id', '=', 'bookings.tour_id')
+            ->whereNotIn('bookings.status', ['cancelled', 'refunded', 'no_show'])
+            ->whereDate('bookings.booking_date', '>=', $from->toDateString())
+            ->whereDate('bookings.booking_date', '<=', $to->toDateString())
+            ->get([
+                'booking_seats.catamaran_id',
+                'bookings.booking_date',
+                'tour_departures.start_time as dep_start',
+                'tour_departures.end_time as dep_end',
+                'tours.duration_hours as tour_duration',
+            ])
+            ->groupBy(fn ($r) => \Carbon\Carbon::parse($r->booking_date)->format('Y-m-d'));
+
         // 3) Costruisci il payload SENZA creare righe: le virtuali restano tali
         //    (id sintetico "virt:Y-m-d:H:i") e verranno materializzate solo al
         //    salvataggio (vedi store()). Le già esistenti usano il loro id reale.
-        $departures = collect($byKey)->map(function ($entry, $key) use ($tour, $pricing) {
+        $departures = collect($byKey)->map(function ($entry, $key) use ($tour, $pricing, $operatingCatamarans, $unavailability, $allBlocks, $occupied) {
             $d = $entry['model'] ?? null;
 
             // Data/orario della partenza (dal modello reale o dalla virtuale).
@@ -264,13 +303,68 @@ class BookingController extends Controller
             $winEnd = $d && $d->end_time
                 ? \Carbon\Carbon::parse($d->end_time)->format('H:i')
                 : \Carbon\Carbon::parse($time)->addMinutes((int) round(((float) ($tour->duration_hours ?? 1)) * 60))->format('H:i');
-            $blockedIds = \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn($isoDate, $time, $winEnd);
+            // Finestra richiesta come istanti, per il confronto di sovrapposizione.
+            $slotStart = \Carbon\Carbon::parse($isoDate.' '.$time);
+            $slotEnd = \Carbon\Carbon::parse($isoDate.' '.$winEnd);
 
-            $catamarans = $tour->operatingCatamarans()
-                ->filter(fn ($cat) => !in_array((int) $cat->id, $blockedIds, true) && $cat->isAvailableOn($isoDate))
-                ->map(function ($cat) use ($d) {
-                    $booked = $d ? $cat->seatsBookedOnDeparture($d->id) : 0;
+            // Blocchi (uso esclusivo) che si sovrappongono a QUESTO slot, dai
+            // dati già caricati: stessa logica di TourCatamaranBlock::blockedCatamaranIdsOn.
+            $blockedIds = $allBlocks
+                ->filter(function ($b) use ($slotStart, $slotEnd) {
+                    $bs = \Carbon\Carbon::parse(\Carbon\Carbon::parse($b->start_date)->format('Y-m-d')
+                        .' '.($b->start_time ? \Carbon\Carbon::parse($b->start_time)->format('H:i') : '00:00'));
+                    $be = $b->end_time
+                        ? \Carbon\Carbon::parse(\Carbon\Carbon::parse($b->end_date)->format('Y-m-d')
+                            .' '.\Carbon\Carbon::parse($b->end_time)->format('H:i'))
+                        : \Carbon\Carbon::parse($b->end_date)->endOfDay();
+
+                    return $slotStart->lt($be) && $bs->lt($slotEnd);
+                })
+                ->pluck('catamaran_id')->map(fn ($id) => (int) $id)->unique()->all();
+
+            // Posti occupati in questa data, dai dati già caricati.
+            $seatsOnDate = $occupied->get($isoDate, collect());
+
+            $catamarans = $operatingCatamarans
+                ->filter(function ($cat) use ($blockedIds, $isoDate, $unavailability) {
+                    if (in_array((int) $cat->id, $blockedIds, true)) {
+                        return false;
+                    }
+
+                    // Indisponibilità del catamarano (manutenzione, fermo…).
+                    return ! $unavailability->contains(fn ($u) =>
+                        (int) $u->catamaran_id === (int) $cat->id
+                        && \Carbon\Carbon::parse($u->date_start)->format('Y-m-d') <= $isoDate
+                        && \Carbon\Carbon::parse($u->date_end)->format('Y-m-d') >= $isoDate);
+                })
+                ->map(function ($cat) use ($seatsOnDate, $slotStart, $slotEnd, $isoDate) {
+                    // Conteggio GLOBALE per data + FASCIA ORARIA: una barca
+                    // impegnata da un ALTRO tour in un orario sovrapposto non ha
+                    // posti liberi nemmeno per questo. Contando solo la propria
+                    // riga tour_departures la prenotazione normale mostrava la
+                    // barca libera mentre l'uso esclusivo la dava occupata.
+                    // Slot disgiunti (Daily la mattina, Sunset la sera) restano
+                    // compatibili.
+                    $booked = $seatsOnDate
+                        ->where('catamaran_id', $cat->id)
+                        ->filter(function ($r) use ($slotStart, $slotEnd, $isoDate) {
+                            // Senza orario di partenza non sappiamo collocare il
+                            // posto: lo contiamo (meglio non vendere che sovrapporre).
+                            if (! $r->dep_start) {
+                                return true;
+                            }
+
+                            $bs = \Carbon\Carbon::parse($isoDate.' '.\Carbon\Carbon::parse($r->dep_start)->format('H:i'));
+                            $be = $r->dep_end
+                                ? \Carbon\Carbon::parse($isoDate.' '.\Carbon\Carbon::parse($r->dep_end)->format('H:i'))
+                                : $bs->copy()->addMinutes((int) round(((float) ($r->tour_duration ?? 1)) * 60));
+
+                            return $slotStart->lt($be) && $bs->lt($slotEnd);
+                        })
+                        ->count();
+
                     $free = max(0, (int) $cat->capacity - $booked);
+
                     return [
                         'id' => $cat->id,
                         'name' => $cat->name,
@@ -345,7 +439,21 @@ class BookingController extends Controller
             $end = $start;
         }
 
-        $catamarans = $tour->operatingCatamarans()->map(function ($cat) use ($tour, $start, $end, $startTime, $endTime) {
+        // Blocchi che coprono il periodo richiesto, per catamarano.
+        //
+        // Serve perché conflictingBookingsForBlock() ricava i conflitti dal numero
+        // prenotazione scritto nel campo reason del blocco: un blocco ORFANO
+        // (prenotazione annullata o blocco creato a mano) non produce conflitti e
+        // la barca risultava LIBERA qui, mentre la prenotazione normale la
+        // escludeva — le due schermate si contraddicevano. Il blocco è la stessa
+        // fonte usata dal calendario della prenotazione normale.
+        $blockedIds = \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn(
+            $start,
+            $startTime,
+            $endTime
+        );
+
+        $catamarans = $tour->operatingCatamarans()->map(function ($cat) use ($tour, $start, $end, $startTime, $endTime, $blockedIds) {
             $conflicts = $this->bookingService->conflictingBookingsForBlock(
                 $tour->id,
                 [(int) $cat->id],
@@ -355,11 +463,16 @@ class BookingController extends Controller
                 $endTime
             );
 
+            $isBlocked = in_array((int) $cat->id, $blockedIds, true);
+
             return [
                 'id' => $cat->id,
                 'name' => $cat->name,
                 'capacity' => (int) $cat->capacity,
-                'available' => $conflicts->isEmpty(),
+                'available' => $conflicts->isEmpty() && ! $isBlocked,
+                // Blocco senza prenotazione collegata: segnalalo, così l'operatore
+                // capisce perché la barca non è disponibile e può ripulirlo.
+                'blocked_without_booking' => $isBlocked && $conflicts->isEmpty(),
                 'conflicts' => $conflicts->map(fn ($b) => [
                     'booking_number' => $b->booking_number,
                     'date' => $b->booking_date->format('d/m/Y'),

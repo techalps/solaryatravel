@@ -568,7 +568,11 @@ class BookingService
             if (!$cat->isAvailableOn($departure->departure_date)) {
                 continue;
             }
-            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            // Conteggio globale per catamarano su questa fascia oraria: la barca
+            // è fisica, se è già piena per un altro tour in orario sovrapposto
+            // non ha posti da vendere. Slot disgiunti nello stesso giorno
+            // (Daily la mattina, Sunset la sera) restano compatibili.
+            $booked = $cat->seatsBookedOnDate($departureDate, $winStart, $winEnd);
             $totalFree += max(0, $cat->capacity - $booked);
         }
 
@@ -608,7 +612,8 @@ class BookingService
             if (!$cat->isAvailableOn($departure->departure_date)) {
                 continue;
             }
-            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            // Vedi remainingCapacity(): conteggio globale per fascia oraria.
+            $booked = $cat->seatsBookedOnDate($departureDate, $winStart, $winEnd);
             $maxFree = max($maxFree, max(0, $cat->capacity - $booked));
         }
 

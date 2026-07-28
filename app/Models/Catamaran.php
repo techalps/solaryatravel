@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -127,5 +128,70 @@ class Catamaran extends Model
                   ->whereNotIn('status', ['cancelled', 'refunded', 'no_show']);
             })
             ->count();
+    }
+
+    /**
+     * Posti occupati sul catamarano in una data e FASCIA ORARIA, su QUALSIASI
+     * tour e partenza.
+     *
+     * Una barca è fisica: se è impegnata da un altro tour in un orario che si
+     * sovrappone, quei posti non sono disponibili nemmeno per il tour che stiamo
+     * prenotando. seatsBookedOnDeparture() conta invece solo la singola riga
+     * tour_departures, e da lì nascevano sia l'incoerenza con l'uso esclusivo
+     * sia il rischio di vendere due volte la stessa barca.
+     *
+     * Il confronto è per SLOT, non per giornata: Daily Escape 10:00-17:00 e
+     * Sunset Escape 18:00-21:00 possono usare la stessa barca lo stesso giorno.
+     * Le riserve per l'intera giornata o in uso esclusivo restano gestite dai
+     * blocchi (TourCatamaranBlock::blockedCatamaranIdsOn), che gli chiamanti
+     * verificano a parte.
+     *
+     * Senza fascia oraria ($startTime/$endTime null) conta l'intera giornata.
+     */
+    public function seatsBookedOnDate(
+        string|\DateTimeInterface $date,
+        ?string $startTime = null,
+        ?string $endTime = null
+    ): int {
+        $d = is_string($date) ? $date : $date->format('Y-m-d');
+
+        $seats = $this->bookingSeats()
+            ->whereNull('cancelled_at')
+            ->whereHas('booking', function ($q) use ($d) {
+                $q->whereDate('booking_date', $d)
+                  ->whereNotIn('status', ['cancelled', 'refunded', 'no_show']);
+            })
+            ->with(['booking.departure', 'booking.tour'])
+            ->get();
+
+        // Nessuna finestra richiesta → intera giornata.
+        if ($startTime === null || $endTime === null) {
+            return $seats->count();
+        }
+
+        $reqStart = Carbon::parse($d.' '.$startTime);
+        $reqEnd = Carbon::parse($d.' '.$endTime);
+
+        return $seats->filter(function ($seat) use ($d, $reqStart, $reqEnd) {
+            $dep = $seat->booking?->departure;
+
+            // Senza partenza collegata non sappiamo l'orario: contiamo il posto
+            // (prudenziale, meglio non vendere che sovrapporre).
+            if (! $dep || ! $dep->start_time) {
+                return true;
+            }
+
+            $start = Carbon::parse($d.' '.Carbon::parse($dep->start_time)->format('H:i'));
+
+            if ($dep->end_time) {
+                $end = Carbon::parse($d.' '.Carbon::parse($dep->end_time)->format('H:i'));
+            } else {
+                $durationMin = (int) round(((float) ($seat->booking->tour?->duration_hours ?? 1)) * 60);
+                $end = $start->copy()->addMinutes($durationMin);
+            }
+
+            // Overlap di intervalli semiaperti: slot disgiunti non collidono.
+            return $reqStart->lt($end) && $start->lt($reqEnd);
+        })->count();
     }
 }

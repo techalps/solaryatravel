@@ -8,9 +8,20 @@
 <h2>Capienza e posti disponibili</h2>
 <ul>
     <li>I <strong>posti disponibili</strong> mostrati sono quelli reali: la capienza dei catamarani meno le prenotazioni già presenti.</li>
+    <li>Il conteggio è per <strong>barca e fascia oraria</strong>, non per tour: una barca è fisica, quindi
+        se è già piena per un tour non ha posti liberi per un altro tour nello stesso orario. Il sistema
+        guarda tutte le prenotazioni della barca, su qualsiasi tour.</li>
+    <li>Gli <strong>orari che non si sovrappongono</strong> restano compatibili: la stessa barca può fare
+        il Daily Escape la mattina e il Sunset Escape la sera dello stesso giorno.</li>
     <li>I catamarani <strong>bloccati/riservati</strong> in quella data non contano nella disponibilità.</li>
     <li>Se in una data non c'è nessun catamarano disponibile, la prenotazione non è possibile e il sistema lo segnala.</li>
 </ul>
+
+<div class="guide-tip">
+    Se una barca risulta occupata e non capisci da cosa, controlla le prenotazioni di
+    <strong>tutti i tour</strong> in quella data e negli orari sovrapposti, non solo del tour che stai
+    prenotando: la flotta è condivisa.
+</div>
 
 <h2>Gruppo diviso su più catamarani</h2>
 <p>
