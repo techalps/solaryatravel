@@ -21,14 +21,14 @@ class PaymentService
     }
 
     /**
-     * Create a Stripe checkout session for a booking.
-     */
-    /**
      * Crea una sessione di checkout Stripe.
      *
      * @param  string  $intent  'full' (intero) | 'deposit' (acconto) | 'balance' (saldo)
+     * @param  bool  $forEmail  true se il link viaggia per email invece di essere
+     *                          seguito subito dopo un redirect: la sessione dura
+     *                          molto più a lungo (vedi checkoutExpiryMinutes()).
      */
-    public function createCheckoutSession(Booking $booking, string $intent = 'full'): array
+    public function createCheckoutSession(Booking $booking, string $intent = 'full', bool $forEmail = false): array
     {
         // Determina importo, line item e label in base all'intento.
         [$amount, $lineItems] = $this->checkoutAmountAndItems($booking, $intent);
@@ -45,7 +45,7 @@ class PaymentService
                 'booking_id' => $booking->id,
                 'intent' => $intent,
             ],
-            'expires_at' => now()->addMinutes(30)->timestamp,
+            'expires_at' => now()->addMinutes($this->checkoutExpiryMinutes($forEmail))->timestamp,
             'locale' => $booking->locale ?? 'it',
         ]);
 
@@ -65,6 +65,82 @@ class PaymentService
             'session_id' => $session->id,
             'url' => $session->url,
         ];
+    }
+
+    /**
+     * Restituisce un link di checkout SICURAMENTE valido per la prenotazione.
+     *
+     * Il vecchio comportamento riusava checkout_url senza controlli: una volta
+     * scaduta, la sessione Stripe resta scaduta per sempre e anche il reinvio
+     * dell'email consegnava lo stesso link morto. Qui interroghiamo Stripe sullo
+     * stato reale dell'ultima sessione e ne creiamo una nuova se non è più
+     * utilizzabile (scaduta, completata o non recuperabile).
+     *
+     * @param  bool  $forEmail  il link viaggia via email (durata estesa)
+     */
+    public function validCheckoutUrl(Booking $booking, string $intent = 'full', bool $forEmail = false): string
+    {
+        if ($booking->checkout_url && $this->lastSessionIsOpen($booking)) {
+            return $booking->checkout_url;
+        }
+
+        $url = $this->createCheckoutSession($booking, $intent, $forEmail)['url'];
+        $booking->update(['checkout_url' => $url]);
+
+        return $url;
+    }
+
+    /**
+     * Vero se l'ultima sessione Stripe della prenotazione è ancora aperta
+     * (pagabile). In caso di dubbio restituisce false: meglio generare un link
+     * nuovo che consegnarne uno morto.
+     */
+    protected function lastSessionIsOpen(Booking $booking): bool
+    {
+        $sessionId = Payment::where('booking_id', $booking->id)
+            ->where('gateway', 'stripe')
+            ->whereNotNull('gateway_payment_id')
+            ->latest('id')
+            ->value('gateway_payment_id');
+
+        if (! $sessionId) {
+            return false;
+        }
+
+        try {
+            $session = StripeSession::retrieve($sessionId);
+        } catch (\Throwable $e) {
+            BookingLog::error('payment_checkout', 'Verifica sessione Stripe fallita: genero un link nuovo', $booking, [
+                'session' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        // status: 'open' = pagabile, 'complete' = già pagata, 'expired' = scaduta.
+        return ($session->status ?? null) === 'open';
+    }
+
+    /**
+     * Durata della sessione di checkout, in minuti.
+     *
+     * Stripe ammette da 30 minuti a 24 ore dalla creazione.
+     *
+     * - Checkout dal sito: il cliente viene rediretto subito, 30 minuti bastano.
+     * - Link inviato per EMAIL: 30 minuti non bastano affatto. Fra accodamento
+     *   SMTP, ritardi di consegna e il tempo che il destinatario legge la posta,
+     *   il link arrivava già scaduto (segnalato da un'agenzia sul canale B2B).
+     *   Usiamo quindi il massimo consentito.
+     */
+    protected function checkoutExpiryMinutes(bool $forEmail): int
+    {
+        $minutes = $forEmail
+            ? (int) config('payment.stripe.checkout_expiry_email_minutes', 1440)
+            : (int) config('payment.stripe.checkout_expiry_minutes', 30);
+
+        // Clamp ai limiti Stripe: fuori range l'API rifiuta la sessione.
+        return max(30, min(1440, $minutes));
     }
 
     /**
@@ -399,9 +475,13 @@ class PaymentService
 
     /**
      * Invia al cliente finale gli estremi di pagamento: link Stripe se carta,
-     * istruzioni bonifico se payment_type=bank_transfer. Riusa checkout_url se già
-     * presente e segna payment_link_sent_at. Idempotente sul link (non ne crea uno
-     * nuovo ogni volta). Lancia eccezione in caso di errore (chiamante decide).
+     * istruzioni bonifico se payment_type=bank_transfer, e segna
+     * payment_link_sent_at. Lancia eccezione in caso di errore (chiamante decide).
+     *
+     * L'email con il link carta punta alla pagina /pagamento/{uuid}, che crea la
+     * sessione Stripe al click: prima veniva spedito il link Stripe diretto, che
+     * dura al massimo 24 ore (30 minuti con la vecchia configurazione) e arrivava
+     * quindi già scaduto.
      *
      * Usato sia alla creazione di una prenotazione B2B (il cliente non è presente,
      * va avvisato via email) sia dal pulsante "Reinvia estremi" del portale.
@@ -415,13 +495,12 @@ class PaymentService
             \Illuminate\Support\Facades\Mail::to($booking->customer_email)
                 ->send(new \App\Mail\BookingAwaitingTransfer($booking, $amountDue));
         } else {
-            $url = $booking->checkout_url;
-            if (! $url) {
-                $url = $this->createCheckoutSession($booking)['url'];
-                $booking->update(['checkout_url' => $url]);
-            }
+            // L'email punta alla NOSTRA pagina di pagamento (permanente): la
+            // sessione Stripe viene creata quando il cliente clicca, non ora.
+            // Così il link non può arrivare scaduto e non chiamiamo Stripe a
+            // ogni invio.
             \Illuminate\Support\Facades\Mail::to($booking->customer_email)
-                ->send(new \App\Mail\BookingPaymentLink($booking, $url));
+                ->send(new \App\Mail\BookingPaymentLink($booking));
         }
 
         $booking->update(['payment_link_sent_at' => now()]);

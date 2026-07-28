@@ -848,14 +848,9 @@ class BookingController extends Controller
     protected function sendPaymentLinkEmail(Booking $booking): bool
     {
         try {
-            // Riusa il link già generato se presente, altrimenti creane uno.
-            $url = $booking->checkout_url;
-            if (! $url) {
-                $session = $this->paymentService->createCheckoutSession($booking);
-                $url = $session['url'];
-                $booking->update(['checkout_url' => $url]);
-            }
-            Mail::to($booking->customer_email)->send(new BookingPaymentLink($booking, $url));
+            // L'email punta alla pagina /pagamento/{uuid}: la sessione Stripe
+            // nasce al click del cliente, quindi il link non scade mai.
+            Mail::to($booking->customer_email)->send(new BookingPaymentLink($booking));
             $booking->update(['payment_link_sent_at' => now()]);
             return true;
         } catch (\Throwable $e) {
@@ -874,8 +869,9 @@ class BookingController extends Controller
     protected function generatePaymentLink(Booking $booking): bool
     {
         try {
-            $session = $this->paymentService->createCheckoutSession($booking);
-            $booking->update(['checkout_url' => $session['url']]);
+            // L'admin copia il link e lo manda a mano (WhatsApp, email…):
+            // vale la durata estesa come per le email automatiche.
+            $this->paymentService->validCheckoutUrl($booking, 'full', forEmail: true);
             return true;
         } catch (\Throwable $e) {
             Log::error('Generazione link pagamento fallita', [

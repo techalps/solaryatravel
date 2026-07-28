@@ -49,7 +49,7 @@
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td align="center" style="padding:8px 0 16px 0;">
-                                    <a href="{{ $checkoutUrl }}" style="display:inline-block;background:#0066cc;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-weight:600;font-size:16px;">
+                                    <a href="{{ $payUrl }}" style="display:inline-block;background:#0066cc;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-weight:600;font-size:16px;">
                                         Paga ora con carta
                                     </a>
                                 </td>
@@ -60,7 +60,7 @@
                             Se il pulsante non funziona, copia e incolla questo link nel browser:
                         </p>
                         <p style="margin:0 0 16px 0;font-size:12px;color:#0066cc;word-break:break-all;">
-                            <a href="{{ $checkoutUrl }}" style="color:#0066cc;">{{ $checkoutUrl }}</a>
+                            <a href="{{ $payUrl }}" style="color:#0066cc;">{{ $payUrl }}</a>
                         </p>
 
                         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
