@@ -280,10 +280,23 @@
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-hourglass-bottom me-1"></i>Saldo entro</label>
                                         <div class="input-group">
-                                            <input type="number" name="balance_due_hours" min="1" max="720"
-                                                   value="{{ old('balance_due_hours', $settings['balance_due_hours'] ?? 12) }}" class="form-control" required>
-                                            <span class="input-group-text">ore prima</span>
+                                            {{-- Settings::balanceDueDays() converte l'eventuale vecchio
+                                                 valore in ore, così un'installazione già configurata
+                                                 non perde l'impostazione al primo caricamento. --}}
+                                            <input type="number" name="balance_due_days" min="1" max="90"
+                                                   value="{{ old('balance_due_days', $settings['balance_due_days'] ?? \App\Support\Settings::balanceDueDays()) }}" class="form-control" required>
+                                            <span class="input-group-text">giorni prima</span>
                                         </div>
+                                        <div class="form-text small">Il cliente vede questo termine nell'avviso quando sceglie l'acconto.</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold text-secondary mb-1"><i class="bi bi-calendar-check me-1"></i>Acconto solo da</label>
+                                        <div class="input-group">
+                                            <input type="number" name="deposit_min_days" min="0" max="365"
+                                                   value="{{ old('deposit_min_days', $settings['deposit_min_days'] ?? 7) }}" class="form-control" required>
+                                            <span class="input-group-text">giorni prima</span>
+                                        </div>
+                                        <div class="form-text small">Sotto questa soglia il cliente paga l'intero importo: l'opzione acconto non viene mostrata. 0 = sempre disponibile.</div>
                                     </div>
                                 </div>
 

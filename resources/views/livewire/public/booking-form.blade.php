@@ -357,10 +357,14 @@
             <div class="text-end text-muted small mb-15" style="font-size:.78rem">{{ __('tours.booking.vat_included') }}</div>
 
             @php
-                $depositOn = \App\Support\Settings::depositEnabled();
+                // L'acconto si propone solo se attivo E la partenza è abbastanza
+                // lontana da poter incassare il saldo in tempo (vedi
+                // Settings::depositAvailableFor).
+                $depositOn = $this->depositAvailable;
                 $bankOn = \App\Support\Settings::bankTransferEnabled();
                 $total = (float) ($this->pricing['total_amount'] ?? 0);
                 $depAmount = round($total * \App\Support\Settings::depositPercentage() / 100, 2);
+                $balanceDays = \App\Support\Settings::balanceDueDays();
             @endphp
 
             {{-- Scelta acconto / intero --}}
@@ -374,9 +378,20 @@
                     <label class="bk-pay-opt">
                         <input type="radio" wire:model="paymentChoice" value="deposit">
                         <span>{{ __('tours.booking.pay_deposit', ['percent' => \App\Support\Settings::depositPercentage()]) }} · <strong>€{{ number_format($depAmount, 2, ',', '.') }}</strong>
-                            <span class="text-muted d-block" style="font-size:.76rem">{{ __('tours.booking.balance_due', ['hours' => \App\Support\Settings::balanceDueHours().'h']) }}</span></span>
+                            <span class="text-muted d-block" style="font-size:.76rem">{{ trans_choice('tours.booking.balance_due_days', $balanceDays, ['days' => $balanceDays]) }}</span></span>
                     </label>
                 </div>
+
+                {{-- Avviso saldo: visibile solo se il cliente sceglie l'acconto. --}}
+                @if($paymentChoice === 'deposit')
+                    <div class="bk-balance-notice mb-15">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                        {{ trans_choice('tours.booking.balance_notice', $balanceDays, [
+                            'days' => $balanceDays,
+                            'amount' => '€'.number_format($total - $depAmount, 2, ',', '.'),
+                        ]) }}
+                    </div>
+                @endif
             @endif
 
             {{-- Scelta metodo: carta / bonifico istantaneo --}}
@@ -493,6 +508,10 @@
         .booking-widget .bk-pay-opt input { margin-top: .2rem; }
         .booking-widget .bk-label { font-size: .78rem; font-weight: 600; color: #0E1B33; margin-bottom: .35rem; display: block; }
         .booking-widget .bk-min-notice { background: #fff8e6; border: 1px solid #ffe39a; border-radius: 12px; padding: .6rem .8rem; font-size: .8rem; color: #6b4e00; line-height: 1.45; }
+        /* Avviso scadenza saldo: più marcato del min-notice perché è un impegno
+           di pagamento che il cliente deve notare prima di confermare. */
+        .booking-widget .bk-balance-notice { background: #fff4e5; border: 1px solid #ffcf99; border-radius: 12px; padding: .65rem .85rem; font-size: .82rem; color: #7a4a00; line-height: 1.5; font-weight: 500; }
+        .booking-widget .bk-balance-notice i { color: #e07b00; }
 
         .booking-widget .bk-stepper { display: inline-flex; align-items: center; background: #f4f4f4; border-radius: 50px; padding: 3px; gap: 4px; }
         .booking-widget .bk-stepper button { width: 26px; height: 26px; border-radius: 50%; border: 0; background: #fff; color: #0E1B33; font-weight: 700; font-size: 1rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }

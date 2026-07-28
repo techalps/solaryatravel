@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -78,9 +79,84 @@ class Settings
         return max(1, min(99, $pct));
     }
 
+    /**
+     * L'acconto è proponibile per questa partenza?
+     *
+     * Vero solo se l'acconto è attivo E la partenza è abbastanza lontana
+     * (>= depositMinDaysBeforeDeparture giorni): a pochi giorni dal viaggio non
+     * ci sarebbe il tempo di incassare il saldo, quindi si paga tutto subito.
+     *
+     * Punto unico: lo usano il form pubblico/agenzie/widget, la validazione del
+     * submit e il calcolo del BookingService, così i tre non possono divergere.
+     */
+    public static function depositAvailableFor(?Carbon $departureAt): bool
+    {
+        if (! self::depositEnabled()) {
+            return false;
+        }
+
+        // Senza data di partenza non possiamo valutare l'anticipo: non offrirlo.
+        if ($departureAt === null) {
+            return false;
+        }
+
+        $minDays = self::depositMinDaysBeforeDeparture();
+
+        if ($minDays <= 0) {
+            return true;
+        }
+
+        // Confronto sui GIORNI di calendario: "manca una settimana" non deve
+        // dipendere dall'ora del giorno in cui il cliente prenota.
+        $daysToDeparture = Carbon::now()
+            ->startOfDay()
+            ->diffInDays($departureAt->copy()->startOfDay(), false);
+
+        return $daysToDeparture >= $minDays;
+    }
+
+    /**
+     * Giorni di anticipo MINIMI perché l'acconto sia proponibile.
+     *
+     * Sotto questa soglia la partenza è troppo vicina per incassare il saldo in
+     * tempo, quindi il cliente paga subito l'intero importo e l'opzione acconto
+     * non viene nemmeno mostrata.
+     */
+    public static function depositMinDaysBeforeDeparture(): int
+    {
+        return max(0, (int) self::get('deposit_min_days', 7));
+    }
+
+    /**
+     * Giorni prima della partenza entro cui il saldo va versato.
+     *
+     * Sostituisce il precedente balance_due_hours: il cliente ragiona in giorni
+     * ("saldo entro 3 giorni dalla partenza"), non in ore. Se a impostazioni
+     * risulta ancora il vecchio valore in ore, viene convertito.
+     */
+    public static function balanceDueDays(): int
+    {
+        $days = self::get('balance_due_days');
+
+        if ($days === null || $days === '') {
+            // Retrocompatibilità: installazioni che hanno solo balance_due_hours.
+            $hours = (int) self::get('balance_due_hours', 0);
+
+            return $hours > 0 ? max(1, (int) ceil($hours / 24)) : 3;
+        }
+
+        return max(1, (int) $days);
+    }
+
+    /**
+     * Scadenza del saldo espressa in ore (= giorni × 24).
+     *
+     * Mantenuta per i punti che lavorano in ore (es. il default della data di
+     * scadenza nel form admin).
+     */
     public static function balanceDueHours(): int
     {
-        return max(1, (int) self::get('balance_due_hours', 12));
+        return self::balanceDueDays() * 24;
     }
 
     /**

@@ -53,7 +53,10 @@ class SettingsController extends Controller
             // Acconto
             'deposit_enabled' => 'boolean',
             'deposit_percentage' => 'required|integer|min:1|max:99',
-            'balance_due_hours' => 'required|integer|min:1|max:720',
+            // Scadenza saldo in giorni prima della partenza (sostituisce le ore).
+            'balance_due_days' => 'required|integer|min:1|max:90',
+            // Anticipo minimo perché l'acconto sia proponibile (0 = sempre).
+            'deposit_min_days' => 'required|integer|min:0|max:365',
             // Bonifico istantaneo
             'bank_transfer_enabled' => 'boolean',
             'bank_transfer_details' => 'nullable|string|max:1000',
@@ -218,7 +221,8 @@ class SettingsController extends Controller
             // Acconto
             'deposit_enabled' => false,
             'deposit_percentage' => 50,
-            'balance_due_hours' => 12,
+            'balance_due_days' => 3,
+            'deposit_min_days' => 7,
             // Bonifico istantaneo
             'bank_transfer_enabled' => false,
             'bank_transfer_details' => '',

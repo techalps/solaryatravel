@@ -89,6 +89,30 @@ class BookingForm extends Component
         ];
     }
 
+    /** Data e ora della partenza selezionata (null se non ancora risolta). */
+    #[Computed]
+    public function departureAt(): ?\Illuminate\Support\Carbon
+    {
+        if (! $this->departure) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse(
+            $this->departure->departure_date->toDateString()
+            .' '.\Illuminate\Support\Carbon::parse($this->departure->start_time)->format('H:i:s')
+        );
+    }
+
+    /**
+     * L'acconto è proponibile per questa partenza? (attivo + anticipo minimo)
+     * Usato dalla view per mostrare o nascondere la scelta acconto/intero.
+     */
+    #[Computed]
+    public function depositAvailable(): bool
+    {
+        return \App\Support\Settings::depositAvailableFor($this->departureAt);
+    }
+
     /** @var array<int> addon ids selezionati */
     public array $selectedAddons = [];
 
@@ -860,7 +884,9 @@ class BookingForm extends Component
 
         // Risolvi metodo/tipo di pagamento secondo le impostazioni attive.
         $useBankTransfer = \App\Support\Settings::bankTransferEnabled() && $this->paymentMethod === 'bank_transfer';
-        $useDeposit = \App\Support\Settings::depositEnabled() && $this->paymentChoice === 'deposit';
+        // Server-side: se la partenza è troppo vicina l'acconto non è ammesso,
+        // qualunque cosa arrivi dal client (radio manomesso o stato stantio).
+        $useDeposit = $this->depositAvailable && $this->paymentChoice === 'deposit';
         $paymentType = $useBankTransfer ? 'bank_transfer' : ($useDeposit ? 'deposit' : 'full');
 
         $payload = [

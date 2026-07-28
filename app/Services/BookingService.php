@@ -167,9 +167,14 @@ class BookingService
             if ($useDeposit) {
                 $depositAmount = round($total * \App\Support\Settings::depositPercentage() / 100, 2);
                 $balanceAmount = round($total - $depositAmount, 2);
+                // Scadenza saldo in GIORNI prima della partenza (impostabile in
+                // admin, default 3): coincide con l'avviso mostrato al cliente
+                // in fase di prenotazione. Fine giornata, così "entro 3 giorni"
+                // vale per tutto il terzo giorno che precede la partenza.
                 $balanceDueAt = \Illuminate\Support\Carbon::parse($departure->departure_date)
-                    ->setTimeFromTimeString((string) ($departure->start_time ?? '00:00'))
-                    ->subHours(\App\Support\Settings::balanceDueHours());
+                    ->startOfDay()
+                    ->subDays(\App\Support\Settings::balanceDueDays())
+                    ->endOfDay();
             }
 
             // Stato iniziale: in admin lo stato è scelto esplicitamente (es. una
