@@ -154,7 +154,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 | Admin
 |--------------------------------------------------------------------------
 */
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin'])->group(function () {
+// 'skipper_area' gira DOPO 'admin': lo skipper entra nell'area (isAdmin() è
+// vero) ma viene confinato alla sola sezione Imbarco. Inerte per gli altri ruoli.
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin', 'skipper_area'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/programma', [DashboardController::class, 'schedule'])->name('schedule');
 

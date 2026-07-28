@@ -56,6 +56,11 @@ class GuideController extends Controller
             'icon' => 'bi-person-vcard',
             'desc' => 'Obbligo documento per ogni passeggero, scadenza, modifica.',
         ],
+        'ruolo-skipper' => [
+            'title' => 'Ruolo Skipper',
+            'icon' => 'bi-qr-code-scan',
+            'desc' => 'Account di bordo che vede solo l\'Imbarco: come crearlo e cosa può fare.',
+        ],
         'sito-inglese' => [
             'title' => 'Sito in inglese',
             'icon' => 'bi-translate',

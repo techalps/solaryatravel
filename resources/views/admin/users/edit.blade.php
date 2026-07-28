@@ -8,6 +8,7 @@
         'super_admin' => ['icon' => 'bi-shield-fill-check', 'class' => 'bg-warning-subtle text-warning border-warning', 'desc' => 'Accesso completo a tutte le funzionalità', 'color' => 'warning'],
         'admin'       => ['icon' => 'bi-shield-fill',       'class' => 'bg-info-subtle text-info border-info',         'desc' => 'Gestisce prenotazioni e contenuti', 'color' => 'info'],
         'b2b'         => ['icon' => 'bi-briefcase-fill',    'class' => 'bg-primary-subtle text-primary border-primary', 'desc' => 'Agenzia rivenditrice: prenota dal portale, riceve una provvigione', 'color' => 'primary'],
+        'skipper'     => ['icon' => 'bi-qr-code-scan',      'class' => 'bg-success-subtle text-success border-success', 'desc' => 'Solo sezione Imbarco: scansiona i QR dei biglietti a bordo', 'color' => 'success'],
         'customer'    => ['icon' => 'bi-person-fill',       'class' => 'bg-light text-secondary border',               'desc' => 'Cliente standard della piattaforma', 'color' => 'secondary'],
     ];
     $rc = $roleConfig[$user->role] ?? $roleConfig['customer'];

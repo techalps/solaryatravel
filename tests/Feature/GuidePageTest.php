@@ -14,6 +14,17 @@ class GuidePageTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_guida_ruolo_skipper_si_renderizza(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'ruolo-skipper'))
+            ->assertOk()
+            ->assertSee('A cosa serve il ruolo Skipper', false)
+            ->assertSee('Skipper (solo imbarco)', false);
+    }
+
     public function test_guida_sito_inglese_si_renderizza(): void
     {
         $admin = User::factory()->create(['role' => 'super_admin']);

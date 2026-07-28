@@ -68,7 +68,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        $target = $user->isAdmin() ? route('admin.dashboard') : route('bookings.my');
+        $target = route($user->homeRouteName());
         return redirect()->intended($target);
     }
 }

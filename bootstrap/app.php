@@ -31,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'system' => \App\Http\Middleware\SystemAdminMiddleware::class,
+            // Confina il ruolo skipper alla sola sezione Imbarco (deny-by-default).
+            'skipper_area' => \App\Http\Middleware\SkipperAreaMiddleware::class,
             'b2b' => \App\Http\Middleware\B2bMiddleware::class,
         ]);
         // Gruppo middleware per l'area B2B: come "web" (cookie, sessione, CSRF)

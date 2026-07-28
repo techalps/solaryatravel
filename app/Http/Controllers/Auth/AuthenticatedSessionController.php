@@ -42,12 +42,9 @@ class AuthenticatedSessionController extends Controller
             return redirect()->to($redirect);
         }
 
-        // Redirect admin users to admin dashboard
-        if ($request->user()->isAdmin()) {
-            return redirect()->intended(route('admin.dashboard'));
-        }
-
-        return redirect()->intended(route('bookings.my'));
+        // Area di atterraggio per ruolo (lo skipper va all'imbarco, non alla
+        // dashboard che non può vedere).
+        return redirect()->intended(route($request->user()->homeRouteName()));
     }
 
     /**

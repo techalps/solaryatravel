@@ -145,6 +145,7 @@
                                         'super_admin' => ['icon' => 'bi-shield-fill-check', 'desc' => 'Accesso completo a tutte le funzionalità', 'color' => 'warning'],
                                         'admin'       => ['icon' => 'bi-shield-fill',       'desc' => 'Gestisce prenotazioni e contenuti', 'color' => 'info'],
                                         'b2b'         => ['icon' => 'bi-briefcase-fill',    'desc' => 'Agenzia rivenditrice: prenota dal portale, riceve una provvigione', 'color' => 'primary'],
+                                        'skipper'     => ['icon' => 'bi-qr-code-scan',   'desc' => 'Solo sezione Imbarco: scansiona i QR dei biglietti a bordo', 'color' => 'success'],
                                         'customer'    => ['icon' => 'bi-person-fill',       'desc' => 'Cliente standard della piattaforma', 'color' => 'secondary'],
                                     ];
                                 @endphp

@@ -72,9 +72,44 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Check if the user is an admin (accede all'area admin).
-     * Include system_admin: ha tutti i poteri admin più la sezione Sistema.
+     * Include system_admin (tutti i poteri admin più la sezione Sistema) e
+     * skipper, che però vede SOLO la sezione Imbarco: il gating fine è nel
+     * middleware 'skipper_area' (vedi SkipperAreaMiddleware).
      */
     public function isAdmin(): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin', 'system_admin', 'skipper']);
+    }
+
+    /**
+     * Ruolo operativo di bordo: scansiona i QR dei biglietti all'imbarco e
+     * nient'altro. Non vede prenotazioni, incassi, report o impostazioni.
+     */
+    public function isSkipper(): bool
+    {
+        return $this->role === 'skipper';
+    }
+
+    /**
+     * Nome della rotta su cui atterrare dopo il login (o la verifica email).
+     *
+     * Lo skipper non può vedere la dashboard: va portato direttamente alla sua
+     * unica sezione, altrimenti verrebbe rimbalzato dal middleware.
+     */
+    public function homeRouteName(): string
+    {
+        if ($this->isSkipper()) {
+            return 'admin.boarding.index';
+        }
+
+        return $this->isAdmin() ? 'admin.dashboard' : 'bookings.my';
+    }
+
+    /**
+     * Pieno accesso al gestionale: tutti i ruoli admin TRANNE lo skipper.
+     * Da usare dove serve distinguere "è nell'area admin" da "può gestire".
+     */
+    public function hasFullAdminAccess(): bool
     {
         return in_array($this->role, ['admin', 'super_admin', 'system_admin']);
     }

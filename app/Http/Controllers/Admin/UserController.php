@@ -20,6 +20,8 @@ class UserController extends Controller
     {
         $roles = [
             'customer'    => 'Cliente',
+            // Ruolo operativo di bordo: entra in admin ma vede solo l'Imbarco.
+            'skipper'     => 'Skipper (solo imbarco)',
             'admin'       => 'Amministratore',
             'super_admin' => 'Super Admin',
         ];

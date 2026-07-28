@@ -39,9 +39,15 @@
         {{-- Sidebar --}}
         <aside class="admin-sidebar sidebar-bg d-flex flex-column shadow-lg" id="adminSidebar">
             <div class="d-flex align-items-start justify-content-between px-4 py-4 border-bottom border-secondary border-opacity-25">
-                <a href="{{ route('admin.dashboard') }}" class="text-decoration-none d-flex flex-column align-items-start gap-2 flex-grow-1">
+                @php
+                    // Lo skipper non può vedere la dashboard: il logo porta alla
+                    // sua unica sezione.
+                    $isSkipper = auth()->user()->isSkipper();
+                    $homeRoute = $isSkipper ? route('admin.boarding.index') : route('admin.dashboard');
+                @endphp
+                <a href="{{ $homeRoute }}" class="text-decoration-none d-flex flex-column align-items-start gap-2 flex-grow-1">
                     <img src="{{ asset('images/logo_white.svg') }}" alt="Solarya Travel" style="height:25px;width:auto;max-width:60%">
-                    <small class="text-warning text-uppercase fw-semibold" style="letter-spacing:.18em;font-size:.65rem">Admin Panel</small>
+                    <small class="text-warning text-uppercase fw-semibold" style="letter-spacing:.18em;font-size:.65rem">{{ $isSkipper ? 'Imbarco' : 'Admin Panel' }}</small>
                 </a>
                 <button class="btn btn-sm btn-link text-white d-lg-none p-0 ms-2" type="button" id="adminSidebarClose" aria-label="Chiudi menu">
                     <i class="bi bi-x-lg"></i>
@@ -50,6 +56,16 @@
 
             <nav class="flex-grow-1 overflow-auto p-3">
                 <ul class="nav nav-pills flex-column gap-1">
+                @if($isSkipper)
+                    {{-- Ruolo skipper: unica voce accessibile (le altre sono
+                         comunque bloccate lato server da SkipperAreaMiddleware). --}}
+                    <li class="nav-item">
+                        <a href="{{ route('admin.boarding.index') }}" class="nav-link {{ request()->routeIs('admin.boarding.*') ? 'active' : '' }}">
+                            <i class="bi bi-qr-code-scan me-2"></i>Imbarco
+                        </a>
+                    </li>
+                @else
+
                     <li class="nav-item">
                         <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                             <i class="bi bi-grid-1x2-fill me-2"></i>Dashboard
@@ -151,6 +167,7 @@
                             </a>
                         </li>
                     @endif
+                @endif
                 </ul>
             </nav>
 
