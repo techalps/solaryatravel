@@ -483,6 +483,12 @@ class BookingService
             // I seat records restano per audit ma la booking essendo cancelled
             // non conta più nelle disponibilità (vedi scope active e seatsBookedOnDeparture).
 
+            // Rilascia le riserve di uso esclusivo di QUESTA prenotazione.
+            // Senza questo il blocco sopravviveva all'annullamento e il
+            // catamarano restava invendibile per sempre su quella data
+            // ("blocco orfano"): in produzione ne sono stati trovati 4.
+            $releasedBlocks = $this->releaseExclusiveBlocks($booking);
+
             if ($booking->discount_code_id) {
                 DiscountCode::find($booking->discount_code_id)?->decrement('times_used');
             }
@@ -490,10 +496,31 @@ class BookingService
             \App\Support\BookingLog::info('booking_cancel', 'Prenotazione annullata (posti liberati)', $booking, [
                 'reason' => $reason,
                 'seats' => $booking->seats,
+                'released_blocks' => $releasedBlocks,
             ]);
 
             return true;
         });
+    }
+
+    /**
+     * Rilascia i blocchi di uso esclusivo creati da una prenotazione.
+     *
+     * I blocchi sono legati alla prenotazione dal numero scritto nel campo
+     * reason ("… #SLY-2026-00044"). Annullamento e rimborso devono rilasciarli:
+     * altrimenti il catamarano resta bloccato su quella data pur non essendoci
+     * più una prenotazione attiva, e diventa invendibile ovunque (calendario
+     * pubblico, admin, uso esclusivo).
+     *
+     * @return int quanti blocchi sono stati rilasciati
+     */
+    public function releaseExclusiveBlocks(Booking $booking): int
+    {
+        if (! $booking->booking_number) {
+            return 0;
+        }
+
+        return (int) TourCatamaranBlock::where('reason', 'like', '%#'.$booking->booking_number.'%')->delete();
     }
 
     /**

@@ -198,6 +198,68 @@ class CatamaranAvailabilityConsistencyTest extends TestCase
         );
     }
 
+    /**
+     * Causa a monte dei blocchi orfani: annullare o rimborsare una prenotazione
+     * non rilasciava le sue riserve di uso esclusivo, quindi il catamarano
+     * restava invendibile su quella data per sempre. In produzione erano 4 i
+     * blocchi in questo stato, due dei quali sul 1 settembre segnalato.
+     */
+    public function test_annullare_una_prenotazione_rilascia_le_riserve_esclusive(): void
+    {
+        $s = $this->scenario();
+        $booking = $this->fillBoat($s['tourB'], $s['depB'], $s['cat'], 4);
+
+        TourCatamaranBlock::create([
+            'tour_id' => $s['tourB']->id,
+            'catamaran_id' => $s['cat']->id,
+            'start_date' => $s['date'],
+            'end_date' => $s['date'],
+            'start_time' => '10:00',
+            'end_time' => '13:00',
+            'reason' => 'Riservato da prenotazione admin #'.$booking->booking_number,
+        ]);
+
+        $this->assertSame(1, TourCatamaranBlock::where('reason', 'like', '%#'.$booking->booking_number.'%')->count());
+
+        app(BookingService::class)->cancel($booking, 'test');
+
+        $this->assertSame(
+            0,
+            TourCatamaranBlock::where('reason', 'like', '%#'.$booking->booking_number.'%')->count(),
+            'Annullando la prenotazione il blocco di uso esclusivo deve essere rilasciato.'
+        );
+
+        // E la barca torna disponibile per quello slot.
+        $blocked = TourCatamaranBlock::blockedCatamaranIdsOn($s['date'], '10:00', '13:00');
+        $this->assertNotContains((int) $s['cat']->id, $blocked);
+    }
+
+    public function test_rimborsare_da_admin_rilascia_le_riserve_esclusive(): void
+    {
+        $s = $this->scenario();
+        $booking = $this->fillBoat($s['tourB'], $s['depB'], $s['cat'], 4);
+
+        TourCatamaranBlock::create([
+            'tour_id' => $s['tourB']->id,
+            'catamaran_id' => $s['cat']->id,
+            'start_date' => $s['date'],
+            'end_date' => $s['date'],
+            'start_time' => '10:00',
+            'end_time' => '13:00',
+            'reason' => 'Riservato da prenotazione admin #'.$booking->booking_number,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.bookings.refund', $booking), ['amount' => 100])
+            ->assertRedirect();
+
+        $this->assertSame(
+            0,
+            TourCatamaranBlock::where('reason', 'like', '%#'.$booking->booking_number.'%')->count(),
+            'Rimborsando la prenotazione il blocco di uso esclusivo deve essere rilasciato.'
+        );
+    }
+
     public function test_le_due_letture_concordano_quando_la_barca_e_piena_sullo_stesso_tour(): void
     {
         $s = $this->scenario();

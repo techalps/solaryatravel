@@ -1573,6 +1573,12 @@ class BookingController extends Controller
         // 1) Aggiorna la prenotazione
         $booking->update(['status' => BookingStatus::REFUNDED]);
 
+        // 1b) Rilascia le riserve di uso esclusivo: una prenotazione rimborsata
+        //     non deve tenere occupato il catamarano. Senza questo il blocco
+        //     sopravviveva e la barca restava invendibile su quella data
+        //     ("blocco orfano"): è la causa del caso segnalato del 1 settembre.
+        $releasedBlocks = $this->bookingService->releaseExclusiveBlocks($booking);
+
         // 2) Rifletti il rimborso sui Payment del booking così la pagina Pagamenti
         //    mostra lo stato corretto (refunded / partially_refunded).
         $payments = $booking->payments()
@@ -1618,6 +1624,7 @@ class BookingController extends Controller
         BookingLog::info('booking_refund', 'Rimborso registrato da admin', $booking->fresh(), [
             'amount' => round($amount, 2),
             'note' => $note,
+            'released_blocks' => $releasedBlocks,
         ]);
 
         try {
