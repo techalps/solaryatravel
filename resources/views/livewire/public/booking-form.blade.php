@@ -1,6 +1,6 @@
 <div>
     <div class="tg-tour-about-sidebar booking-widget mb-30">
-        <h4 class="tg-tour-about-title title-2 mb-15">Prenota questo tour</h4>
+        <h4 class="tg-tour-about-title title-2 mb-15">{{ __('tours.booking.book_this_tour') }}</h4>
 
         @php
             $availableDateKeys = array_keys($availableDates ?? []);
@@ -11,13 +11,13 @@
 
         {{-- Date picker --}}
         @if($hasPicker)
-            <span class="tg-tour-about-sidebar-title d-inline-block mb-5">Data</span>
+            <span class="tg-tour-about-sidebar-title d-inline-block mb-5">{{ __('tours.booking.date') }}</span>
             <div class="tg-booking-form-parent-inner mb-15" wire:ignore>
                 <div class="tg-tour-about-date p-relative">
                     <input id="booking-date-input"
                            class="input"
                            type="text"
-                           placeholder="Seleziona una data"
+                           placeholder="{{ __('tours.booking.select_date') }}"
                            value="{{ $selectedDate }}"
                            data-available-dates='@json($availableDateKeys)'
                            data-current="{{ $selectedDate }}"
@@ -35,7 +35,7 @@
             {{-- Time picker (solo se >1 orario disponibile per la data scelta) --}}
             @if($needsTimePicker)
                 <div class="tg-tour-about-time d-flex align-items-center flex-wrap mb-15">
-                    <span class="time me-2">Orario:</span>
+                    <span class="time me-2">{{ __('tours.booking.time') }}</span>
                     @foreach($timesForSelected as $t)
                         <div class="form-check me-3 m-0">
                             <input class="form-check-input" type="radio" id="time-{{ $t }}" wire:click="pickTime('{{ $t }}')" @checked($selectedTime === $t)>
@@ -50,13 +50,13 @@
                 <div class="tg-tour-about-border-doted mb-15"></div>
                 <p class="text-muted small text-center py-2 mb-0">
                     <i class="fa-regular fa-hand-pointer me-1"></i>
-                    Clicca sul campo data per scegliere il giorno.
+                    {{ __('tours.booking.date_hint') }}
                 </p>
             @endif
         @endif
 
         @if(!$hasPicker && !$departure)
-            <div class="alert alert-warning small">Nessuna partenza disponibile al momento.</div>
+            <div class="alert alert-warning small">{{ __('tours.booking.no_departures') }}</div>
         @endif
 
         {{-- Form principale (solo quando partenza risolta) --}}
@@ -65,7 +65,7 @@
 
             {{-- Partecipanti: Adulti + Bambini --}}
             <div class="tg-tour-about-tickets-wrap mb-15">
-                <span class="tg-tour-about-sidebar-title d-inline-block mb-10">Partecipanti:</span>
+                <span class="tg-tour-about-sidebar-title d-inline-block mb-10">{{ __('tours.booking.participants') }}</span>
 
                 @php $maxSeats = $this->maxSeats; @endphp
 
@@ -74,14 +74,15 @@
                     @if($maxSeats <= 0)
                         <div class="alert alert-danger small py-2 mb-10">
                             <i class="fa-solid fa-circle-exclamation me-1"></i>
-                            Posti esauriti per questa data. Scrivici su
-                            <a href="https://wa.me/393450884743" target="_blank" rel="noopener">WhatsApp</a> o via
-                            <a href="mailto:info@solaryatravel.com">email</a> per le alternative.
+                            {!! __('tours.booking.sold_out', [
+                                'whatsapp' => '<a href="https://wa.me/393450884743" target="_blank" rel="noopener">'.__('tours.detail.whatsapp').'</a>',
+                                'email' => '<a href="mailto:'.e(config('mail.from.address')).'">'.__('tours.detail.email').'</a>',
+                            ]) !!}
                         </div>
                     @else
                         <div class="bk-seats-left small text-muted mb-10">
                             <i class="fa-regular fa-chair me-1"></i>
-                            Posti disponibili per questa data: <strong>{{ $maxSeats }}</strong>
+                            {!! __('tours.booking.seats_left', ['count' => '<strong>'.e($maxSeats).'</strong>']) !!}
                         </div>
 
                         {{-- Dettaglio posti per ogni catamarano --}}
@@ -91,7 +92,7 @@
                                 @foreach($cats as $c)
                                     <span class="bk-cat-chip {{ $c['free'] <= 0 ? 'is-full' : '' }}">
                                         <i class="fa-solid fa-sailboat me-1"></i>{{ $c['name'] }}
-                                        <em>{{ $c['free'] }}/{{ $c['capacity'] }} posti</em>
+                                        <em>{{ __('tours.booking.seats_of', ['free' => $c['free'], 'capacity' => $c['capacity']]) }}</em>
                                     </span>
                                 @endforeach
                             </div>
@@ -104,21 +105,23 @@
                 @if($largestFree !== null && $this->totalSelected > $largestFree && (!$this->maxSeats || $this->totalSelected <= $this->maxSeats))
                     <div class="alert alert-info small py-2 mb-10">
                         <i class="fa-solid fa-people-group me-1"></i>
-                        Con <strong>{{ $this->totalSelected }} partecipanti</strong> il gruppo verrà diviso su più catamarani
-                        (la barca più capiente ha {{ $largestFree }} posti liberi per questa partenza).
+                        {!! __('tours.booking.split_notice', [
+                            'count' => '<strong>'.e($this->totalSelected).'</strong>',
+                            'free' => e($largestFree),
+                        ]) !!}
                     </div>
                 @endif
 
                 {{-- Adulti --}}
                 <div class="tg-tour-about-tickets mb-15">
                     <div class="tg-tour-about-tickets-adult">
-                        <span>Adulti</span>
-                        <p class="mb-0">(da 18 anni) <span>€{{ number_format($this->adultUnitPrice, 0, ',', '.') }}</span></p>
+                        <span>{{ __('tours.booking.adults') }}</span>
+                        <p class="mb-0">{{ __('tours.booking.adults_hint') }} <span>€{{ number_format($this->adultUnitPrice, 0, ',', '.') }}</span></p>
                     </div>
                     <div class="bk-stepper">
-                        <button type="button" wire:click="decrementAdults" @disabled($adultsCount <= 1) aria-label="Diminuisci">−</button>
+                        <button type="button" wire:click="decrementAdults" @disabled($adultsCount <= 1) aria-label="{{ __('tours.booking.decrease') }}">−</button>
                         <span class="qty">{{ $adultsCount }}</span>
-                        <button type="button" class="plus" wire:click="incrementAdults" @disabled($this->capacityReached) aria-label="Aumenta">+</button>
+                        <button type="button" class="plus" wire:click="incrementAdults" @disabled($this->capacityReached) aria-label="{{ __('tours.booking.increase') }}">+</button>
                     </div>
                 </div>
 
@@ -126,22 +129,22 @@
                     {{-- Bambini --}}
                     <div class="tg-tour-about-tickets mb-10">
                         <div class="tg-tour-about-tickets-adult">
-                            <span>Bambini</span>
-                            <p class="mb-0"><span class="text-muted small fw-normal">prezzo in base all'età</span></p>
+                            <span>{{ __('tours.booking.children') }}</span>
+                            <p class="mb-0"><span class="text-muted small fw-normal">{{ __('tours.booking.children_hint') }}</span></p>
                         </div>
                         <div class="bk-stepper">
-                            <button type="button" wire:click="removeChild" @disabled(count($children) <= 0) aria-label="Diminuisci">−</button>
+                            <button type="button" wire:click="removeChild" @disabled(count($children) <= 0) aria-label="{{ __('tours.booking.decrease') }}">−</button>
                             <span class="qty">{{ count($children) }}</span>
-                            <button type="button" class="plus" wire:click="addChild" @disabled($this->capacityReached) aria-label="Aumenta">+</button>
+                            <button type="button" class="plus" wire:click="addChild" @disabled($this->capacityReached) aria-label="{{ __('tours.booking.increase') }}">+</button>
                         </div>
                     </div>
 
                     <div class="bk-reductions-info small text-muted mb-10">
                         <i class="fa-regular fa-circle-info me-1"></i>
-                        Riduzioni:
+                        {{ __('tours.booking.reductions') }}
                         @foreach($this->childBrackets as $b)
                             <span class="bk-reduction-chip">
-                                {{ $b->label }}
+                                {{ tdb($b->label) }}
                                 <em class="text-nowrap">
                                     @if($b->max_age !== null && $b->min_age)
                                         ({{ $b->min_age }}–{{ $b->max_age }})
@@ -162,7 +165,7 @@
             @if($this->addons->isNotEmpty())
                 <div class="tg-tour-about-border-doted mb-15"></div>
                 <div class="tg-tour-about-extra mb-15">
-                    <span class="tg-tour-about-sidebar-title mb-10 d-inline-block">Aggiungi extra:</span>
+                    <span class="tg-tour-about-sidebar-title mb-10 d-inline-block">{{ __('tours.booking.addons_title') }}</span>
                     <div class="tg-filter-list">
                         <ul class="list-unstyled mb-0">
                             @foreach($this->addons as $addon)
@@ -170,7 +173,7 @@
                                 <li wire:key="addon-{{ $addon->id }}">
                                     <div class="checkbox d-flex align-items-center">
                                         <input class="tg-checkbox" type="checkbox" id="addon-{{ $addon->id }}" wire:click="toggleAddon({{ $addon->id }})" @checked($isActive)>
-                                        <label for="addon-{{ $addon->id }}" class="tg-label ms-2 mb-0">{{ $addon->name }}</label>
+                                        <label for="addon-{{ $addon->id }}" class="tg-label ms-2 mb-0">{{ tdb($addon->name) }}</label>
                                     </div>
                                     <span class="quantity">€{{ number_format((float) $addon->price, 0, ',', '.') }}</span>
                                 </li>
@@ -186,19 +189,19 @@
                 <div class="bk-summary-mini mb-15">
                     @foreach($this->pricing['brackets'] ?? [] as $line)
                         <div class="bk-summary-line">
-                            <span>{{ $line['label'] }} × {{ $line['count'] }}</span>
+                            <span>{{ tdb($line['label']) }} × {{ $line['count'] }}</span>
                             <span>€{{ number_format($line['line_total'], 2, ',', '.') }}</span>
                         </div>
                     @endforeach
                     @if(($this->pricing['addons_total'] ?? 0) > 0)
                         <div class="bk-summary-line">
-                            <span>Extra</span>
+                            <span>{{ __('tours.booking.extras') }}</span>
                             <span>€{{ number_format($this->pricing['addons_total'], 2, ',', '.') }}</span>
                         </div>
                     @endif
                     @if(($this->pricing['discount_amount'] ?? 0) > 0)
                         <div class="bk-summary-line discount">
-                            <span><i class="fa-solid fa-tag me-1"></i>Sconto</span>
+                            <span><i class="fa-solid fa-tag me-1"></i>{{ __('tours.booking.discount') }}</span>
                             <span>− €{{ number_format($this->pricing['discount_amount'], 2, ',', '.') }}</span>
                         </div>
                     @endif
@@ -207,13 +210,13 @@
 
             {{-- Discount --}}
             <div class="mb-15">
-                <label class="bk-label">Codice sconto</label>
+                <label class="bk-label">{{ __('tours.booking.discount_code') }}</label>
                 <div class="d-flex gap-2">
-                    <input type="text" wire:model="discountCode" class="bk-input flex-grow-1" placeholder="ES. ESTATE10" @disabled($discountValid)>
+                    <input type="text" wire:model="discountCode" class="bk-input flex-grow-1" placeholder="{{ __('tours.booking.discount_placeholder') }}" @disabled($discountValid)>
                     @if($discountValid)
-                        <button type="button" wire:click="removeDiscount" class="btn btn-light border rounded-pill px-3" title="Rimuovi"><i class="fa-solid fa-xmark"></i></button>
+                        <button type="button" wire:click="removeDiscount" class="btn btn-light border rounded-pill px-3" title="{{ __('tours.booking.discount_remove') }}"><i class="fa-solid fa-xmark"></i></button>
                     @else
-                        <button type="button" wire:click="applyDiscount" class="btn btn-outline-primary rounded-pill px-3">Applica</button>
+                        <button type="button" wire:click="applyDiscount" class="btn btn-outline-primary rounded-pill px-3">{{ __('tours.booking.discount_apply') }}</button>
                     @endif
                 </div>
                 @if($discountFeedback)
@@ -224,30 +227,30 @@
             <div class="tg-tour-about-border-doted mb-15"></div>
 
             {{-- Customer fields --}}
-            <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-regular fa-user text-primary me-1"></i>Dati intestatario</span>
+            <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-regular fa-user text-primary me-1"></i>{{ __('tours.booking.customer_title') }}</span>
             <div class="row g-2 mb-10">
                 <div class="col-6">
-                    <input type="text" wire:model.live.debounce.300ms="customer_first_name" class="bk-input" placeholder="Nome *">
+                    <input type="text" wire:model.live.debounce.300ms="customer_first_name" class="bk-input" placeholder="{{ __('tours.booking.first_name') }}">
                     @error('customer_first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-6">
-                    <input type="text" wire:model.live.debounce.300ms="customer_last_name" class="bk-input" placeholder="Cognome *">
+                    <input type="text" wire:model.live.debounce.300ms="customer_last_name" class="bk-input" placeholder="{{ __('tours.booking.last_name') }}">
                     @error('customer_last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-12">
-                    <input type="text" wire:model.blur="customer_tax_code" class="bk-input text-uppercase" placeholder="Codice fiscale *" maxlength="16">
+                    <input type="text" wire:model.blur="customer_tax_code" class="bk-input text-uppercase" placeholder="{{ __('tours.booking.tax_code') }}" maxlength="16">
                     @error('customer_tax_code') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-12">
-                    <input type="email" wire:model="customer_email" class="bk-input" placeholder="Email *">
+                    <input type="email" wire:model="customer_email" class="bk-input" placeholder="{{ __('tours.booking.email') }}">
                     @error('customer_email') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-12">
-                    <input type="tel" wire:model="customer_phone" class="bk-input" placeholder="Telefono">
+                    <input type="tel" wire:model="customer_phone" class="bk-input" placeholder="{{ __('tours.booking.phone') }}">
                     @error('customer_phone') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                 </div>
                 <div class="col-12">
-                    <textarea wire:model="special_requests" class="bk-textarea" rows="2" placeholder="Richieste speciali (opzionale)"></textarea>
+                    <textarea wire:model="special_requests" class="bk-textarea" rows="2" placeholder="{{ __('tours.booking.special_requests') }}"></textarea>
                 </div>
                 {{-- Documento dell'intestatario (adulto #1). Obbligatorio come per tutti. --}}
                 <div class="col-12">
@@ -258,7 +261,7 @@
             {{-- Dati degli altri passeggeri (nome/cognome + documento), dopo l'intestatario. --}}
             @if($adultsCount > 1 || count($children) > 0)
                 <div class="tg-tour-about-border-doted mb-15"></div>
-                <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-solid fa-users text-primary me-1"></i>Dati passeggeri</span>
+                <span class="tg-tour-about-sidebar-title d-inline-block mb-10"><i class="fa-solid fa-users text-primary me-1"></i>{{ __('tours.booking.passengers_title') }}</span>
 
                 {{-- Adulti aggiuntivi (il primo è l'intestatario, già sopra) --}}
                 @if($adultsCount > 1)
@@ -266,15 +269,15 @@
                         @for ($i = 1; $i < $adultsCount; $i++)
                             <div class="bk-child-row" wire:key="adult-{{ $i }}">
                                 <div class="bk-child-row-head">
-                                    <span class="bk-child-num">Adulto {{ $i + 1 }}</span>
+                                    <span class="bk-child-num">{{ __('tours.booking.adult_n', ['n' => $i + 1]) }}</span>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <input type="text" wire:model.blur="adults.{{ $i }}.first_name" class="bk-input" placeholder="Nome *">
+                                        <input type="text" wire:model.blur="adults.{{ $i }}.first_name" class="bk-input" placeholder="{{ __('tours.booking.first_name') }}">
                                         @error('adults.'.$i.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" wire:model.blur="adults.{{ $i }}.last_name" class="bk-input" placeholder="Cognome *">
+                                        <input type="text" wire:model.blur="adults.{{ $i }}.last_name" class="bk-input" placeholder="{{ __('tours.booking.last_name') }}">
                                         @error('adults.'.$i.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                                     </div>
                                 </div>
@@ -291,31 +294,31 @@
                             @php $idx = $c['index']; @endphp
                             <div class="bk-child-row" wire:key="child-{{ $idx }}">
                                 <div class="bk-child-row-head">
-                                    <span class="bk-child-num">Bambino {{ $idx + 1 }}</span>
-                                    <button type="button" wire:click="removeChild({{ $idx }})" class="bk-child-remove" title="Rimuovi"><i class="fa-solid fa-xmark"></i></button>
+                                    <span class="bk-child-num">{{ __('tours.booking.child_n', ['n' => $idx + 1]) }}</span>
+                                    <button type="button" wire:click="removeChild({{ $idx }})" class="bk-child-remove" title="{{ __('tours.booking.discount_remove') }}"><i class="fa-solid fa-xmark"></i></button>
                                 </div>
                                 <div class="row g-2 mb-2">
                                     <div class="col-6">
-                                        <input type="text" wire:model.blur="children.{{ $idx }}.first_name" class="bk-input" placeholder="Nome *">
+                                        <input type="text" wire:model.blur="children.{{ $idx }}.first_name" class="bk-input" placeholder="{{ __('tours.booking.first_name') }}">
                                         @error('children.'.$idx.'.first_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" wire:model.blur="children.{{ $idx }}.last_name" class="bk-input" placeholder="Cognome *">
+                                        <input type="text" wire:model.blur="children.{{ $idx }}.last_name" class="bk-input" placeholder="{{ __('tours.booking.last_name') }}">
                                         @error('children.'.$idx.'.last_name') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                                     </div>
                                 </div>
-                                <label class="bk-label">Data di nascita <span class="text-danger">*</span></label>
+                                <label class="bk-label">{{ __('tours.booking.dob') }} <span class="text-danger">*</span></label>
                                 <input type="date" wire:model.live="children.{{ $idx }}.dob" class="bk-input" max="{{ now()->toDateString() }}">
                                 @if($c['error'])
                                     <small class="text-danger d-block mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ $c['error'] }}</small>
                                 @elseif($c['ready'])
                                     <div class="bk-child-resolved">
                                         <i class="fa-solid fa-check-circle me-1"></i>
-                                        <strong>{{ $c['bracket']->label }}</strong> ({{ $c['age'] }} anni)
+                                        <strong>{{ tdb($c['bracket']->label) }}</strong> ({{ __('tours.booking.child_years', ['age' => $c['age']]) }})
                                         <span class="text-primary fw-bold">€{{ number_format($c['unit_price'], 0, ',', '.') }}</span>
                                     </div>
                                 @elseif($c['dob'] === '')
-                                    <small class="text-muted d-block mt-1"><i class="fa-regular fa-circle-info me-1"></i>Inserisci la data di nascita per vedere la riduzione.</small>
+                                    <small class="text-muted d-block mt-1"><i class="fa-regular fa-circle-info me-1"></i>{{ __('tours.booking.dob_hint') }}</small>
                                 @endif
                                 @include('livewire.public._document-fields', ['group' => 'children', 'idx' => $idx])
                             </div>
@@ -330,20 +333,20 @@
                     <div class="form-check mb-0">
                         <input class="form-check-input" type="checkbox" wire:model.live="wantsAccount" id="bk-wants-account">
                         <label class="form-check-label small fw-semibold" for="bk-wants-account">
-                            <i class="fa-solid fa-user-plus text-primary me-1"></i>Crea un account per gestire le tue prenotazioni
+                            <i class="fa-solid fa-user-plus text-primary me-1"></i>{{ __('tours.booking.wants_account') }}
                         </label>
                     </div>
                     @if($wantsAccount)
                         <div class="row g-2 mt-2">
                             <div class="col-12">
-                                <small class="text-muted d-block mb-2">L'account sarà creato con l'email <strong>{{ $customer_email ?: 'indicata sopra' }}</strong>.</small>
+                                <small class="text-muted d-block mb-2">{!! __('tours.booking.account_email_note', ['email' => '<strong>'.e($customer_email ?: __('tours.booking.account_email_fallback')).'</strong>']) !!}</small>
                             </div>
                             <div class="col-sm-6">
-                                <input type="password" wire:model="accountPassword" class="bk-input" placeholder="Password *" autocomplete="new-password">
+                                <input type="password" wire:model="accountPassword" class="bk-input" placeholder="{{ __('tours.booking.password') }}" autocomplete="new-password">
                                 @error('accountPassword') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
                             </div>
                             <div class="col-sm-6">
-                                <input type="password" wire:model="accountPassword_confirmation" class="bk-input" placeholder="Conferma password *" autocomplete="new-password">
+                                <input type="password" wire:model="accountPassword_confirmation" class="bk-input" placeholder="{{ __('tours.booking.password_confirm') }}" autocomplete="new-password">
                             </div>
                         </div>
                     @endif
@@ -352,10 +355,10 @@
 
             {{-- Total --}}
             <div class="tg-tour-about-coast d-flex align-items-center flex-wrap justify-content-between mb-5">
-                <span class="tg-tour-about-sidebar-title d-inline-block">Costo totale:</span>
+                <span class="tg-tour-about-sidebar-title d-inline-block">{{ __('tours.booking.total') }}</span>
                 <h5 class="total-price mb-0">€{{ number_format($this->pricing['total_amount'] ?? 0, 2, ',', '.') }}</h5>
             </div>
-            <div class="text-end text-muted small mb-15" style="font-size:.78rem">IVA inclusa</div>
+            <div class="text-end text-muted small mb-15" style="font-size:.78rem">{{ __('tours.booking.vat_included') }}</div>
 
             @php
                 $depositOn = \App\Support\Settings::depositEnabled();
@@ -367,15 +370,15 @@
             {{-- Scelta acconto / intero --}}
             @if($depositOn)
                 <div class="bk-pay-box mb-15">
-                    <div class="small fw-semibold mb-2"><i class="fa-solid fa-wallet text-primary me-1"></i>Importo da pagare ora</div>
+                    <div class="small fw-semibold mb-2"><i class="fa-solid fa-wallet text-primary me-1"></i>{{ __('tours.booking.pay_now_title') }}</div>
                     <label class="bk-pay-opt">
                         <input type="radio" wire:model="paymentChoice" value="full">
-                        <span>Intero · <strong>€{{ number_format($total, 2, ',', '.') }}</strong></span>
+                        <span>{{ __('tours.booking.pay_full') }} · <strong>€{{ number_format($total, 2, ',', '.') }}</strong></span>
                     </label>
                     <label class="bk-pay-opt">
                         <input type="radio" wire:model="paymentChoice" value="deposit">
-                        <span>Acconto {{ \App\Support\Settings::depositPercentage() }}% · <strong>€{{ number_format($depAmount, 2, ',', '.') }}</strong>
-                            <span class="text-muted d-block" style="font-size:.76rem">Saldo entro {{ \App\Support\Settings::balanceDueHours() }}h dalla partenza</span></span>
+                        <span>{{ __('tours.booking.pay_deposit', ['percent' => \App\Support\Settings::depositPercentage()]) }} · <strong>€{{ number_format($depAmount, 2, ',', '.') }}</strong>
+                            <span class="text-muted d-block" style="font-size:.76rem">{{ __('tours.booking.balance_due', ['hours' => \App\Support\Settings::balanceDueHours().'h']) }}</span></span>
                     </label>
                 </div>
             @endif
@@ -384,15 +387,15 @@
             @if($bankOn)
                 @php $bankExpiryHours = \App\Support\Settings::bankTransferExpiryHours(); @endphp
                 <div class="bk-pay-box mb-15">
-                    <div class="small fw-semibold mb-2"><i class="fa-solid fa-credit-card text-primary me-1"></i>Metodo di pagamento</div>
+                    <div class="small fw-semibold mb-2"><i class="fa-solid fa-credit-card text-primary me-1"></i>{{ __('tours.booking.payment_method') }}</div>
                     <label class="bk-pay-opt">
                         <input type="radio" wire:model="paymentMethod" value="card">
-                        <span>Carta di credito <span class="text-muted">(immediato)</span></span>
+                        <span>{{ __('tours.booking.pay_card') }} <span class="text-muted">{{ __('tours.booking.pay_card_hint') }}</span></span>
                     </label>
                     <label class="bk-pay-opt">
                         <input type="radio" wire:model="paymentMethod" value="bank_transfer">
-                        <span>Bonifico istantaneo
-                            <span class="text-muted d-block" style="font-size:.76rem">Posti riservati per {{ $bankExpiryHours }}h; confermiamo manualmente alla ricezione del bonifico.</span></span>
+                        <span>{{ __('tours.booking.pay_bank') }}
+                            <span class="text-muted d-block" style="font-size:.76rem">{{ __('tours.booking.pay_bank_hint', ['hours' => $bankExpiryHours.'h']) }}</span></span>
                     </label>
                 </div>
             @endif
@@ -400,7 +403,11 @@
             {{-- Avviso minimo partecipanti --}}
             <div class="bk-min-notice mb-15">
                 <i class="fa-solid fa-circle-info me-1"></i>
-                {{ \App\Support\Settings::minParticipantsNotice() }}
+                {{-- In italiano vale il testo configurabile in admin; in inglese
+                     il testo tradotto dai file di lingua (l'admin resta IT). --}}
+                {{ app()->getLocale() === 'it'
+                    ? \App\Support\Settings::minParticipantsNotice()
+                    : __('tours.detail.min_participants') }}
             </div>
 
             {{-- Terms --}}
@@ -417,7 +424,10 @@
             <div class="form-check mb-15">
                 <input class="form-check-input" type="checkbox" wire:model="terms" id="bk-terms">
                 <label class="form-check-label small" for="bk-terms">
-                    Accetto i <a href="{{ $termsUrl }}" target="_blank" rel="noopener">termini</a> e la <a href="{{ $privacyUrl }}" target="_blank" rel="noopener">privacy policy</a>.
+                    {!! __('tours.booking.accept_terms', [
+                        'terms' => '<a href="'.e($termsUrl).'" target="_blank" rel="noopener">'.__('tours.booking.accept_terms_terms').'</a>',
+                        'privacy' => '<a href="'.e($privacyUrl).'" target="_blank" rel="noopener">'.__('tours.booking.accept_terms_privacy').'</a>',
+                    ]) !!}
                 </label>
                 @error('terms') <small class="d-block text-danger">{{ $message }}</small> @enderror
             </div>
@@ -428,10 +438,10 @@
 
             <button type="button" class="tg-btn tg-btn-switch-animation w-100" wire:click="requestSubmit" wire:loading.attr="disabled" wire:target="requestSubmit,submit,confirmSplit" @disabled($this->hasChildrenWithErrors || $adultsCount < 1 || ($this->maxSeats !== null && ($this->maxSeats <= 0 || $this->totalSelected > $this->maxSeats)))>
                 <span wire:loading.remove wire:target="requestSubmit,submit,confirmSplit">
-                    <i class="fa-solid fa-lock me-2"></i>Prenota ora
+                    <i class="fa-solid fa-lock me-2"></i>{{ __('tours.booking.submit') }}
                 </span>
                 <span wire:loading wire:target="requestSubmit,submit,confirmSplit">
-                    <i class="fa-solid fa-spinner fa-spin me-2"></i>Attendere…
+                    <i class="fa-solid fa-spinner fa-spin me-2"></i>{{ __('tours.booking.submitting') }}
                 </span>
             </button>
 
@@ -441,28 +451,28 @@
                     <div class="bk-modal" role="dialog" aria-modal="true">
                         <div class="bk-modal-head">
                             <i class="fa-solid fa-triangle-exclamation"></i>
-                            <h5>Gruppo su più catamarani</h5>
+                            <h5>{{ __('tours.booking.split_modal_title') }}</h5>
                         </div>
                         <div class="bk-modal-body">
                             <p>
-                                Per questa data non c'è un'unica imbarcazione con
-                                <strong>{{ $this->totalSelected }} posti</strong> liberi: il tuo gruppo verrà
-                                diviso su <strong>{{ $this->splitCatamaransCount }} catamarani</strong> per la stessa partenza.
+                                {!! __('tours.booking.split_modal_text', [
+                                    'seats' => '<strong>'.e($this->totalSelected).'</strong>',
+                                    'boats' => '<strong>'.e($this->splitCatamaransCount).'</strong>',
+                                ]) !!}
                             </p>
                             <p class="text-muted small mb-0">
-                                Puoi proseguire così, scegliere un'altra data, oppure contattare il nostro
-                                customer care su WhatsApp per organizzare il gruppo su un'unica barca.
+                                {{ __('tours.booking.split_modal_hint') }}
                             </p>
                         </div>
                         <div class="bk-modal-actions">
                             <button type="button" class="tg-btn w-100" wire:click="confirmSplit" wire:loading.attr="disabled" wire:target="confirmSplit">
-                                <i class="fa-solid fa-check me-2"></i>Prosegui comunque
+                                <i class="fa-solid fa-check me-2"></i>{{ __('tours.booking.split_modal_continue') }}
                             </button>
                             <button type="button" class="bk-modal-btn-outline w-100" wire:click="closeSplitModal">
-                                <i class="fa-solid fa-calendar-day me-2"></i>Cambia data
+                                <i class="fa-solid fa-calendar-day me-2"></i>{{ __('tours.booking.split_modal_change_date') }}
                             </button>
                             <a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="bk-modal-btn-wa w-100">
-                                <i class="fa-brands fa-whatsapp me-2"></i>Contatta su WhatsApp
+                                <i class="fa-brands fa-whatsapp me-2"></i>{{ __('tours.booking.split_modal_whatsapp') }}
                             </a>
                         </div>
                     </div>
@@ -470,7 +480,7 @@
             @endif
 
             <small class="d-block text-muted text-center mt-2" style="font-size:.78rem">
-                <i class="fa-solid fa-shield-alt me-1"></i>Pagamento sicuro via Stripe
+                <i class="fa-solid fa-shield-alt me-1"></i>{{ __('tours.booking.secure_payment') }}
             </small>
         @endif
     </div>
@@ -588,11 +598,14 @@
                         dateFormat: 'Y-m-d',
                         disableMobile: true,
                         defaultDate: el.dataset.current || null,
-                        locale: {
-                            firstDayOfWeek: 1,
-                            weekdays: { shorthand: ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'], longhand: ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'] },
-                            months: { shorthand: ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'], longhand: ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'] },
-                        },
+                        // Nomi di mesi/giorni: dal locale globale impostato in
+                        // layouts/public.blade.php (flatpickr.localize).
+                        //
+                        // Niente altInput qui: il campo è readonly e stilizzato
+                        // dal template (.input dentro un wrapper wire:ignore);
+                        // altInput lo nasconderebbe sostituendolo con un clone
+                        // non stilizzato. Il valore mostrato resta Y-m-d, come
+                        // prima di questo intervento.
                         onChange: function (selectedDates, dateStr) {
                             if (window.Livewire && dateStr) {
                                 @this.call('pickDate', dateStr);

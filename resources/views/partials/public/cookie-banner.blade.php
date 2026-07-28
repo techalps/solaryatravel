@@ -11,64 +11,63 @@
     <div class="cc-backdrop" data-cc-close-prefs hidden></div>
 
     {{-- Banner base --}}
-    <div class="cc-banner" role="dialog" aria-live="polite" aria-label="Informativa cookie" data-cc-banner>
+    <div class="cc-banner" role="dialog" aria-live="polite" aria-label="{{ __('common.cookie.banner_label') }}" data-cc-banner>
         <div class="cc-banner-body">
-            <h3 class="cc-title">🍪 Rispettiamo la tua privacy</h3>
+            <h3 class="cc-title">{{ __('common.cookie.banner_title') }}</h3>
             <p class="cc-text">
-                Utilizziamo cookie tecnici necessari al funzionamento del sito e, previo tuo consenso,
-                cookie di statistica e marketing (Google Analytics, Meta Pixel). Puoi accettare, rifiutare
-                o personalizzare le tue scelte. Maggiori dettagli nella
-                <a href="{{ route('cookies') }}">Cookie Policy</a>.
+                {!! __('common.cookie.banner_text', [
+                    'policy' => '<a href="'.e(route('cookies')).'">'.__('common.cookie.policy_link').'</a>',
+                ]) !!}
             </p>
         </div>
         <div class="cc-banner-actions">
-            <button type="button" class="cc-btn cc-btn-ghost" data-cc-open-prefs>Personalizza</button>
-            <button type="button" class="cc-btn cc-btn-ghost" data-cc-reject>Rifiuta</button>
-            <button type="button" class="cc-btn cc-btn-primary" data-cc-accept-all>Accetta tutto</button>
+            <button type="button" class="cc-btn cc-btn-ghost" data-cc-open-prefs>{{ __('common.cookie.customize') }}</button>
+            <button type="button" class="cc-btn cc-btn-ghost" data-cc-reject>{{ __('common.cookie.reject') }}</button>
+            <button type="button" class="cc-btn cc-btn-primary" data-cc-accept-all>{{ __('common.cookie.accept_all') }}</button>
         </div>
     </div>
 
     {{-- Pannello preferenze --}}
-    <div class="cc-prefs" role="dialog" aria-modal="true" aria-label="Preferenze cookie" data-cc-prefs hidden>
+    <div class="cc-prefs" role="dialog" aria-modal="true" aria-label="{{ __('common.cookie.prefs_title') }}" data-cc-prefs hidden>
         <div class="cc-prefs-header">
-            <h3 class="cc-title mb-0">Preferenze cookie</h3>
-            <button type="button" class="cc-close" data-cc-close-prefs aria-label="Chiudi">&times;</button>
+            <h3 class="cc-title mb-0">{{ __('common.cookie.prefs_title') }}</h3>
+            <button type="button" class="cc-close" data-cc-close-prefs aria-label="{{ __('common.a11y.close') }}">&times;</button>
         </div>
         <div class="cc-prefs-body">
             <div class="cc-cat">
                 <div class="cc-cat-head">
-                    <span class="cc-cat-name">Cookie necessari</span>
-                    <span class="cc-cat-always">Sempre attivi</span>
+                    <span class="cc-cat-name">{{ __('common.cookie.necessary_name') }}</span>
+                    <span class="cc-cat-always">{{ __('common.cookie.always_on') }}</span>
                 </div>
-                <p class="cc-cat-desc">Indispensabili per la navigazione, l'autenticazione e la gestione delle prenotazioni. Non possono essere disattivati.</p>
+                <p class="cc-cat-desc">{{ __('common.cookie.necessary_desc') }}</p>
             </div>
 
             <div class="cc-cat">
                 <div class="cc-cat-head">
-                    <span class="cc-cat-name">Cookie statistici</span>
+                    <span class="cc-cat-name">{{ __('common.cookie.statistics_name') }}</span>
                     <label class="cc-switch">
                         <input type="checkbox" data-cc-toggle="statistics">
                         <span class="cc-slider"></span>
                     </label>
                 </div>
-                <p class="cc-cat-desc">Ci aiutano a capire come viene usato il sito in forma aggregata (Google Analytics 4 con IP anonimizzato).</p>
+                <p class="cc-cat-desc">{{ __('common.cookie.statistics_desc') }}</p>
             </div>
 
             <div class="cc-cat">
                 <div class="cc-cat-head">
-                    <span class="cc-cat-name">Cookie di marketing</span>
+                    <span class="cc-cat-name">{{ __('common.cookie.marketing_name') }}</span>
                     <label class="cc-switch">
                         <input type="checkbox" data-cc-toggle="marketing">
                         <span class="cc-slider"></span>
                     </label>
                 </div>
-                <p class="cc-cat-desc">Utilizzati per misurare le campagne pubblicitarie e mostrare annunci pertinenti (Meta Pixel, Google Ads).</p>
+                <p class="cc-cat-desc">{{ __('common.cookie.marketing_desc') }}</p>
             </div>
         </div>
         <div class="cc-prefs-actions">
-            <button type="button" class="cc-btn cc-btn-ghost" data-cc-reject>Rifiuta tutto</button>
-            <button type="button" class="cc-btn cc-btn-primary" data-cc-save>Salva preferenze</button>
-            <button type="button" class="cc-btn cc-btn-primary" data-cc-accept-all>Accetta tutto</button>
+            <button type="button" class="cc-btn cc-btn-ghost" data-cc-reject>{{ __('common.cookie.reject_all') }}</button>
+            <button type="button" class="cc-btn cc-btn-primary" data-cc-save>{{ __('common.cookie.save') }}</button>
+            <button type="button" class="cc-btn cc-btn-primary" data-cc-accept-all>{{ __('common.cookie.accept_all') }}</button>
         </div>
     </div>
 </div>

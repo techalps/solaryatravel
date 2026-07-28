@@ -187,7 +187,9 @@ oppure direttamente sul server `cd ~/www && ./deploy.sh`.
 ### Cosa fa `deploy.sh` (versionato nel repo)
 
 1. `git fetch` + `git reset --hard origin/production` (allinea ESATTAMENTE al remote)
-2. `composer install` **solo se** `composer.lock` è cambiato
+2. `composer install` **solo se** `composer.lock` è cambiato; se invece è cambiato
+   solo `composer.json` (tipicamente la sezione `autoload`) esegue il più rapido
+   `composer dump-autoload --optimize`
 3. `migrate --force` **solo se** ci sono migration pendenti
 4. `livewire:publish --assets` (asset Livewire statici, vedi 1.5)
 5. Ricrea il symlink storage **relativo** se manca (vedi 1.4)
@@ -195,6 +197,12 @@ oppure direttamente sul server `cd ~/www && ./deploy.sh`.
 
 ⚠️ `deploy.sh` **non** lancia `config:cache`/`optimize` di proposito: con un `.env`
 malformato causerebbe un 500 a tappeto (vedi Troubleshooting).
+
+⚠️ **Modifiche alla sezione `autoload` di `composer.json`**: `vendor/` è gitignored,
+quindi l'autoloader sul server si rigenera solo se `deploy.sh` lo fa. Aggiungendo
+per esempio un file a `autoload.files` (gli helper `tdb()`, `locale_route()`,
+`season_label()`) il `composer.lock` **non** cambia: senza il `dump-autoload` del
+punto 2 quelle funzioni resterebbero undefined e ogni pagina andrebbe in 500.
 
 ⚠️ `git reset --hard` sovrascrive le modifiche locali ai file tracciati: **non editare
 codice direttamente sul server**, passa sempre dal repo. `.env`, `vendor/` e `storage/`

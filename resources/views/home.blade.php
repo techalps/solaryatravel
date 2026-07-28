@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Solarya Travel — Escursioni in Catamarano')
-@section('meta_description', 'Solarya Travel: escursioni esclusive in catamarano in Sardegna. Comfort, eleganza e mare cristallino in ogni viaggio.')
+@section('title', __('home.meta.title'))
+@section('meta_description', __('home.meta.description'))
 
 @push('head')
 <style>
@@ -51,15 +51,21 @@
                         <div class="col-xl-10">
                             <div class="tg-hero-content text-center">
                                 <div class="tg-hero-title-box mb-10">
-                                    <h5 class="tg-hero-subtitle mb-5 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".7s">Solarya</h5>
-                                    <h1 class="tg-hero-title wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">Your Ticket to the Next Experience<br><span style="font-size: 80%;">Escursioni in Catamarano in Sardegna</span></h1>
+                                    <h5 class="tg-hero-subtitle mb-5 wow fadeInUp" data-wow-delay=".3s" data-wow-duration=".7s">{{ __('home.hero.brand') }}</h5>
+                                    @php
+                                        // L'headline è una stringa unica nei file di lingua:
+                                        // la spezziamo sull'em dash per tenere il claim di brand
+                                        // sulla prima riga e il sottotitolo, più piccolo, sulla seconda.
+                                        [$heroLead, $heroSub] = array_pad(preg_split('/\s+—\s+/u', __('home.hero.title'), 2), 2, null);
+                                    @endphp
+                                    <h1 class="tg-hero-title wow fadeInUp" data-wow-delay=".4s" data-wow-duration=".9s">{{ $heroLead }}@if($heroSub)<br><span style="font-size: 80%;">{{ $heroSub }}</span>@endif</h1>
                                     <p class="tg-hero-para mb-0 wow fadeInUp" data-wow-delay=".6s" data-wow-duration="1.1s">
-                                        Solarya è il tuo biglietto per il mare della Sardegna. <br>Escursioni in catamarano lungo la costa nord-est:<br>Daily Cruise, Sunset Cruise, calette nascoste e momenti indimenticabili.
+                                        {{ __('home.hero.text') }}
                                     </p>
                                 </div>
                                 <div class="tg-hero-btn-box wow fadeInUp" data-wow-delay=".8s" data-wow-duration="1.5s">
                                     <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-switch-animation">
-                                        <span class="tg-btn-text">Scopri i Tour</span>
+                                        <span class="tg-btn-text">{{ __('home.hero.cta') }}</span>
                                     </a>
                                 </div>
                             </div>
@@ -104,17 +110,13 @@
                     <div class="d-block d-lg-none mb-3" style="background: url({{ asset('assets/template/img/about/about-1.jpg') }}) center/cover no-repeat; height: 250px; border-radius: 12px;"></div>
                     <div class="tg-about-content text-center">
                         <div class="tg-about-section-title mb-25">
-                            <h4 class="tg-section-subtitle wow fadeInUp">Solarya</h4>
-                            <h2 class="mb-15 wow fadeInUp">Sei stanco delle solite mete affollate? Con Solarya Travel vivi il mare in modo diverso: relax, comfort e itinerari su misura.</h2>
-                            <p class="wow fadeInUp">
-                                Solarya Travel è il tuo partner per escursioni in catamarano in Sardegna.
-                                Equipaggi qualificati, comfort di bordo e itinerari curati nel dettaglio per
-                                regalarti emozioni autentiche e memorie indelebili.
-                            </p>
+                            <h4 class="tg-section-subtitle wow fadeInUp">{{ __('home.about.brand') }}</h4>
+                            <h2 class="mb-15 wow fadeInUp">{{ __('home.about.claim') }}</h2>
+                            <p class="wow fadeInUp">{{ __('home.about.text') }}</p>
                         </div>
                         <div class="tp-about-btn-wrap wow fadeInUp">
                             <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
-                                <span class="tg-btn-text">Scopri i tour</span>
+                                <span class="tg-btn-text">{{ __('home.about.cta') }}</span>
                             </a>
                         </div>
                     </div>
@@ -138,62 +140,24 @@
             <div class="row">
                 <div class="col-12">
                     <div class="tg-listing-section-title text-center mb-35">
-                        <h5 class="tg-section-subtitle wow fadeInUp">I nostri tour</h5>
-                        <h2 class="mb-15 wow fadeInUp">Esperienze indimenticabili ti aspettano</h2>
+                        <h5 class="tg-section-subtitle wow fadeInUp">{{ __('home.tours.title') }}</h5>
+                        <h2 class="mb-15 wow fadeInUp">{{ __('home.tours.subtitle') }}</h2>
                     </div>
                 </div>
             </div>
             <div class="row">
                 @forelse($tours as $i => $tour)
                     <div class="col-xxl-4 col-xl-4 col-lg-4 col-md-6">
-                        <div class="tg-listing-card-item mb-30">
-                            <div class="tg-listing-card-thumb fix mb-15 p-relative">
-                                <a href="{{ route('tours.show', $tour->slug) }}">
-                                    @if($tour->primaryImage)
-                                        <img class="tg-card-border w-100" src="{{ $tour->primaryImage->url }}" alt="{{ $tour->name }}">
-                                    @else
-                                        <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" alt="{{ $tour->name }}">
-                                    @endif
-                                </a>
-                            </div>
-                            <div class="tg-listing-card-content">
-                                <h4 class="tg-listing-card-title"><a href="{{ route('tours.show', $tour->slug) }}">{{ $tour->name }}</a></h4>
-                                <div class="tg-listing-card-duration-tour">
-                                    <span class="tg-listing-card-duration-map mb-5">
-                                        <i class="fa-solid fa-location-dot me-1"></i> {{ $tour->departure_point ?? '' }}
-                                    </span>
-                                    @if($tour->duration_hours)
-                                        <span class="tg-listing-card-duration-time">
-                                            <i class="fa-regular fa-clock me-1"></i> {{ $tour->duration_hours }}h
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="tg-listing-card-price d-flex align-items-center justify-content-between">
-                                <div class="tg-listing-card-price-wrap price-bg d-flex align-items-center">
-                                    @if($tour->price_from && ! $tour->booking_on_request)
-                                        <span class="tg-listing-card-currency-amount mr-5">
-                                            <span class="currency-symbol">€</span>{{ number_format($tour->price_from, 0, ',', '.') }}
-                                        </span>
-                                        <span class="tg-listing-card-activity-person">/Persona</span>
-                                    @else
-                                        <span class="tg-listing-card-currency-amount mr-5">Su richiesta</span>
-                                    @endif
-                                </div>
-                                <a href="{{ route('tours.show', $tour->slug) }}" class="tg-card-tour-link" style="margin-right:24px">
-                                    Scopri <i class="fa-solid fa-arrow-right ms-1"></i>
-                                </a>
-                            </div>
-                        </div>
+                        <x-tour-card :tour="$tour" :index="$i" />
                     </div>
                 @empty
                     <div class="col-12 text-center py-5">
-                        <p class="text-muted">Nessun tour disponibile al momento.</p>
+                        <p class="text-muted">{{ __('home.tours.empty') }}</p>
                     </div>
                 @endforelse
                 <div class="col-12 text-center mt-15">
                     <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
-                        <span class="tg-btn-text">Vedi tutti i tour</span>
+                        <span class="tg-btn-text">{{ __('home.tours.cta_all') }}</span>
                     </a>
                 </div>
             </div>
@@ -208,11 +172,9 @@
                 <div class="col-lg-5">
                     <div class="tg-chose-content mb-25">
                         <div class="tg-chose-section-title mb-30">
-                            <h5 class="tg-section-subtitle mb-15 wow fadeInUp">Pianifica la tua avventura</h5>
-                            <h2 class="mb-15 wow fadeInUp">Scopri quando vuoi <br>partire con noi</h2>
-                            <p class="wow fadeInUp">
-                                Sei stanco delle solite mete affollate? Con Solarya Travel vivi il mare in modo diverso: relax, comfort e itinerari su misura.
-                            </p>
+                            <h5 class="tg-section-subtitle mb-15 wow fadeInUp">{{ __('home.plan.title') }}</h5>
+                            <h2 class="mb-15 wow fadeInUp">{{ __('home.plan.subtitle') }}</h2>
+                            <p class="wow fadeInUp">{{ __('home.plan.text') }}</p>
                         </div>
                         <div class="tg-chose-list-wrap">
                             <div class="tg-chose-list d-flex mb-15 wow fadeInUp">
@@ -222,8 +184,8 @@
                                     </span>
                                 </span>
                                 <div class="tg-chose-list-content">
-                                    <h4 class="tg-chose-list-title mb-5">Equipaggio esperto</h4>
-                                    <p>Skipper professionali con anni di esperienza in mare.</p>
+                                    <h4 class="tg-chose-list-title mb-5">{{ __('home.plan.crew_title') }}</h4>
+                                    <p>{{ __('home.plan.crew_text') }}</p>
                                 </div>
                             </div>
                             <div class="tg-chose-list d-flex mb-40 wow fadeInUp">
@@ -233,13 +195,13 @@
                                     </span>
                                 </span>
                                 <div class="tg-chose-list-content">
-                                    <h4 class="tg-chose-list-title mb-5">Prenotazione sicura</h4>
-                                    <p>Pagamento online protetto e cancellazione gratuita fino a 24h prima.</p>
+                                    <h4 class="tg-chose-list-title mb-5">{{ __('home.plan.booking_title') }}</h4>
+                                    <p>{{ __('home.plan.booking_text') }}</p>
                                 </div>
                             </div>
                             <div class="tg-chose-btn wow fadeInUp">
                                 <a href="{{ route('booking.start') }}" class="tg-btn tg-btn-switch-animation">
-                                    <span class="tg-btn-text">Prenota ora</span>
+                                    <span class="tg-btn-text">{{ __('home.plan.cta') }}</span>
                                 </a>
                             </div>
                         </div>
@@ -260,7 +222,7 @@
                                         <img class="w-100 tg-round-15" src="{{ asset('assets/template/img/chose/chose-2.jpg') }}" alt="chose">
                                     </div>
                                     <div class="tg-chose-big-text d-none d-xl-block">
-                                        <h2 data-text="MARE">MARE</h2>
+                                        <h2 data-text="{{ __('home.cta.eyebrow') }}">{{ __('home.cta.eyebrow') }}</h2>
                                     </div>
                                 </div>
                             </div>
@@ -362,12 +324,12 @@
             <div class="col-lg-12">
                 <div class="tg-banner-2-content text-center">
                     <div class="tg-about-section-title mb-25">
-                        <h5 class="tg-section-subtitle mb-10 wow fadeInUp">La tua prossima avventura</h5>
-                        <h3 class="tg-section-title-white mb-25 wow fadeInUp">Il tuo biglietto ti sta aspettando, vivi con noi la tua prossima indimenticabile avventura!</h3>
+                        <h5 class="tg-section-subtitle mb-10 wow fadeInUp">{{ __('home.cta.title') }}</h5>
+                        <h3 class="tg-section-title-white mb-25 wow fadeInUp">{{ __('home.cta.text') }}</h3>
                     </div>
                     <div class="tp-banner-btn-wrap wow fadeInUp">
                         <a href="{{ route('booking.start') }}" class="tg-btn tg-btn-transparent tg-btn-switch-animation">
-                            <span class="tg-btn-text">Prenota ora</span>
+                            <span class="tg-btn-text">{{ __('home.cta.button') }}</span>
                         </a>
                     </div>
                 </div>

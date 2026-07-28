@@ -19,11 +19,11 @@
     $selPlace = (string) ($row['doc_place'] ?? '');
 @endphp
 <div class="bk-doc-block mt-2">
-    <label class="bk-label d-block mb-1"><i class="fa-regular fa-id-card text-primary me-1"></i>Documento d'identità <span class="text-danger">*</span></label>
+    <label class="bk-label d-block mb-1"><i class="fa-regular fa-id-card text-primary me-1"></i>{{ __('tours.document.title') }} <span class="text-danger">*</span></label>
     <div class="row g-2">
         <div class="col-6">
             <select wire:model.live="{{ $base }}.doc_type" class="bk-input">
-                <option value="">Tipo documento *</option>
+                <option value="">{{ __('tours.document.type') }}</option>
                 @foreach($this->docTypes as $val => $label)
                     <option value="{{ $val }}">{{ $label }}</option>
                 @endforeach
@@ -31,17 +31,17 @@
             @error($base.'.doc_type') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
         </div>
         <div class="col-6">
-            <input type="text" wire:model.blur="{{ $base }}.doc_number" class="bk-input text-uppercase" placeholder="Numero documento *" maxlength="40">
+            <input type="text" wire:model.blur="{{ $base }}.doc_number" class="bk-input text-uppercase" placeholder="{{ __('tours.document.number') }}" maxlength="40">
             @error($base.'.doc_number') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
         </div>
         <div class="col-12">
-            <label class="bk-label small text-muted mb-1">Scadenza <span class="text-danger">*</span></label>
+            <label class="bk-label small text-muted mb-1">{{ __('tours.document.expiry') }} <span class="text-danger">*</span></label>
             <input type="date" wire:model.blur="{{ $base }}.doc_expiry" class="bk-input"
                    @if($this->minDocExpiry) min="{{ $this->minDocExpiry }}" @endif>
             @error($base.'.doc_expiry') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
         </div>
         <div class="col-12">
-            <label class="bk-label small text-muted mb-1">Luogo di emissione <span class="text-danger">*</span></label>
+            <label class="bk-label small text-muted mb-1">{{ __('tours.document.issue_place') }} <span class="text-danger">*</span></label>
         </div>
         <div class="col-{{ $isItaly ? '4' : '12' }}">
             <select wire:model.live="{{ $base }}.doc_country" class="bk-input">
@@ -54,7 +54,7 @@
         @if($isItaly)
             <div class="col-4">
                 <select wire:model.live="{{ $base }}.doc_province" class="bk-input">
-                    <option value="">Provincia *</option>
+                    <option value="">{{ __('tours.document.province') }}</option>
                     @foreach($this->provinces as $p)
                         <option value="{{ $p['sigla'] }}">{{ $p['name'] }} ({{ $p['sigla'] }})</option>
                     @endforeach
@@ -63,7 +63,7 @@
             </div>
             <div class="col-4">
                 <select wire:model.blur="{{ $base }}.doc_place" class="bk-input" @disabled($selProvince === '')>
-                    <option value="">Comune *</option>
+                    <option value="">{{ __('tours.document.municipality') }}</option>
                     @foreach($comuniList as $comune)
                         <option value="{{ $comune }}" @selected($comune === $selPlace)>{{ $comune }}</option>
                     @endforeach
@@ -72,7 +72,7 @@
             </div>
         @else
             <div class="col-12">
-                <input type="text" wire:model.blur="{{ $base }}.doc_place" class="bk-input" placeholder="Città / luogo di emissione *" maxlength="120">
+                <input type="text" wire:model.blur="{{ $base }}.doc_place" class="bk-input" placeholder="{{ __('tours.document.city_free') }}" maxlength="120">
                 @error($base.'.doc_place') <small class="text-danger d-block mt-1">{{ $message }}</small> @enderror
             </div>
         @endif

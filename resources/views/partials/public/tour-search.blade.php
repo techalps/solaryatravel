@@ -22,10 +22,10 @@
 
                                 {{-- Tour --}}
                                 <div class="tg-booking-form-parent-inner mr-15 mb-10">
-                                    <span class="tg-booking-form-title mb-5">Tour:</span>
+                                    <span class="tg-booking-form-title mb-5">{{ __('common.search.tour_label') }}</span>
                                     <div class="tg-booking-add-input-field">
                                         <select name="tour" class="bf-native-select">
-                                            <option value="">Tutti i tour</option>
+                                            <option value="">{{ __('common.search.all_tours') }}</option>
                                             @foreach($searchTours as $st)
                                                 <option value="{{ $st->id }}" {{ (int)($tourSearch['tour'] ?? 0) === $st->id ? 'selected' : '' }}>{{ $st->name }}</option>
                                             @endforeach
@@ -41,34 +41,34 @@
 
                                 {{-- Data partenza --}}
                                 <div class="tg-booking-form-parent-inner mr-15 mb-10">
-                                    <span class="tg-booking-form-title mb-5">Data partenza:</span>
+                                    <span class="tg-booking-form-title mb-5">{{ __('common.search.departure_date') }}</span>
                                     <div class="tg-booking-add-input-date p-relative">
                                         <span>
                                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M9.76501 0.777771V3.26668M4.23413 0.777771V3.26668M0.777344 5.75548H13.2218M2.16006 2.02211H11.8391C12.6027 2.02211 13.2218 2.57927 13.2218 3.26656V11.9778C13.2218 12.6651 12.6027 13.2222 11.8391 13.2222H2.16006C1.39641 13.2222 0.777344 12.6651 0.777344 11.9778V3.26656C0.777344 2.57927 1.39641 2.02211 2.16006 2.02211Z" stroke="currentColor" stroke-width="0.977778" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         </span>
-                                        <input type="text" name="date" value="{{ $tourSearch['date'] ?? '' }}" class="input bf-flatpickr" placeholder="gg/mm/aaaa" data-min="{{ $minBookingDate }}" autocomplete="off">
+                                        <input type="text" name="date" value="{{ $tourSearch['date'] ?? '' }}" class="input bf-flatpickr" placeholder="{{ __('common.js.date_placeholder') }}" data-min="{{ $minBookingDate }}" autocomplete="off">
                                     </div>
                                 </div>
 
                                 {{-- Ospiti (dropdown con +/-) --}}
                                 <div class="tg-booking-form-parent-inner tg-hero-quantity p-relative mr-15 mb-10" id="bfGuestRoot">
-                                    <span class="tg-booking-form-title mb-5">Ospiti:</span>
+                                    <span class="tg-booking-form-title mb-5">{{ __('common.search.guests') }}</span>
                                     <div class="tg-booking-add-input-field tg-booking-quantity-toggle" id="bfGuestToggle">
                                         <span class="location">
                                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-2.5 2.7-4 6-4s6 1.5 6 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                                             </svg>
                                         </span>
-                                        <span class="tg-booking-title-value" id="bfGuestLabel">+ Aggiungi ospiti</span>
+                                        <span class="tg-booking-title-value" id="bfGuestLabel">{{ __('common.search.add_guests') }}</span>
                                     </div>
                                     <input type="hidden" name="adults" id="bfAdults" value="{{ (int)($tourSearch['adults'] ?? 2) }}">
                                     <input type="hidden" name="children" id="bfChildren" value="{{ (int)($tourSearch['children'] ?? 0) }}">
                                     <div class="tg-booking-form-location-list tg-quantity tg-booking-quantity-active" id="bfGuestPanel">
                                         <ul>
                                             <li>
-                                                <span class="mr-20">Adulti</span>
+                                                <span class="mr-20">{{ __('common.search.adults') }}</span>
                                                 <div class="tg-booking-quantity-item">
                                                     <span class="decrement" data-target="bfAdults" data-min="1">
                                                         <svg width="14" height="2" viewBox="0 0 14 2" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -85,7 +85,7 @@
                                                 </div>
                                             </li>
                                             <li>
-                                                <span class="mr-20">Bambini</span>
+                                                <span class="mr-20">{{ __('common.search.children') }}</span>
                                                 <div class="tg-booking-quantity-item">
                                                     <span class="decrement" data-target="bfChildren" data-min="0">
                                                         <svg width="14" height="2" viewBox="0 0 14 2" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -103,14 +103,14 @@
                                             </li>
                                         </ul>
                                         <div class="tg-booking-form-search-btn mt-15">
-                                            <button type="button" class="bk-search-button bk-search-button-2 w-100" id="bfGuestOk">Ok</button>
+                                            <button type="button" class="bk-search-button bk-search-button-2 w-100" id="bfGuestOk">{{ __('common.search.ok') }}</button>
                                         </div>
                                     </div>
                                 </div>
 
                                 {{-- Bottone --}}
                                 <div class="tg-booking-form-search-btn mb-10">
-                                    <button class="bk-search-button" type="submit">Cerca
+                                    <button class="bk-search-button" type="submit">{{ __('common.search.search') }}
                                         <span class="ml-5">
                                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M13.2218 13.2222L10.5188 10.5192M12.1959 6.48705C12.1959 9.6402 9.63977 12.1963 6.48662 12.1963C3.33348 12.1963 0.777344 9.6402 0.777344 6.48705C0.777344 3.3339 3.33348 0.777771 6.48662 0.777771C9.63977 0.777771 12.1959 3.3339 12.1959 6.48705Z" stroke="currentColor" stroke-width="1.575" stroke-linecap="round" stroke-linejoin="round"/>
@@ -186,12 +186,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!root || !toggle || !panel) return;
 
         function refreshLabel() {
+            var t = window.i18n || {};
             var a = parseInt(adults.value, 10) || 0;
             var c = parseInt(kids.value, 10) || 0;
             var parts = [];
-            parts.push(a + ' ' + (a === 1 ? 'adulto' : 'adulti'));
-            if (c > 0) parts.push(c + ' ' + (c === 1 ? 'bambino' : 'bambini'));
-            label.textContent = parts.join(', ');
+            // Singolare/plurale dalle stringhe di lingua: niente italiano nel JS.
+            parts.push(a + ' ' + (a === 1 ? t.adult : t.adults));
+            if (c > 0) parts.push(c + ' ' + (c === 1 ? t.child : t.children));
+            label.textContent = parts.length ? parts.join(', ') : (t.add_guests || '');
         }
         function open()  { toggle.classList.add('active');    panel.classList.add('tg-list-open'); }
         function close() { toggle.classList.remove('active'); panel.classList.remove('tg-list-open'); }
@@ -238,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
             flatpickr(el, {
                 dateFormat: 'Y-m-d',
                 altInput: true,
-                altFormat: 'd/m/Y',
+                altFormat: window.i18nDateAltFormat || 'd/m/Y',
                 minDate: el.dataset.min || 'today',
                 disableMobile: true,
             });

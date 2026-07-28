@@ -12,7 +12,49 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->registerLocalizedUrlGenerator();
+    }
+
+    /**
+     * Sostituisce l'UrlGenerator con la variante che risolve i nomi di route
+     * del frontend nella lingua attiva (vedi App\Routing\LocalizedUrlGenerator).
+     *
+     * Così route('tours.show', $slug) restituisce /tour/... in italiano e
+     * /en/tour/... in inglese senza che le Blade sappiano nulla del prefisso.
+     *
+     * La registrazione ricalca quella di Illuminate\Routing\RoutingServiceProvider
+     * (rebinding su 'request' + resolver della sessione compresi).
+     */
+    protected function registerLocalizedUrlGenerator(): void
+    {
+        $this->app->singleton('url', function ($app) {
+            $routes = $app['router']->getRoutes();
+
+            // Come nel framework: le route vengono condivise nel container così
+            // che, dopo il caching, l'istanza sia la stessa usata dal router.
+            $app->instance('routes', $routes);
+
+            return new \App\Routing\LocalizedUrlGenerator(
+                $routes,
+                $app->rebinding('request', function ($app, $request) {
+                    $app['url']->setRequest($request);
+                }),
+                $app['config']['app.asset_url'],
+            );
+        });
+
+        $this->app->extend('url', function (\Illuminate\Routing\UrlGenerator $url, $app) {
+            // Consente a UrlGenerator di risolvere pigramente le route quando
+            // vengono caricate da cache dopo la creazione del generator.
+            $url->setSessionResolver(fn () => $app['session'] ?? null);
+            $url->setKeyResolver(fn () => $app->make('config')->get('app.key'));
+
+            $app->rebinding('routes', function ($app, $routes) {
+                $app['url']->setRoutes($routes);
+            });
+
+            return $url;
+        });
     }
 
     public function boot(): void

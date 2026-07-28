@@ -8,6 +8,8 @@ use App\Http\Controllers\WidgetController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\BoardingController as AdminBoardingController;
@@ -25,15 +27,74 @@ use App\Http\Controllers\Admin\DeployController;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes
+| Public Routes (bilingue IT/EN)
 |--------------------------------------------------------------------------
+|
+| Le pagine pubbliche indicizzabili sono registrate UNA VOLTA PER LINGUA,
+| sempre con gli stessi URI e gli stessi controller:
+|
+|   italiano (default) → nessun prefisso, nomi "nudi"  (home, tours.show…)
+|   inglese            → prefisso /en,   nomi "en.*"   (en.home, en.tours.show…)
+|
+| I nomi vanno namespacati perché in Laravel un nome di route è unico: due
+| registrazioni omonime si sovrascrivono nella name lookup. Le Blade però NON
+| devono conoscere questo dettaglio: continuano a chiamare route('tours.show')
+| e l'helper locale_route() (app/Helpers/locale.php) mappa il nome sulla
+| variante della lingua attiva. Nessuna Blade costruisce URL a mano.
+|
+| Gli slug dei tour restano identici nelle due lingue.
+|
+| Restano a registrazione singola (solo italiano) i flussi non indicizzabili
+| e fuori perimetro: pagamenti, prenotazione per UUID, widget, check-in, API,
+| area utente, auth e admin.
+|
 */
 
-Route::get('/', HomeController::class)->name('home');
+$localizedPublicRoutes = function (): void {
+    Route::get('/', HomeController::class)->name('home');
 
-// Tours (entry-point pubblico per prenotazione)
-Route::get('/tour', [TourController::class, 'index'])->name('tours.index');
-Route::get('/tour/{slug}', [TourController::class, 'show'])->name('tours.show');
+    // Tours (entry-point pubblico per prenotazione)
+    Route::get('/tour', [TourController::class, 'index'])->name('tours.index');
+    Route::get('/tour/{slug}', [TourController::class, 'show'])->name('tours.show');
+
+    // Booking flow (form pubblico)
+    Route::get('/prenota', [BookingController::class, 'start'])->name('booking.start');
+    Route::post('/prenota', [BookingController::class, 'store'])->name('booking.store');
+
+    // Static
+    Route::get('/privacy-policy', [PageController::class, 'privacy'])->name('privacy');
+    Route::get('/termini-condizioni', [PageController::class, 'terms'])->name('terms');
+    Route::get('/cookie-policy', [PageController::class, 'cookies'])->name('cookies');
+};
+
+// Italiano: URL storiche, nessun prefisso, nomi di route invariati.
+Route::group([], $localizedPublicRoutes);
+
+// Ogni altra lingua: prefisso di URI e di nome uguali al codice lingua.
+foreach ((array) config('locales.supported', ['it']) as $locale) {
+    if ($locale === (string) config('locales.default', 'it')) {
+        continue;
+    }
+
+    Route::prefix($locale)->name($locale.'.')->group($localizedPublicRoutes);
+}
+
+// Sicurezza: /it/... (prefisso esplicito per la lingua di default) non esiste
+// come URL canonica → 301 alla versione senza prefisso, per non generare
+// contenuto duplicato se qualcuno linkasse quella forma.
+Route::get('/it/{path?}', function (?string $path = null) {
+    return redirect(($path ? '/'.$path : '/'), 301);
+})->where('path', '.*')->name('locale.legacy-it');
+
+// Switcher di lingua: salva la preferenza e torna alla STESSA pagina
+// nell'altra lingua (non alla home).
+Route::get('/lingua/{locale}', LocaleController::class)
+    ->whereIn('locale', (array) config('locales.supported', ['it']))
+    ->name('locale.switch');
+
+// Sitemap XML bilingue (annotazioni xhtml:link reciproche).
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
 Route::get('/api/departures/{departure}/availability', [TourController::class, 'checkDeparture'])->name('api.departure.availability');
 
 // Comuni di una provincia (select a cascata luogo di emissione documento).
@@ -48,9 +109,7 @@ Route::redirect('/catamarani', '/tour');
 // Riusa il flusso pubblico + referral (?ref=TOKEN) con layout "nudo".
 Route::get('/widget', [WidgetController::class, 'index'])->name('widget.index');
 
-// Booking flow
-Route::get('/prenota', [BookingController::class, 'start'])->name('booking.start');
-Route::post('/prenota', [BookingController::class, 'store'])->name('booking.store');
+// Booking flow (le route /prenota sono registrate nel gruppo bilingue sopra)
 Route::get('/prenotazione/{booking:uuid}/bonifico', [BookingController::class, 'bankTransfer'])->name('booking.bank-transfer');
 Route::get('/prenotazione/{booking:uuid}/saldo', [BookingController::class, 'balance'])->name('booking.balance');
 Route::post('/prenotazione/{booking:uuid}/saldo', [BookingController::class, 'payBalance'])->name('booking.balance.pay');
@@ -74,10 +133,7 @@ Route::post('/webhooks/stripe', [PaymentController::class, 'webhook'])->name('we
 // Check-in QR
 Route::get('/checkin/{qrCode}', [CheckInController::class, 'verify'])->name('checkin.verify');
 
-// Static
-Route::get('/privacy-policy', [PageController::class, 'privacy'])->name('privacy');
-Route::get('/termini-condizioni', [PageController::class, 'terms'])->name('terms');
-Route::get('/cookie-policy', [PageController::class, 'cookies'])->name('cookies');
+// Static: le pagine legali sono registrate nel gruppo bilingue sopra.
 
 /*
 |--------------------------------------------------------------------------

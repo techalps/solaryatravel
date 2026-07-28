@@ -317,13 +317,13 @@ class BookingForm extends Component
             try {
                 $dobCarbon = Carbon::parse($dob);
             } catch (\Throwable) {
-                $entry['error'] = 'Data non valida.';
+                $entry['error'] = __('booking.errors.invalid_date');
                 $out[] = $entry;
                 continue;
             }
 
             if ($dobCarbon->gt($depDate)) {
-                $entry['error'] = 'La data di nascita deve essere precedente alla data di partenza.';
+                $entry['error'] = __('booking.errors.dob_after_departure');
                 $out[] = $entry;
                 continue;
             }
@@ -491,7 +491,11 @@ class BookingForm extends Component
     #[Computed]
     public function docTypes(): array
     {
-        return \App\Models\BookingSeat::DOC_TYPES;
+        // Le chiavi restano quelle del modello (valore salvato a DB); solo le
+        // etichette mostrate passano dai file di lingua.
+        return collect(\App\Models\BookingSeat::DOC_TYPES)
+            ->map(fn (string $label, string $key) => __('booking.doc_types.'.$key))
+            ->all();
     }
 
     /** Data minima di scadenza documento (= giorno del viaggio), per l'attributo min degli input date. */
@@ -664,11 +668,11 @@ class BookingForm extends Component
             ->where('is_active', true)
             ->first();
         if (!$code || !$code->isValid()) {
-            $this->discountFeedback = 'Codice non valido o scaduto.';
+            $this->discountFeedback = __('booking.discount.invalid');
             return;
         }
         $this->discountValid = true;
-        $this->discountFeedback = 'Codice applicato correttamente.';
+        $this->discountFeedback = __('booking.discount.applied');
     }
 
     public function removeDiscount(): void
@@ -749,27 +753,27 @@ class BookingForm extends Component
         }
 
         $this->validate($rules, [
-            'terms.accepted' => 'Devi accettare i termini e condizioni.',
-            'customer_tax_code.required' => 'Inserisci il codice fiscale dell\'intestatario.',
-            'customer_tax_code.min' => 'Codice fiscale non valido.',
-            'adults.*.first_name.required' => 'Inserisci il nome di ogni adulto.',
-            'adults.*.last_name.required' => 'Inserisci il cognome di ogni adulto.',
-            'children.*.first_name.required' => 'Inserisci il nome di ogni bambino.',
-            'children.*.last_name.required' => 'Inserisci il cognome di ogni bambino.',
-            'adults.*.doc_type.required' => 'Scegli il tipo di documento per ogni passeggero.',
-            'adults.*.doc_type.in' => 'Tipo di documento non valido.',
-            'adults.*.doc_number.required' => 'Inserisci il numero del documento di ogni passeggero.',
-            'adults.*.doc_expiry.required' => 'Inserisci la data di scadenza del documento.',
-            'adults.*.doc_expiry.after_or_equal' => 'Il documento deve essere valido fino alla data del viaggio.',
-            'adults.*.doc_country.required' => 'Indica lo Stato di emissione del documento.',
-            'adults.*.doc_place.required' => 'Indica il luogo di emissione del documento.',
-            'children.*.doc_type.required' => 'Scegli il tipo di documento per ogni passeggero.',
-            'children.*.doc_type.in' => 'Tipo di documento non valido.',
-            'children.*.doc_number.required' => 'Inserisci il numero del documento di ogni passeggero.',
-            'children.*.doc_expiry.required' => 'Inserisci la data di scadenza del documento.',
-            'children.*.doc_expiry.after_or_equal' => 'Il documento deve essere valido fino alla data del viaggio.',
-            'children.*.doc_country.required' => 'Indica lo Stato di emissione del documento.',
-            'children.*.doc_place.required' => 'Indica il luogo di emissione del documento.',
+            'terms.accepted' => __('booking.validation.terms'),
+            'customer_tax_code.required' => __('booking.validation.tax_code_required'),
+            'customer_tax_code.min' => __('booking.validation.tax_code_invalid'),
+            'adults.*.first_name.required' => __('booking.validation.adult_first_name'),
+            'adults.*.last_name.required' => __('booking.validation.adult_last_name'),
+            'children.*.first_name.required' => __('booking.validation.child_first_name'),
+            'children.*.last_name.required' => __('booking.validation.child_last_name'),
+            'adults.*.doc_type.required' => __('booking.validation.doc_type_required'),
+            'adults.*.doc_type.in' => __('booking.validation.doc_type_invalid'),
+            'adults.*.doc_number.required' => __('booking.validation.doc_number_required'),
+            'adults.*.doc_expiry.required' => __('booking.validation.doc_expiry_required'),
+            'adults.*.doc_expiry.after_or_equal' => __('booking.validation.doc_expiry_after'),
+            'adults.*.doc_country.required' => __('booking.validation.doc_country_required'),
+            'adults.*.doc_place.required' => __('booking.validation.doc_place_required'),
+            'children.*.doc_type.required' => __('booking.validation.doc_type_required'),
+            'children.*.doc_type.in' => __('booking.validation.doc_type_invalid'),
+            'children.*.doc_number.required' => __('booking.validation.doc_number_required'),
+            'children.*.doc_expiry.required' => __('booking.validation.doc_expiry_required'),
+            'children.*.doc_expiry.after_or_equal' => __('booking.validation.doc_expiry_after'),
+            'children.*.doc_country.required' => __('booking.validation.doc_country_required'),
+            'children.*.doc_place.required' => __('booking.validation.doc_place_required'),
         ]);
 
         // Provincia obbligatoria quando lo Stato è Italia (il comune è ISTAT).
@@ -778,7 +782,7 @@ class BookingForm extends Component
             foreach ($this->{$group} as $i => $p) {
                 $country = strtoupper((string) ($p['doc_country'] ?? ''));
                 if ($country === 'IT' && trim((string) ($p['doc_province'] ?? '')) === '') {
-                    $provinceErrors[$group.'.'.$i.'.doc_province'] = 'Seleziona la provincia di emissione.';
+                    $provinceErrors[$group.'.'.$i.'.doc_province'] = __('booking.validation.doc_province_required');
                 }
             }
         }
@@ -791,7 +795,7 @@ class BookingForm extends Component
         $creatingAccount = ! $this->b2bMode && $this->wantsAccount && ! Auth::check();
         if ($creatingAccount) {
             if (User::where('email', $this->customer_email)->exists()) {
-                $this->errorMessage = 'Esiste già un account con questa email. Accedi prima di proseguire, oppure deseleziona "Crea un account".';
+                $this->errorMessage = __('booking.errors.account_exists');
                 return null;
             }
             $this->validate(
@@ -804,7 +808,7 @@ class BookingForm extends Component
         }
 
         if (!$this->departure) {
-            $this->errorMessage = 'Seleziona una data di partenza.';
+            $this->errorMessage = __('booking.errors.no_date');
             return null;
         }
 
@@ -814,22 +818,21 @@ class BookingForm extends Component
         $departAt = \Carbon\Carbon::parse($this->departure->departure_date->toDateString()
             .' '.\Carbon\Carbon::parse($this->departure->start_time)->format('H:i:s'));
         if ($departAt->isPast()) {
-            $this->errorMessage = 'Questa partenza non è più disponibile.';
+            $this->errorMessage = __('booking.errors.departure_unavailable');
             return null;
         }
         if (now()->gt($this->tour->bookingDeadlineFor($departAt))) {
-            $this->errorMessage = 'Le prenotazioni per questa partenza sono chiuse (si prenota entro le '
-                .$this->tour->effectiveCutoffTime().' del giorno precedente).';
+            $this->errorMessage = __('booking.errors.bookings_closed', ['time' => $this->tour->effectiveCutoffTime()]);
             return null;
         }
 
         if ($this->adultsCount < 1) {
-            $this->errorMessage = 'Serve almeno un adulto.';
+            $this->errorMessage = __('booking.errors.need_adult');
             return null;
         }
 
         if ($this->hasChildrenWithErrors) {
-            $this->errorMessage = 'Controlla le date di nascita dei bambini: ognuna deve corrispondere a una riduzione disponibile.';
+            $this->errorMessage = __('booking.errors.children_dob');
             return null;
         }
 

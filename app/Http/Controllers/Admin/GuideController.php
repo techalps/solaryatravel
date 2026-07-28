@@ -56,6 +56,11 @@ class GuideController extends Controller
             'icon' => 'bi-person-vcard',
             'desc' => 'Obbligo documento per ogni passeggero, scadenza, modifica.',
         ],
+        'sito-inglese' => [
+            'title' => 'Sito in inglese',
+            'icon' => 'bi-translate',
+            'desc' => 'Come funziona la versione EN e cosa succede se modifichi i testi dei tour.',
+        ],
         'impostazioni' => [
             'title' => 'Impostazioni',
             'icon' => 'bi-gear',

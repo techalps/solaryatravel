@@ -43,6 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
+        // Lingua del frontend pubblico (IT default senza prefisso, EN su /en).
+        // Deve girare PRIMA di tutto il resto del gruppo web: imposta il locale
+        // e i default di URL::route() usati da ogni redirect/vista a valle.
+        // Non ha effetto sull'admin (sempre italiano) né sul gruppo b2b_web.
+        $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         // Cattura ?ref=TOKEN sul sito pubblico per l'attribuzione referral B2B.
         // PRIMA di ComingSoon: così, quando un cliente arriva da un link/widget
         // agenzia, il cookie b2b_ref è già impostato e ComingSoon lo lascia passare.

@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', $tour->meta_title ?: $tour->name)
-@section('meta_description', $tour->meta_description ?: ($tour->description_short ?: ''))
+@section('title', __('tours.meta.title_detail', ['tour' => tdb($tour->meta_title ?: $tour->name)]))
+@section('meta_description', tdb($tour->meta_description ?: ($tour->description_short ?: '')))
 
 @section('content')
 
@@ -18,22 +18,22 @@
                 <div class="col-12 text-center text-white">
                     <nav aria-label="breadcrumb" class="mb-3">
                         <ol class="breadcrumb justify-content-center mb-0">
-                            <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white-50 text-decoration-none">Home</a></li>
-                            <li class="breadcrumb-item"><a href="{{ route('tours.index') }}" class="text-white-50 text-decoration-none">Tour</a></li>
-                            <li class="breadcrumb-item active text-white" aria-current="page">{{ $tour->name }}</li>
+                            <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white-50 text-decoration-none">{{ __('tours.breadcrumb.home') }}</a></li>
+                            <li class="breadcrumb-item"><a href="{{ route('tours.index') }}" class="text-white-50 text-decoration-none">{{ __('tours.breadcrumb.tours') }}</a></li>
+                            <li class="breadcrumb-item active text-white" aria-current="page">{{ tdb($tour->name) }}</li>
                         </ol>
                     </nav>
-                    <h1 class="mb-3 wow fadeInUp">{{ $tour->name }}</h1>
+                    <h1 class="mb-3 wow fadeInUp">{{ tdb($tour->name) }}</h1>
                     @if($tour->description_short)
-                        <p class="lead mb-4 wow fadeInUp" style="max-width:700px;margin:0 auto;">{{ $tour->description_short }}</p>
+                        <p class="lead mb-4 wow fadeInUp" style="max-width:700px;margin:0 auto;">{{ tdb($tour->description_short) }}</p>
                     @endif
                     @if($tour->booking_on_request)
-                        <a href="mailto:info@solaryatravel.com" class="tg-btn tg-btn-hero-cta wow fadeInUp">
-                            <i class="fa-regular fa-envelope me-2"></i>Contattaci per prenotare
+                        <a href="mailto:{{ config('mail.from.address') }}" class="tg-btn tg-btn-hero-cta wow fadeInUp">
+                            <i class="fa-regular fa-envelope me-2"></i>{{ __('tours.detail.contact_to_book') }}
                         </a>
                     @else
                         <button onclick="openBookingDrawer()" class="tg-btn tg-btn-hero-cta wow fadeInUp">
-                            <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
+                            <i class="fa-regular fa-calendar-check me-2"></i>{{ __('tours.detail.book_now') }}
                         </button>
                     @endif
                 </div>
@@ -50,7 +50,7 @@
                     {{-- Quick meta strip (nascosto per i tour su richiesta) --}}
                     @if($tour->departure_point && ! $tour->booking_on_request)
                     <div class="tg-tour-details-video-location d-flex flex-wrap align-items-center mb-25 justify-content-center">
-                        <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ $tour->departure_point }}</span>
+                        <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ tdb($tour->departure_point) }}</span>
                     </div>
                     @endif
 
@@ -64,7 +64,7 @@
                         <div class="row gx-15 mb-25">
                             <div class="col-lg-7">
                                 <div class="tg-tour-details-video-thumb mb-15">
-                                    <img class="w-100" src="{{ $main->url }}" alt="{{ $tour->name }}" style="height:420px;object-fit:cover;border-radius:15px;">
+                                    <img class="w-100" src="{{ $main->url }}" alt="{{ tdb($tour->name) }}" style="height:420px;object-fit:cover;border-radius:15px;">
                                 </div>
                             </div>
                             <div class="col-lg-5">
@@ -90,8 +90,8 @@
                                     <li>
                                         <span class="icon"><i class="fa-regular fa-clock"></i></span>
                                         <div>
-                                            <span class="title">Durata</span>
-                                            <span class="duration">{{ $tour->duration_hours }} ore</span>
+                                            <span class="title">{{ __('tours.detail.duration_label') }}</span>
+                                            <span class="duration">{{ __('tours.detail.duration_value', ['hours' => $tour->duration_hours]) }}</span>
                                         </div>
                                     </li>
                                 @endif
@@ -99,16 +99,16 @@
                                 <li>
                                     <span class="icon"><i class="fa-solid fa-tag"></i></span>
                                     <div>
-                                        <span class="title">A partire da</span>
-                                        <span class="duration"><x-tour-price :price="$adultBasePrice" suffix="/pers" /></span>
+                                        <span class="title">{{ __('tours.detail.starting_from_label') }}</span>
+                                        <span class="duration"><x-tour-price :price="$adultBasePrice" :suffix="__('tours.card.per_person')" :on-request="__('tours.card.on_request')" /></span>
                                     </div>
                                 </li>
                                 @if($tour->departure_point)
                                     <li>
                                         <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
                                         <div>
-                                            <span class="title">Partenza</span>
-                                            <span class="duration">{{ $tour->departure_point }}</span>
+                                            <span class="title">{{ __('tours.detail.departure_label') }}</span>
+                                            <span class="duration">{{ tdb($tour->departure_point) }}</span>
                                         </div>
                                     </li>
                                 @endif
@@ -121,15 +121,19 @@
                     @unless($tour->booking_on_request)
                         <div class="tg-min-participants-notice mb-25">
                             <i class="fa-solid fa-circle-info me-2"></i>
-                            {{ \App\Support\Settings::minParticipantsNotice() }}
+                            {{-- In italiano vale il testo configurabile in admin; in inglese
+                                 il testo tradotto dai file di lingua (l'admin resta IT). --}}
+                            {{ app()->getLocale() === 'it'
+                                ? \App\Support\Settings::minParticipantsNotice()
+                                : __('tours.detail.min_participants') }}
                         </div>
                     @endunless
 
                     {{-- About --}}
                     @if($tour->description)
                         <div class="tg-tour-about-inner mb-25">
-                            <h4 class="tg-tour-about-title mb-15">Informazioni sul tour</h4>
-                            <p class="lh-28 mb-0">{!! nl2br(e($tour->description)) !!}</p>
+                            <h4 class="tg-tour-about-title mb-15">{{ __('tours.detail.info_title') }}</h4>
+                            <p class="lh-28 mb-0">{!! nl2br(e(tdb($tour->description))) !!}</p>
                         </div>
                     @endif
 
@@ -139,8 +143,8 @@
                     {{-- Itinerary --}}
                     @if($tour->itinerary)
                         <div class="tg-tour-about-inner mb-40">
-                            <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-route text-primary me-2"></i>Itinerario</h4>
-                            <p class="lh-28 mb-0">{!! nl2br(e($tour->itinerary)) !!}</p>
+                            <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-route text-primary me-2"></i>{{ __('tours.detail.itinerary_title') }}</h4>
+                            <p class="lh-28 mb-0">{!! nl2br(e(tdb($tour->itinerary))) !!}</p>
                         </div>
                     @endif
 
@@ -148,13 +152,14 @@
                     @if(!empty($tour->included) || !empty($tour->excluded))
                         <div class="tg-tour-about-border mb-40"></div>
                         <div class="tg-tour-about-inner mb-40">
-                            <h4 class="tg-tour-about-title mb-20">Cosa è incluso / escluso</h4>
+                            <h4 class="tg-tour-about-title mb-20">{{ __('tours.detail.included_excluded') }}</h4>
                             <div class="row">
                                 @if(!empty($tour->included))
                                     <div class="col-lg-6">
+                                        <h6 class="tg-tour-about-subtitle mb-10">{{ __('tours.detail.included') }}</h6>
                                         <div class="tg-tour-about-list tg-tour-about-list-2">
                                             <ul class="list-unstyled mb-0">
-                                                @foreach((array) $tour->included as $item)
+                                                @foreach(tdb_list((array) $tour->included) as $item)
                                                     <li>
                                                         <span class="icon mr-10"><i class="fa-sharp fa-solid fa-check fa-fw"></i></span>
                                                         <span class="text">{{ $item }}</span>
@@ -166,9 +171,10 @@
                                 @endif
                                 @if(!empty($tour->excluded))
                                     <div class="col-lg-6">
+                                        <h6 class="tg-tour-about-subtitle mb-10">{{ __('tours.detail.excluded') }}</h6>
                                         <div class="tg-tour-about-list tg-tour-about-list-2 disable">
                                             <ul class="list-unstyled mb-0">
-                                                @foreach((array) $tour->excluded as $item)
+                                                @foreach(tdb_list((array) $tour->excluded) as $item)
                                                     <li>
                                                         <span class="icon mr-10"><i class="fa-sharp fa-solid fa-xmark"></i></span>
                                                         <span class="text">{{ $item }}</span>
@@ -187,7 +193,7 @@
                     @if($periodsWithPrices->count())
                         <div class="tg-tour-about-border mb-40"></div>
                         <div class="tg-tour-about-inner mb-40">
-                            <h4 class="tg-tour-about-title mb-20"><i class="fa-solid fa-tags text-primary me-2"></i>Tariffe per fascia d'età</h4>
+                            <h4 class="tg-tour-about-title mb-20"><i class="fa-solid fa-tags text-primary me-2"></i>{{ __('tours.detail.rates_title') }}</h4>
                             <div class="accordion" id="acc-tariffe">
                                 @foreach($periodsWithPrices as $loop_period => $period)
                                     @php $accId = 'acc-period-' . $period->id; @endphp
@@ -200,9 +206,11 @@
                                                     aria-expanded="{{ $loop_period === 0 ? 'true' : 'false' }}"
                                                     aria-controls="{{ $accId }}"
                                                     style="font-weight:600;background:#fff">
-                                                <span>{{ $period->label ?: 'Periodo' }}</span>
+                                                <span>{{ season_label($period->label, $period->start_date) ?: __('tours.detail.period') }}</span>
                                                 <span class="ms-auto me-3 text-muted fw-normal small">
-                                                    {{ $period->start_date->format('d/m/Y') }} – {{ $period->end_date->format('d/m/Y') }}
+                                                    {{-- Le fasce stagionali vengono da date a DB: nomi di mese
+                                                         resi da Carbon nel locale attivo, non da dizionario. --}}
+                                                    {{ locale_date_range($period->start_date, $period->end_date) }}
                                                 </span>
                                             </button>
                                         </h2>
@@ -214,20 +222,20 @@
                                                     <table class="table table-borderless align-middle mb-0 tg-price-table">
                                                         <thead>
                                                             <tr>
-                                                                <th>Fascia</th>
-                                                                <th>Età</th>
-                                                                <th class="text-end">Prezzo</th>
+                                                                <th>{{ __('tours.detail.age_group') }}</th>
+                                                                <th>{{ __('tours.detail.age') }}</th>
+                                                                <th class="text-end">{{ __('tours.detail.price') }}</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             @foreach($period->ageBrackets as $b)
                                                                 <tr>
-                                                                    <td><strong>{{ $b->label }}</strong></td>
+                                                                    <td><strong>{{ tdb($b->label) }}</strong></td>
                                                                     <td class="text-muted small">
                                                                         @if($b->max_age === null)
-                                                                            da {{ $b->min_age }} anni
+                                                                            {{ __('tours.detail.age_from', ['from' => $b->min_age]) }}
                                                                         @else
-                                                                            {{ $b->min_age }} – {{ $b->max_age }} anni
+                                                                            {{ __('tours.detail.age_years', ['from' => $b->min_age, 'to' => $b->max_age]) }}
                                                                         @endif
                                                                     </td>
                                                                     <td class="text-end fw-bold text-primary">€{{ number_format($b->price, 0, ',', '.') }}</td>
@@ -258,17 +266,17 @@
         <div class="container py-2">
             <div class="row align-items-center g-2">
                 <div class="col">
-                    <span style="font-size:.76rem;color:#888;display:block;line-height:1.3">Prenotazione su richiesta</span>
-                    <strong style="font-size:.95rem;color:#0E1B33">Contattaci per disponibilità e tariffe</strong>
+                    <span style="font-size:.76rem;color:#888;display:block;line-height:1.3">{{ __('tours.detail.on_request_eyebrow') }}</span>
+                    <strong style="font-size:.95rem;color:#0E1B33">{{ __('tours.detail.on_request_text') }}</strong>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    <a href="https://wa.me/393450884743?text={{ rawurlencode('Ciao Solarya Travel, vorrei informazioni sulla crociera "' . $tour->name . '".') }}" target="_blank" rel="noopener"
+                    <a href="https://wa.me/393450884743?text={{ rawurlencode(__('tours.detail.whatsapp_message', ['tour' => tdb($tour->name)])) }}" target="_blank" rel="noopener"
                        style="background:#25D366;color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
-                        <i class="fa-brands fa-whatsapp"></i><span class="d-none d-sm-inline">WhatsApp</span>
+                        <i class="fa-brands fa-whatsapp"></i><span class="d-none d-sm-inline">{{ __('tours.detail.whatsapp') }}</span>
                     </a>
-                    <a href="mailto:info@solaryatravel.com"
+                    <a href="mailto:{{ config('mail.from.address') }}"
                        style="background:var(--tg-theme-secondary);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
-                        <i class="fa-regular fa-envelope"></i><span class="d-none d-sm-inline">Email</span>
+                        <i class="fa-regular fa-envelope"></i><span class="d-none d-sm-inline">{{ __('tours.detail.email') }}</span>
                     </a>
                 </div>
             </div>
@@ -291,13 +299,13 @@
             <div class="container py-3">
                 <div class="row align-items-center">
                     <div class="col">
-                        <span style="font-size:.75rem;color:#888;display:block;margin-bottom:2px">Stai prenotando</span>
-                        <h6 style="margin:0;font-weight:700;color:#0E1B33">{{ $tour->name }}</h6>
+                        <span style="font-size:.75rem;color:#888;display:block;margin-bottom:2px">{{ __('tours.booking.you_are_booking') }}</span>
+                        <h6 style="margin:0;font-weight:700;color:#0E1B33">{{ tdb($tour->name) }}</h6>
                     </div>
                     <div class="col-auto">
                         <button onclick="closeBookingDrawer()"
                                 style="background:#f4f4f4;border:none;border-radius:50%;width:36px;height:36px;font-size:1.1rem;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center"
-                                aria-label="Chiudi">
+                                aria-label="{{ __('common.a11y.close') }}">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -323,18 +331,18 @@
         <div class="container py-2">
             <div class="row align-items-center">
                 <div class="col">
-                    <span style="font-size:.72rem;color:#888;display:block;line-height:1.2">A partire da</span>
+                    <span style="font-size:.72rem;color:#888;display:block;line-height:1.2">{{ __('tours.detail.starting_from_label') }}</span>
                     @php $barPrice = $tour->price_from; @endphp
                     @if($barPrice)
-                        <strong style="font-size:1.15rem;color:#0E1B33">€{{ number_format($barPrice, 0, ',', '.') }}<span style="font-size:.75rem;font-weight:400;color:#888"> /pers</span></strong>
+                        <strong style="font-size:1.15rem;color:#0E1B33">€{{ number_format($barPrice, 0, ',', '.') }}<span style="font-size:.75rem;font-weight:400;color:#888"> {{ __('tours.card.per_person') }}</span></strong>
                     @else
-                        <strong style="font-size:1rem;color:#0E1B33">Su richiesta</strong>
+                        <strong style="font-size:1rem;color:#0E1B33">{{ __('tours.card.on_request') }}</strong>
                     @endif
                 </div>
                 <div class="col-auto">
                     <button onclick="openBookingDrawer()"
                             style="background:var(--tg-theme-secondary);color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:.95rem;cursor:pointer;transition:background .2s">
-                        <i class="fa-regular fa-calendar-check me-2"></i>Prenota ora
+                        <i class="fa-regular fa-calendar-check me-2"></i>{{ __('tours.detail.book_now') }}
                     </button>
                 </div>
             </div>
@@ -347,22 +355,22 @@
     @if($similar->count())
         <div class="py-5">
             <div class="container">
-                <h3 class="tg-tour-about-title mb-4">Tour simili</h3>
+                <h3 class="tg-tour-about-title mb-4">{{ __('tours.similar.title') }}</h3>
                 <div class="row g-3">
                     @foreach($similar as $i => $st)
                         <div class="col-lg-4 col-md-6">
                             <a href="{{ route('tours.show', $st->slug) }}" class="text-decoration-none">
                                 <div class="bg-white border rounded-4 overflow-hidden h-100 shadow-sm tg-similar-card">
                                     @if($st->primaryImage)
-                                        <img src="{{ $st->primaryImage->url }}" class="w-100" alt="{{ $st->name }}" style="height:200px;object-fit:cover">
+                                        <img src="{{ $st->primaryImage->url }}" class="w-100" alt="{{ tdb($st->name) }}" style="height:200px;object-fit:cover">
                                     @else
-                                        <img src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" class="w-100" alt="{{ $st->name }}" style="height:200px;object-fit:cover">
+                                        <img src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" class="w-100" alt="{{ tdb($st->name) }}" style="height:200px;object-fit:cover">
                                     @endif
                                     <div class="p-3">
-                                        <h6 class="text-dark mb-1">{{ $st->name }}</h6>
+                                        <h6 class="text-dark mb-1">{{ tdb($st->name) }}</h6>
                                         <div class="d-flex justify-content-between text-muted small">
                                             <span>@if($st->duration_hours) <i class="fa-regular fa-clock me-1"></i>{{ $st->duration_hours }}h @endif</span>
-                                            <strong class="text-primary">@if($st->price_from && ! $st->booking_on_request)da €{{ number_format($st->price_from, 0, ',', '.') }}@else Su richiesta @endif</strong>
+                                            <strong class="text-primary">@if($st->price_from && ! $st->booking_on_request){{ __('tours.card.from_price', ['price' => number_format($st->price_from, 0, ',', '.')]) }}@else {{ __('tours.card.on_request') }} @endif</strong>
                                         </div>
                                     </div>
                                 </div>

@@ -46,7 +46,11 @@
                         @endif
 
                         <div style="margin:24px 0;text-align:center;">
-                            <a href="{{ route('tours.index') }}" style="display:inline-block;background:#0066cc;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+                            {{-- Le email restano in italiano (fuori dal perimetro
+                                 bilingue): il link va forzato alla versione IT,
+                                 altrimenti erediterebbe la lingua della richiesta
+                                 in cui la mail viene generata. --}}
+                            <a href="{{ locale_route('tours.index', [], config('locales.default', 'it')) }}" style="display:inline-block;background:#0066cc;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
                                 Esplora i tour
                             </a>
                         </div>

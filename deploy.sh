@@ -21,8 +21,14 @@ echo "▶ Deploy avviato $(date '+%Y-%m-%d %H:%M:%S')"
 echo "▶ Branch: $BRANCH"
 
 # --- 1. Aggiorna il codice ------------------------------------------------
-# Hash del lock PRIMA del pull, per capire se le dipendenze sono cambiate.
+# Hash PRIMA del pull, per capire cosa è cambiato:
+#   - composer.lock → sono cambiate le dipendenze (serve install)
+#   - composer.json → può essere cambiata la sezione autoload (files/psr-4):
+#     in quel caso il lock resta identico ma l'autoloader in vendor/ è STALE.
+#     Senza rigenerarlo le funzioni degli helper (tdb(), locale_route(), …)
+#     risultano undefined e il sito va in 500 su ogni pagina.
 LOCK_BEFORE="$(md5sum composer.lock 2>/dev/null | awk '{print $1}' || true)"
+JSON_BEFORE="$(md5sum composer.json 2>/dev/null | awk '{print $1}' || true)"
 
 git fetch --prune origin
 git checkout "$BRANCH"
@@ -30,13 +36,20 @@ git reset --hard "origin/$BRANCH"        # allinea esattamente al remote (niente
 
 echo "▶ Ora su commit: $(git log -1 --oneline)"
 
-# --- 2. Dipendenze (solo se composer.lock è cambiato) ---------------------
+# --- 2. Dipendenze / autoloader ------------------------------------------
 LOCK_AFTER="$(md5sum composer.lock 2>/dev/null | awk '{print $1}' || true)"
+JSON_AFTER="$(md5sum composer.json 2>/dev/null | awk '{print $1}' || true)"
+
 if [ "$LOCK_BEFORE" != "$LOCK_AFTER" ] || [ ! -d vendor ]; then
     echo "▶ composer.lock cambiato → composer install"
     $COMPOSER install --no-dev --optimize-autoloader --no-interaction
+elif [ "$JSON_BEFORE" != "$JSON_AFTER" ]; then
+    # Lock invariato ma json modificato: bastano il dump dell'autoloader,
+    # molto più rapido di un install completo.
+    echo "▶ composer.json cambiato (lock invariato) → dump-autoload"
+    $COMPOSER dump-autoload --no-dev --optimize --no-interaction
 else
-    echo "▷ composer.lock invariato → salto composer install"
+    echo "▷ composer.json/lock invariati → salto composer"
 fi
 
 # --- 3. Migration (solo se ce ne sono di pendenti) ------------------------
