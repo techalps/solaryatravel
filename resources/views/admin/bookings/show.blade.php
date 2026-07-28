@@ -620,6 +620,21 @@
                             <span class="fw-semibold">{{ $fmtMoney($booking->addons_total) }}</span>
                         </div>
                     @endif
+                    @php $comp = $booking->metadata['complimentary'] ?? null; @endphp
+                    @if ($comp && ($comp['seats'] ?? 0) > 0)
+                        {{-- Posti omaggio: il subtotale è già al netto, questa riga
+                             serve a spiegare PERCHÉ il totale è più basso. --}}
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>
+                                <i class="bi bi-gift me-1"></i>{{ $comp['seats'] }}
+                                {{ $comp['seats'] == 1 ? 'posto omaggio' : 'posti omaggio' }}
+                                @if (! empty($comp['reason']))
+                                    <span class="small text-muted d-block">{{ $comp['reason'] }}</span>
+                                @endif
+                            </span>
+                            <span class="fw-semibold">-{{ $fmtMoney($comp['amount'] ?? 0) }}</span>
+                        </div>
+                    @endif
                     @if ((float) $booking->discount_amount > 0)
                         <div class="d-flex justify-content-between mb-2 text-success">
                             <span>

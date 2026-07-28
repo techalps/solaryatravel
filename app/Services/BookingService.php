@@ -123,7 +123,11 @@ class BookingService
                     $adultsCount,
                     $resolvedChildren,
                     $data['addons'] ?? [],
-                    $data['discount_code'] ?? null
+                    $data['discount_code'] ?? null,
+                    // Posti omaggio concessi dall'admin: occupano il posto in
+                    // barca ma valgono 0€.
+                    max(0, (int) ($data['complimentary_seats'] ?? 0)),
+                    ! empty($data['complimentary_includes_addons'])
                 );
             }
 
@@ -238,6 +242,16 @@ class BookingService
                 'metadata' => [
                     'pricing' => $pricing,
                     'distribution' => $assignment,
+                    // Traccia dell'omaggio: quanti posti, quanto valeva, chi
+                    // l'ha concesso e perché. Serve per report e verifiche.
+                    'complimentary' => ($pricing['complimentary_seats'] ?? 0) > 0 ? [
+                        'seats' => $pricing['complimentary_seats'],
+                        'amount' => $pricing['complimentary_amount'] ?? 0,
+                        'includes_addons' => (bool) ($pricing['complimentary_includes_addons'] ?? false),
+                        'reason' => $data['complimentary_reason'] ?? null,
+                        'granted_by' => auth()->id(),
+                        'granted_at' => now()->toDateTimeString(),
+                    ] : null,
                 ],
             ]);
 
@@ -266,6 +280,13 @@ class BookingService
                 $guests,
                 $manualTotalOnFirstSeat
             );
+
+            // Posti omaggio: azzera i più costosi DOPO la creazione (i posti
+            // nascono in tre passaggi: adulti, bambini, infanti).
+            $complimentarySeats = max(0, (int) ($data['complimentary_seats'] ?? 0));
+            if ($complimentarySeats > 0) {
+                $this->markComplimentarySeats($booking, $complimentarySeats);
+            }
 
             // Addons
             if (!empty($data['addons'])) {
@@ -312,12 +333,18 @@ class BookingService
             throw new \Exception('Devi selezionare almeno un partecipante.');
         }
 
+        // Posti omaggio concessi dall'admin: occupano il posto ma valgono 0€.
+        $complimentarySeats = max(0, (int) ($data['complimentary_seats'] ?? 0));
+        $complimentaryIncludesAddons = ! empty($data['complimentary_includes_addons']);
+
         $pricing = $this->pricingService->calculate(
             $tour,
             $departure,
             $bracketCounts,
             $data['addons'] ?? [],
-            $data['discount_code'] ?? null
+            $data['discount_code'] ?? null,
+            $complimentarySeats,
+            $complimentaryIncludesAddons
         );
 
         $countingSeats = $pricing['counting_seats'];
@@ -355,10 +382,22 @@ class BookingService
             'locale' => app()->getLocale(),
             'ip_address' => request()?->ip(),
             'user_agent' => request()?->userAgent(),
-            'metadata' => ['pricing' => $pricing, 'distribution' => $assignment],
+            'metadata' => [
+                'pricing' => $pricing,
+                'distribution' => $assignment,
+                // Traccia dell'omaggio: chi l'ha concesso, quanti posti e perché.
+                'complimentary' => $complimentarySeats > 0 ? [
+                    'seats' => $complimentarySeats,
+                    'amount' => $pricing['complimentary_amount'] ?? 0,
+                    'includes_addons' => $complimentaryIncludesAddons,
+                    'reason' => $data['complimentary_reason'] ?? null,
+                    'granted_by' => auth()->id(),
+                    'granted_at' => now()->toDateTimeString(),
+                ] : null,
+            ],
         ]);
 
-        $this->createSeats($booking, $bracketCounts, $assignment, $data['guests'] ?? []);
+        $this->createSeats($booking, $bracketCounts, $assignment, $data['guests'] ?? [], $complimentarySeats);
 
         if (!empty($data['addons'])) {
             foreach ($data['addons'] as $addonId) {
@@ -501,6 +540,38 @@ class BookingService
 
             return true;
         });
+    }
+
+    /**
+     * Azzera il prezzo di N posti della prenotazione: i più costosi per primi.
+     *
+     * Applicato DOPO la creazione dei posti invece che dentro i cicli: i posti
+     * nascono in tre passaggi diversi (adulti, bambini, infanti) e replicare la
+     * scelta in ognuno sarebbe fragile. Così l'ordine è garantito e coincide con
+     * quello di PricingService::applyComplimentarySeats().
+     *
+     * @return float importo omaggiato
+     */
+    protected function markComplimentarySeats(Booking $booking, int $complimentarySeats): float
+    {
+        if ($complimentarySeats <= 0) {
+            return 0.0;
+        }
+
+        $seats = $booking->seatRecords()
+            ->orderByDesc('price_paid')
+            ->orderBy('seat_number')
+            ->limit($complimentarySeats)
+            ->get();
+
+        $amount = 0.0;
+
+        foreach ($seats as $seat) {
+            $amount += (float) $seat->price_paid;
+            $seat->update(['price_paid' => 0]);
+        }
+
+        return round($amount, 2);
     }
 
     /**
@@ -1124,8 +1195,18 @@ class BookingService
      * @param  array<int, array{catamaran_id:int, seats:int}>  $distribution
      * @param  array  $guests
      */
-    protected function createSeats(Booking $booking, array $bracketCounts, array $distribution, array $guests = []): void
-    {
+    /**
+     * @param  int  $complimentarySeats  Quanti posti sono OMAGGIO: vengono
+     *   salvati con price_paid = 0. Si azzerano i posti di maggior valore,
+     *   coerentemente con PricingService::calculate().
+     */
+    protected function createSeats(
+        Booking $booking,
+        array $bracketCounts,
+        array $distribution,
+        array $guests = [],
+        int $complimentarySeats = 0
+    ): void {
         // Espandi la distribuzione in una lista di catamaran_id (uno per posto contante)
         $catamaranQueue = [];
         foreach ($distribution as $slot) {
@@ -1160,16 +1241,29 @@ class BookingService
 
         $seatNumber = 1;
 
+        // Quali posti sono omaggio: i più costosi, come in PricingService.
+        // Indici riferiti a countingList seguita da nonCountingList.
+        $modifier = (float) $booking->departure->price_modifier;
+        $freeIndexes = collect($countingList)
+            ->map(fn ($e, $i) => ['key' => 'c'.$i, 'price' => (float) $e['bracket']->price * $modifier])
+            ->concat(collect($nonCountingList)
+                ->map(fn ($e, $i) => ['key' => 'n'.$i, 'price' => (float) $e['bracket']->price * $modifier]))
+            ->sortByDesc('price')
+            ->take(max(0, $complimentarySeats))
+            ->pluck('key')
+            ->all();
+
         // Posti contanti → assegnati a catamarano dalla queue
         foreach ($countingList as $idx => $entry) {
             $bracket = $entry['bracket'];
             $guest = $guests[$idx] ?? [];
+            $isFree = in_array('c'.$idx, $freeIndexes, true);
             BookingSeat::create(array_merge([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $catamaranQueue[$idx] ?? null,
                 'tour_age_bracket_id' => $bracket->id,
-                'price_paid' => (float) $bracket->price * (float) $booking->departure->price_modifier,
+                'price_paid' => $isFree ? 0 : (float) $bracket->price * $modifier,
                 'guest_first_name' => $guest['first_name'] ?? null,
                 'guest_last_name' => $guest['last_name'] ?? null,
                 'guest_date_of_birth' => $guest['date_of_birth'] ?? null,
@@ -1180,14 +1274,15 @@ class BookingService
 
         // Posti non contanti (es. neonati) → seguono il catamarano del primo posto contante
         $defaultCatamaran = $catamaranQueue[0] ?? null;
-        foreach ($nonCountingList as $entry) {
+        foreach ($nonCountingList as $nIdx => $entry) {
             $bracket = $entry['bracket'];
+            $isFree = in_array('n'.$nIdx, $freeIndexes, true);
             BookingSeat::create([
                 'booking_id' => $booking->id,
                 'seat_number' => $seatNumber++,
                 'catamaran_id' => $defaultCatamaran,
                 'tour_age_bracket_id' => $bracket->id,
-                'price_paid' => (float) $bracket->price * (float) $booking->departure->price_modifier,
+                'price_paid' => $isFree ? 0 : (float) $bracket->price * $modifier,
                 'is_primary' => false,
             ]);
         }

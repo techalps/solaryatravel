@@ -524,6 +524,12 @@ class BookingController extends Controller
             'children.*.doc_place' => 'required_with:children|string|max:120',
             // Prezzo TOTALE manuale (solo tour "su richiesta", es. catamarano riservato).
             'total_price' => 'nullable|numeric|min:0',
+            // Posti OMAGGIO: N partecipanti a 0€ (ospiti invitati). Occupano il
+            // posto in barca; il massimo è controllato più sotto sul totale
+            // effettivo dei partecipanti.
+            'complimentary_seats' => 'nullable|integer|min:0|max:100',
+            'complimentary_includes_addons' => 'nullable|boolean',
+            'complimentary_reason' => 'nullable|string|max:200',
             'addons' => 'nullable|array',
             'addons.*' => 'integer|exists:addons,id',
             'discount_code' => 'nullable|string|max:50',
@@ -676,6 +682,17 @@ class BookingController extends Controller
         $adults = array_values($validated['adults']);
         $children = array_values($validated['children'] ?? []);
 
+        // I posti omaggio non possono superare i partecipanti effettivi:
+        // altrimenti l'operatore azzererebbe più di quanto c'è da azzerare.
+        $complimentarySeats = (int) ($validated['complimentary_seats'] ?? 0);
+        $participants = count($adults) + count($children);
+        if ($complimentarySeats > $participants) {
+            return back()->withInput()->with(
+                'error',
+                "Hai indicato {$complimentarySeats} posti omaggio ma i partecipanti sono {$participants}."
+            );
+        }
+
         $resolvedChildren = [];
         $guests = [];
         foreach ($adults as $i => $a) {
@@ -720,6 +737,9 @@ class BookingController extends Controller
             'use_deposit' => $useDeposit,
             // Prezzo TOTALE manuale (usato solo per i tour su richiesta).
             'total_price' => $isOnRequest ? (float) ($validated['total_price'] ?? 0) : null,
+            'complimentary_seats' => $complimentarySeats,
+            'complimentary_includes_addons' => ! empty($validated['complimentary_includes_addons']),
+            'complimentary_reason' => $validated['complimentary_reason'] ?? null,
             // Uso esclusivo: i catamarani scelti vanno usati (anche oltre capienza).
             'exclusive_use' => $exclusive,
             'forced_catamaran_ids' => $exclusive

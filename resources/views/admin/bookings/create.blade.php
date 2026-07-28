@@ -164,6 +164,49 @@
                                 </div>
                             </div>
 
+                            {{-- Posti omaggio: N partecipanti a 0€ (ospiti invitati) --}}
+                            <div class="border rounded-3 p-3 mb-3" style="background:rgba(25,135,84,.04);border-color:rgba(25,135,84,.25)!important">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-gift text-success"></i>
+                                    <span class="fw-semibold small">Posti omaggio</span>
+                                    <span class="text-muted small">— occupano il posto in barca ma non si pagano</span>
+                                </div>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-auto">
+                                        <label for="complimentary_seats" class="col-form-label small mb-0">Quanti posti</label>
+                                    </div>
+                                    <div class="col-auto" style="width:110px">
+                                        <input type="number" min="0" step="1" class="form-control form-control-sm"
+                                               name="complimentary_seats" id="complimentary_seats"
+                                               value="{{ old('complimentary_seats', 0) }}">
+                                    </div>
+                                    <div class="col-sm">
+                                        <input type="text" class="form-control form-control-sm"
+                                               name="complimentary_reason" id="complimentary_reason"
+                                               value="{{ old('complimentary_reason') }}"
+                                               placeholder="Motivo (es. ospite dello staff, omaggio partner)" maxlength="200">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check form-switch">
+                                            <input type="hidden" name="complimentary_includes_addons" value="0">
+                                            <input class="form-check-input" type="checkbox" role="switch" value="1"
+                                                   name="complimentary_includes_addons" id="complimentary_includes_addons"
+                                                   {{ old('complimentary_includes_addons') ? 'checked' : '' }}>
+                                            <label class="form-check-label small" for="complimentary_includes_addons">
+                                                Omaggio anche sugli extra di quei posti
+                                                <span class="text-muted">(se spento gli extra restano a pagamento)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-text">
+                                            L'omaggio si applica ai posti di <strong>maggior valore</strong>. I passeggeri
+                                            omaggio hanno comunque biglietto e QR per l'imbarco.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {{-- Adulti (solo conteggio; i dati vanno più in basso) --}}
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <div class="fw-semibold">Adulti <span class="text-muted small">(prezzo pieno)</span></div>
@@ -878,6 +921,9 @@
         }
         const lines = [];
         let total = 0, seats = 0, pax = 0;
+        // Prezzi unitari dei singoli posti: serve per applicare l'omaggio ai
+        // più costosi, come fa il server (PricingService).
+        const unitPrices = [];
 
         if (onRequest) {
             // Su richiesta: il totale è il prezzo unico inserito; adulti+bambini = posti.
@@ -893,15 +939,31 @@
             if (adultsCount > 0) {
                 const sub = adultsCount * unitAdult;
                 total += sub; seats += adultsCount; pax += adultsCount;
+                for (let i = 0; i < adultsCount; i++) unitPrices.push(unitAdult);
                 lines.push(`<div class="d-flex justify-content-between small mb-1"><span>Adulti × ${adultsCount}</span><span>${eur(sub)}</span></div>`);
             }
             children.forEach((c) => {
                 const res = resolveBracket(c.dob);
                 if (!res.bracket) { if (c.dob) pax += 1; return; }
                 total += res.bracket.price; pax += 1;
+                unitPrices.push(res.bracket.price);
                 if (res.bracket.counts_as_seat) seats += 1;
                 lines.push(`<div class="d-flex justify-content-between small mb-1"><span>${escapeHtml(res.bracket.label)}</span><span>${eur(res.bracket.price)}</span></div>`);
             });
+        }
+
+        // ---- Posti omaggio: azzera i più costosi -------------------------
+        const compInput = document.getElementById('complimentary_seats');
+        let compSeats = Math.max(0, parseInt(compInput?.value || '0', 10) || 0);
+        compSeats = Math.min(compSeats, pax);
+        let compAmount = 0;
+        if (compSeats > 0 && !onRequest) {
+            unitPrices.sort((a, b) => b - a);
+            for (let i = 0; i < compSeats && i < unitPrices.length; i++) compAmount += unitPrices[i];
+            total = Math.max(0, total - compAmount);
+            lines.push(`<div class="d-flex justify-content-between small mb-1 text-success"><span><i class="bi bi-gift me-1"></i>${compSeats} ${compSeats === 1 ? 'posto' : 'posti'} omaggio</span><span>− ${eur(compAmount)}</span></div>`);
+        } else if (compSeats > 0 && onRequest) {
+            lines.push(`<div class="d-flex justify-content-between small mb-1 text-muted"><span><i class="bi bi-gift me-1"></i>${compSeats} posti omaggio</span><span>prezzo manuale</span></div>`);
         }
 
         summaryBox.innerHTML = `
@@ -1032,6 +1094,11 @@
 
     // Prezzo totale manuale (tour su richiesta)
     totalPriceInput.addEventListener('input', e => { totalPrice = e.target.value; renderSummary(); });
+
+    // Posti omaggio: aggiorna il riepilogo mentre l'operatore digita, così il
+    // totale mostrato coincide sempre con quello che verrà salvato.
+    document.getElementById('complimentary_seats')?.addEventListener('input', renderSummary);
+    document.getElementById('complimentary_includes_addons')?.addEventListener('change', renderSummary);
     document.addEventListener('click', e => {
         const btn = e.target.closest('[data-remove-child]');
         if (btn) { children.splice(+btn.dataset.removeChild, 1); renderChildren(); renderSummary(); }

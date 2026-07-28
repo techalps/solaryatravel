@@ -18,12 +18,23 @@ class PricingService
      * @param  array<int,int>  $bracketCounts  mappa bracket_id => quantità
      * @param  array<int,int>  $addonIds       id degli addon selezionati
      */
+    /**
+     * @param  int  $complimentarySeats  Posti OMAGGIO concessi dall'admin: occupano
+     *   il posto in barca (capienza, biglietto, QR) ma valgono 0€. Vengono
+     *   scontati partendo dalle fasce più costose, così l'omaggio vale sul
+     *   posto di maggior valore.
+     * @param  bool  $complimentaryIncludesAddons  Se true anche la quota extra
+     *   dei posti omaggio è gratuita; se false gli extra restano addebitati
+     *   (il fornitore va pagato comunque).
+     */
     public function calculate(
         Tour $tour,
         TourDeparture $departure,
         array $bracketCounts,
         array $addonIds = [],
-        ?string $discountCode = null
+        ?string $discountCode = null,
+        int $complimentarySeats = 0,
+        bool $complimentaryIncludesAddons = false
     ): array {
         $brackets = $this->resolveBrackets($tour, $departure->departure_date)
             ->whereIn('id', array_keys($bracketCounts))
@@ -61,7 +72,17 @@ class PricingService
             ];
         }
 
-        $addonsTotal = $this->calculateAddonsTotal($addonIds, $countingSeats, $tour->duration_hours ?? 0);
+        // Posti omaggio: i posti restano occupati, si azzera il loro valore
+        // partendo dalle fasce più costose (vedi applyComplimentarySeats).
+        [$basePrice, $bracketDetails, $complimentarySeats, $complimentaryAmount]
+            = $this->applyComplimentarySeats($basePrice, $bracketDetails, $totalSeats, $complimentarySeats);
+
+        // Extra: se l'omaggio li include, si pagano solo per i posti non omaggio.
+        $payingSeatsForAddons = $complimentaryIncludesAddons
+            ? max(0, $countingSeats - $complimentarySeats)
+            : $countingSeats;
+
+        $addonsTotal = $this->calculateAddonsTotal($addonIds, $payingSeatsForAddons, $tour->duration_hours ?? 0);
 
         $discountAmount = 0.0;
         $discountCodeId = null;
@@ -90,6 +111,9 @@ class PricingService
             'total_seats' => $totalSeats,
             'counting_seats' => $countingSeats,
             'brackets' => $bracketDetails,
+            'complimentary_seats' => $complimentarySeats,
+            'complimentary_amount' => $complimentaryAmount,
+            'complimentary_includes_addons' => $complimentaryIncludesAddons,
         ];
     }
 
@@ -136,13 +160,19 @@ class PricingService
      *         già risolto. Se `bracket_id` è null/assente viene risolto qui.
      * @param  array<int>  $addonIds
      */
+    /**
+     * @param  int  $complimentarySeats  Posti OMAGGIO (vedi calculate()).
+     * @param  bool  $complimentaryIncludesAddons  Omaggio anche sugli extra.
+     */
     public function calculateForParticipants(
         Tour $tour,
         TourDeparture $departure,
         int $adultsCount,
         array $children,
         array $addonIds = [],
-        ?string $discountCode = null
+        ?string $discountCode = null,
+        int $complimentarySeats = 0,
+        bool $complimentaryIncludesAddons = false
     ): array {
         $adultsCount = max(0, $adultsCount);
         $period = $this->resolvePeriod($tour, $departure->departure_date);
@@ -213,7 +243,16 @@ class PricingService
             ];
         }
 
-        $addonsTotal = $this->calculateAddonsTotal($addonIds, $countingSeats, $tour->duration_hours ?? 0);
+        // Posti omaggio: stessa logica di calculate() — si azzerano i posti di
+        // maggior valore, così l'omaggio vale sul biglietto più caro.
+        [$basePrice, $bracketDetails, $complimentarySeats, $complimentaryAmount]
+            = $this->applyComplimentarySeats($basePrice, $bracketDetails, $totalSeats, $complimentarySeats);
+
+        $payingSeatsForAddons = $complimentaryIncludesAddons
+            ? max(0, $countingSeats - $complimentarySeats)
+            : $countingSeats;
+
+        $addonsTotal = $this->calculateAddonsTotal($addonIds, $payingSeatsForAddons, $tour->duration_hours ?? 0);
 
         $discountAmount = 0.0;
         $discountCodeId = null;
@@ -245,7 +284,52 @@ class PricingService
             'adults_count' => $adultsCount,
             'adult_unit_price' => round($adultUnit, 2),
             'unresolved_children' => $unresolved,
+            'complimentary_seats' => $complimentarySeats,
+            'complimentary_amount' => $complimentaryAmount,
+            'complimentary_includes_addons' => $complimentaryIncludesAddons,
         ];
+    }
+
+    /**
+     * Azzera il valore di N posti, partendo dalle fasce più costose.
+     *
+     * Estratto perché lo usano sia calculate() (fasce esplicite) sia
+     * calculateForParticipants() (adulti + bambini): l'omaggio deve comportarsi
+     * identico nei due percorsi.
+     *
+     * @param  array<int, array<string, mixed>>  $bracketDetails
+     * @return array{0: float, 1: array<int, array<string, mixed>>, 2: int, 3: float}
+     */
+    protected function applyComplimentarySeats(
+        float $basePrice,
+        array $bracketDetails,
+        int $totalSeats,
+        int $complimentarySeats
+    ): array {
+        $complimentarySeats = max(0, min($complimentarySeats, $totalSeats));
+
+        if ($complimentarySeats === 0) {
+            return [$basePrice, $bracketDetails, 0, 0.0];
+        }
+
+        $remaining = $complimentarySeats;
+        $amount = 0.0;
+
+        $order = collect($bracketDetails)->sortByDesc('unit_price')->keys()->all();
+
+        foreach ($order as $i) {
+            if ($remaining <= 0) {
+                break;
+            }
+            $take = min($remaining, (int) $bracketDetails[$i]['count']);
+            $amount += $take * (float) $bracketDetails[$i]['unit_price'];
+            $bracketDetails[$i]['complimentary_count'] = $take;
+            $remaining -= $take;
+        }
+
+        $amount = round($amount, 2);
+
+        return [max(0, round($basePrice - $amount, 2)), $bracketDetails, $complimentarySeats, $amount];
     }
 
     /**

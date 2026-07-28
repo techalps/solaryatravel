@@ -105,3 +105,32 @@
     <strong>Date di nascita dei bambini:</strong> inseriscile da tastiera tranquillamente —
     il prezzo si aggiorna man mano, ma il campo non perde la digitazione.
 </div>
+
+<h2>Regalare un posto (omaggio)</h2>
+<p>
+    Nel form di prenotazione, nel blocco verde <strong>Posti omaggio</strong>, indica quanti
+    partecipanti non devono pagare. Serve quando vuoi invitare qualcuno: un ospite dello staff,
+    un partner, un accompagnatore.
+</p>
+<ul>
+    <li>I posti omaggio <strong>occupano il posto in barca</strong> come tutti gli altri: contano per la
+        capienza e ricevono biglietto e QR per l'imbarco.</li>
+    <li>L'omaggio si applica ai posti di <strong>maggior valore</strong>. Esempio: 1 adulto (150&euro;) +
+        1 bambino (100&euro;) con 1 posto omaggio &rarr; resta da pagare il bambino, 100&euro;.</li>
+    <li>Il riepilogo a destra mostra subito la riga verde con lo sconto, così vedi il totale reale
+        prima di salvare.</li>
+    <li>Puoi scrivere un <strong>motivo</strong> (es. "ospite dello staff"): resta salvato sulla
+        prenotazione insieme a chi ha concesso l'omaggio e quando.</li>
+</ul>
+
+<div class="guide-tip">
+    L'interruttore <strong>"Omaggio anche sugli extra"</strong> decide se il posto regalato include
+    anche pranzo e bevande. Se lo lasci spento gli extra restano a pagamento &mdash; scelta prudente,
+    perché il fornitore va pagato comunque.
+</div>
+
+<div class="guide-warn">
+    Non usare l'omaggio per applicare uno sconto commerciale: per quello ci sono i
+    <strong>codici sconto</strong>. L'omaggio azzera il posto e resta tracciato come regalo,
+    quindi nei report risulta ricavo zero su quel posto.
+</div>
