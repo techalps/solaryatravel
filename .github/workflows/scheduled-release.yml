@@ -1,15 +1,24 @@
 name: Rilascio notturno (main → production)
 
-# Merge automatico main→production nelle notti da lunedì a giovedì alle 03:00
+# Merge automatico main→production nelle notti da lunedì a giovedì, di notte
 # (ora italiana). Il push su production fa poi partire il workflow di deploy.
 #
 # Nota fusi: GitHub cron è in UTC. Le 03:00 di Roma sono 01:00 UTC (ora legale,
-# CEST) o 02:00 UTC (ora solare, CET). Scheduliamo entrambe e lasciamo procedere
-# solo quando a Roma sono davvero le 03, così scatta una volta sola tutto l'anno.
+# CEST) o 02:00 UTC (ora solare, CET): schedulando entrambe si copre tutto l'anno.
+#
+# ATTENZIONE — il cron di GitHub è "best effort": sui runner condivisi il job
+# parte anche con 2-3 ore di ritardo rispetto all'orario dichiarato (verificato:
+# cron alle 01:00/02:00 UTC eseguiti fra le 04:11 e le 05:51 UTC). Il gate NON
+# deve quindi pretendere un'ora esatta, altrimenti scarta ogni esecuzione e il
+# rilascio non avviene mai — restituendo comunque "success". Era esattamente il
+# bug: nessun rilascio automatico per giorni, senza alcun segnale di errore.
+#
+# Il gate ora garantisce solo che il rilascio avvenga UNA volta per notte,
+# indipendentemente da quando GitHub riesce a far partire il job.
 on:
   schedule:
-    - cron: '0 1 * * 1-4'   # 01:00 UTC = 03:00 CEST (lun-gio)
-    - cron: '0 2 * * 1-4'   # 02:00 UTC = 03:00 CET  (lun-gio)
+    - cron: '0 1 * * 1-4'   # 01:00 UTC ≈ 03:00 CEST (lun-gio)
+    - cron: '0 2 * * 1-4'   # 02:00 UTC ≈ 03:00 CET  (lun-gio)
   workflow_dispatch: {}      # avvio manuale (forza il rilascio quando vuoi)
 
 concurrency:
@@ -25,27 +34,40 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Verifica che a Roma siano le 03 (evita doppio scatto legale/solare)
-        id: gate
-        run: |
-          HOUR=$(TZ='Europe/Rome' date +%H)
-          echo "Ora a Roma: ${HOUR}"
-          # Su avvio manuale (workflow_dispatch) procedi sempre.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "run=yes" >> "$GITHUB_OUTPUT"
-          elif [ "$HOUR" = "03" ]; then
-            echo "run=yes" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=no" >> "$GITHUB_OUTPUT"
-            echo "Non sono le 03 a Roma: salto (scatto duplicato per il fuso)."
-          fi
-
       - name: Checkout (storia completa, serve per il merge)
-        if: steps.gate.outputs.run == 'yes'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verifica se c'è qualcosa da rilasciare
+        id: gate
+        run: |
+          echo "Ora a Roma: $(TZ='Europe/Rome' date '+%Y-%m-%d %H:%M')"
+
+          # Avvio manuale: procedi sempre.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch origin main production --quiet
+
+          # Idempotente e senza vincoli di orario: se production contiene già
+          # tutto main non c'è nulla da rilasciare, quindi il secondo scatto
+          # della notte (ora legale/solare) si limita a non fare nulla.
+          #
+          # NON si controlla l'ora: il cron di GitHub parte con ritardi di ore
+          # sui runner condivisi, e pretendere un orario esatto bloccava OGNI
+          # rilascio restituendo comunque "success".
+          if git merge-base --is-ancestor origin/main origin/production; then
+            echo "run=no" >> "$GITHUB_OUTPUT"
+            echo "production è già allineato a main: nulla da rilasciare."
+          else
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+            echo "Da rilasciare:"
+            git log --oneline origin/production..origin/main
+          fi
 
       - name: Merge main → production e push
         if: steps.gate.outputs.run == 'yes'
