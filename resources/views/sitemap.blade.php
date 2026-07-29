@@ -1,4 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+{{--
+    La dichiarazione XML NON va scritta letteralmente in questa vista: con
+    short_open_tag=On (attivo su OVH, disattivo in locale) PHP interpreta
+    l'apertura xml come un tag PHP e la vista va in
+    "syntax error, unexpected identifier version".
+    La stampiamo quindi da PHP concatenando i caratteri: è il modo portabile.
+--}}
+{!! '<'.'?xml version="1.0" encoding="UTF-8"?'.'>' !!}
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
 @foreach($pages as $page)

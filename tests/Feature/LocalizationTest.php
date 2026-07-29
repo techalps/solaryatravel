@@ -368,6 +368,32 @@ class LocalizationTest extends TestCase
         $this->assertStringContainsString('hreflang="x-default"', $xml);
     }
 
+    /**
+     * La dichiarazione XML deve essere prodotta da PHP: scritta letteralmente,
+     * con short_open_tag=On (attivo su OVH) verrebbe interpretata come tag PHP
+     * e la vista andrebbe in errore di sintassi. È accaduto in produzione.
+     */
+    public function test_la_sitemap_e_xml_valido_e_non_dipende_da_short_open_tag(): void
+    {
+        $this->makeTour();
+
+        $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
+
+        $this->assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>', $xml);
+
+        // Deve essere parsabile: se la vista emette PHP o HTML di errore, qui salta.
+        $doc = simplexml_load_string($xml);
+        $this->assertNotFalse($doc, 'La sitemap deve essere XML ben formato.');
+
+        // La dichiarazione non va scritta letteralmente nel template.
+        $template = file_get_contents(resource_path('views/sitemap.blade.php'));
+        $this->assertStringNotContainsString(
+            '<'.'?xml',
+            $template,
+            'La dichiarazione XML va emessa da PHP, non scritta nel template.'
+        );
+    }
+
     public function test_nessuna_chiave_grezza_di_traduzione_nelle_pagine(): void
     {
         $this->makeTour();
