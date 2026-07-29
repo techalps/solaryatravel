@@ -44,12 +44,36 @@ if [ "$LOCK_BEFORE" != "$LOCK_AFTER" ] || [ ! -d vendor ]; then
     echo "▶ composer.lock cambiato → composer install"
     $COMPOSER install --no-dev --optimize-autoloader --no-interaction
 elif [ "$JSON_BEFORE" != "$JSON_AFTER" ]; then
-    # Lock invariato ma json modificato: bastano il dump dell'autoloader,
+    # Lock invariato ma json modificato: basta il dump dell'autoloader,
     # molto più rapido di un install completo.
     echo "▶ composer.json cambiato (lock invariato) → dump-autoload"
     $COMPOSER dump-autoload --no-dev --optimize --no-interaction
 else
     echo "▷ composer.json/lock invariati → salto composer"
+fi
+
+# --- 2b. VERIFICA che l'autoloader risolva davvero gli helper --------------
+# Il confronto di hash sopra non basta: deploy.sh viene eseguito nella versione
+# che il server aveva PRIMA del pull, quindi un miglioramento del controllo
+# entra in vigore solo dal deploy successivo. Se un rilascio aggiunge un file a
+# "autoload.files" (gli helper tdb(), locale_route(), season_label()), il primo
+# deploy dopo la modifica può saltare il dump e mandare il sito in 500 su OGNI
+# pagina. Qui la verifica è sul FATTO, non sulle ipotesi: se una funzione attesa
+# non esiste, l'autoloader viene rigenerato.
+MISSING_HELPERS="$($PHP -r '
+require "vendor/autoload.php";
+$missing = [];
+foreach (["tdb", "locale_route", "season_label"] as $fn) {
+    if (! function_exists($fn)) { $missing[] = $fn; }
+}
+echo implode(",", $missing);
+' 2>/dev/null || echo "errore")"
+
+if [ -n "$MISSING_HELPERS" ]; then
+    echo "▶ Helper non risolti ($MISSING_HELPERS) → rigenero l'autoloader"
+    $COMPOSER dump-autoload --no-dev --optimize --no-interaction
+else
+    echo "▷ Autoloader OK: tutti gli helper sono risolti"
 fi
 
 # --- 3. Migration (solo se ce ne sono di pendenti) ------------------------
