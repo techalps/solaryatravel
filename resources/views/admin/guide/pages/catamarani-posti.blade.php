@@ -72,6 +72,28 @@
     completamente libera, usa invece il pulsante nella sezione "Catamarani riservati" (vedi Riservare un catamarano).
 </p>
 
+<h2>Spostare più passeggeri in una volta (cambio barca)</h2>
+<p>
+    Quando devi cambiare barca a un gruppo — un guasto, un cambio di scafo, una riorganizzazione —
+    non serve spostare i passeggeri uno per uno. Da <strong>Assegnazione</strong> apri la partenza:
+    ogni catamarano ha una barra con <strong>Seleziona tutti</strong> e un menu <strong>"Sposta su…"</strong>.
+</p>
+<div class="guide-step"><span class="guide-step-num">1</span><div>Spunta i passeggeri da spostare, oppure usa <strong>Seleziona tutti</strong> per l'intera barca.</div></div>
+<div class="guide-step"><span class="guide-step-num">2</span><div>Scegli la barca di destinazione: accanto al nome vedi quanti <strong>posti liberi</strong> ha.</div></div>
+<div class="guide-step"><span class="guide-step-num">3</span><div>Prima di spostare, sotto compare l'esito: <span class="text-success fw-semibold">"Ci stanno…"</span> con i posti che resteranno liberi, oppure <span class="text-danger fw-semibold">"Non ci stanno tutti…"</span> con quanti mancano. Il pulsante <strong>Sposta</strong> si attiva solo se il gruppo entra.</div></div>
+
+<div class="guide-tip">
+    Lo spostamento è <strong>tutto-o-niente</strong>: se il gruppo non entra non viene spostato nessuno,
+    così non ti ritrovi metà passeggeri su una barca e metà sull'altra. Se devi dividerli
+    volutamente, seleziona prima un sottoinsieme e ripeti l'operazione.
+</div>
+
+<div class="guide-warn">
+    Le barche <strong>riservate in uso esclusivo</strong> non compaiono tra le destinazioni. I passeggeri
+    di una prenotazione a uso esclusivo che occupa più giorni sono in sola lettura: per spostarli si
+    sposta l'intera riserva (vedi Riservare un catamarano).
+</div>
+
 <h2>Sistemare un eventuale overbooking</h2>
 <p>
     Se per errore su una data risultano più posti prenotati della capienza (o prenotazioni su una barca

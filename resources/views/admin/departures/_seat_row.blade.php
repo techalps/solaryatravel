@@ -8,8 +8,22 @@
     $currentCatId = (int) ($seat->catamaran_id ?? 0);
     $isSpanning = $seat->is_spanning ?? false; // posto di una prenotazione multi-giorno (uso esclusivo)
 @endphp
-<li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 px-0">
-    <div class="me-2">
+<li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2 px-0"
+    data-seat-row
+    data-seat-id="{{ $seat->id }}">
+    <div class="me-2 d-flex align-items-start gap-2 flex-grow-1" style="min-width:0">
+        @unless ($isSpanning)
+            {{-- Selezione per lo spostamento in blocco. I posti "spanning" (uso
+                 esclusivo su più giorni) non sono spostabili, quindi niente casella. --}}
+            <input type="checkbox"
+                   name="seat_ids[]"
+                   class="form-check-input mt-1 flex-shrink-0"
+                   data-seat-check
+                   data-from-catamaran="{{ $currentCatId }}"
+                   value="{{ $seat->id }}"
+                   aria-label="Seleziona {{ $guestName }}">
+        @endunless
+        <div>
         <div class="fw-semibold">
             {{ $guestName }}
             @if ($seat->is_primary)
@@ -32,6 +46,7 @@
                 · <span class="text-success"><i class="bi bi-check2"></i> imbarcato</span>
             @endif
         </div>
+        </div>
     </div>
     @if ($isSpanning)
         {{-- Posto di una prenotazione che parte in un altro giorno: sola lettura. --}}
@@ -45,7 +60,7 @@
         <select name="catamaran_id"
                 class="form-select form-select-sm"
                 data-initial="{{ $currentCatId }}"
-                style="min-width: 200px;">
+                style="min-width: 170px;">
             @php $exclusiveByCatamaran = $exclusiveByCatamaran ?? []; @endphp
             @foreach ($catamarans as $cat)
                 @php

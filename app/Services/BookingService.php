@@ -1335,6 +1335,105 @@ class BookingService
     }
 
     /**
+     * Sposta in blocco più posti sullo stesso catamarano di destinazione.
+     *
+     * Serve al caso operativo "sposta tutti (o alcuni) i passeggeri di una barca
+     * su un'altra": guasto, cambio scafo, riorganizzazione dei gruppi.
+     *
+     * La capienza è verificata UNA volta sul totale dei posti da spostare, non
+     * uno per uno: spostandoli singolarmente i primi entrerebbero e gli ultimi
+     * no, lasciando il gruppo diviso a metà. Se non ci stanno tutti non si
+     * sposta nessuno (tutto-o-niente, dentro una transazione).
+     *
+     * @param  \Illuminate\Support\Collection<int, BookingSeat>|array<int, BookingSeat>  $seats
+     * @return int quanti posti sono stati effettivamente spostati
+     *
+     * @throws \Exception se la destinazione non è idonea o non ha posti a sufficienza
+     */
+    public function moveSeatsBulk($seats, int $targetCatamaranId): int
+    {
+        $seats = collect($seats)->filter(fn ($s) => $s instanceof BookingSeat)->values();
+
+        if ($seats->isEmpty()) {
+            throw new \Exception('Nessun passeggero selezionato.');
+        }
+
+        return DB::transaction(function () use ($seats, $targetCatamaranId) {
+            $target = Catamaran::lockForUpdate()->findOrFail($targetCatamaranId);
+
+            // Tutti i posti devono appartenere alla STESSA partenza: la capienza
+            // ha senso solo dentro una partenza.
+            $departureIds = $seats->map(fn ($s) => (int) $s->booking?->tour_departure_id)->unique();
+            if ($departureIds->count() > 1) {
+                throw new \Exception('I passeggeri selezionati appartengono a partenze diverse.');
+            }
+
+            $departure = $seats->first()->booking?->departure;
+            if (! $departure) {
+                throw new \Exception('Partenza non trovata per i passeggeri selezionati.');
+            }
+
+            // Posti già sulla destinazione: non vanno spostati né contati due volte.
+            $toMove = $seats->reject(fn ($s) => (int) $s->catamaran_id === (int) $target->id)->values();
+
+            if ($toMove->isEmpty()) {
+                return 0; // erano già tutti su quel catamarano
+            }
+
+            if (! $target->isAvailableOn($departure->departure_date)) {
+                throw new \Exception("Catamarano {$target->name} non disponibile nella data.");
+            }
+
+            // Uso esclusivo di un'ALTRA prenotazione: destinazione non valida.
+            $day = $departure->departure_date instanceof \DateTimeInterface
+                ? $departure->departure_date->format('Y-m-d')
+                : (string) $departure->departure_date;
+
+            $ownNumbers = $toMove->map(fn ($s) => $s->booking?->booking_number)->filter()->unique();
+
+            $exclusiveBlock = TourCatamaranBlock::whereDate('start_date', '<=', $day)
+                ->whereDate('end_date', '>=', $day)
+                ->where('catamaran_id', $target->id)
+                ->where('reason', 'like', '%#%')
+                ->get()
+                ->contains(function ($block) use ($ownNumbers) {
+                    // Il blocco è "altrui" se il suo numero non è fra quelli spostati.
+                    foreach ($ownNumbers as $n) {
+                        if (str_contains((string) $block->reason, '#'.$n)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                });
+
+            if ($exclusiveBlock) {
+                throw new \Exception("Catamarano {$target->name} riservato in uso esclusivo: non disponibile.");
+            }
+
+            // Capienza: posti già presenti + quelli in arrivo.
+            $booked = $target->seatsBookedOnDeparture($departure->id);
+            $free = max(0, (int) $target->capacity - $booked);
+
+            if ($toMove->count() > $free) {
+                throw new \Exception(sprintf(
+                    'Su %s ci sono %d posti liberi ma ne stai spostando %d: non ci stanno tutti.',
+                    $target->name,
+                    $free,
+                    $toMove->count()
+                ));
+            }
+
+            foreach ($toMove as $seat) {
+                $seat->catamaran_id = $target->id;
+                $seat->save();
+            }
+
+            return $toMove->count();
+        });
+    }
+
+    /**
      * Sposta un'INTERA prenotazione a uso esclusivo da un catamarano all'altro:
      * ricolloca tutti i suoi posti sul nuovo catamarano E sposta i relativi
      * TourCatamaranBlock (la riserva). Il vecchio catamarano si libera, il nuovo

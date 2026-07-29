@@ -4,14 +4,22 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Models\BookingSeat;
+use App\Models\Catamaran;
 use App\Models\Tour;
 use App\Models\TourDeparture;
+use App\Services\BookingService;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DepartureAssignmentController extends Controller
 {
+    public function __construct(
+        protected BookingService $bookingService
+    ) {}
+
     /**
      * Indice: tutte le partenze attive della data scelta, raggruppate per tour.
      * Ogni partenza è già completa dei dati di assegnazione catamarani inline.
@@ -97,6 +105,65 @@ class DepartureAssignmentController extends Controller
             ['departure' => $departure],
             $data,
         ));
+    }
+
+    /**
+     * Sposta in blocco i passeggeri selezionati su un altro catamarano.
+     *
+     * Caso operativo: "sposta tutti (o alcuni) i passeggeri di questa barca su
+     * un'altra" — guasto, cambio scafo, riorganizzazione dei gruppi.
+     *
+     * La capienza è verificata sul TOTALE dei selezionati: se non ci stanno
+     * tutti non si sposta nessuno, così il gruppo non resta diviso a metà.
+     */
+    public function moveSeatsBulk(Request $request, TourDeparture $departure): RedirectResponse
+    {
+        $validated = $request->validate([
+            'seat_ids' => 'required|array|min:1',
+            'seat_ids.*' => 'integer|exists:booking_seats,id',
+            'target_catamaran_id' => 'required|integer|exists:catamarans,id',
+        ], [
+            'seat_ids.required' => 'Seleziona almeno un passeggero da spostare.',
+            'target_catamaran_id.required' => 'Scegli il catamarano di destinazione.',
+        ]);
+
+        // Carica SOLO i posti che appartengono davvero a questa partenza: evita
+        // che un id manomesso sposti passeggeri di un'altra partenza.
+        $seats = BookingSeat::with('booking.departure')
+            ->whereIn('id', $validated['seat_ids'])
+            ->whereNull('cancelled_at')
+            ->whereHas('booking', fn ($q) => $q->where('tour_departure_id', $departure->id))
+            ->get();
+
+        if ($seats->isEmpty()) {
+            return back()->with('error', 'Nessun passeggero valido fra quelli selezionati.');
+        }
+
+        $ignored = count($validated['seat_ids']) - $seats->count();
+
+        try {
+            $moved = $this->bookingService->moveSeatsBulk($seats, (int) $validated['target_catamaran_id']);
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        if ($moved === 0) {
+            return back()->with('info', 'I passeggeri selezionati erano già su quel catamarano.');
+        }
+
+        $target = Catamaran::find($validated['target_catamaran_id']);
+        $message = sprintf(
+            '%d %s spostati su %s.',
+            $moved,
+            $moved === 1 ? 'passeggero' : 'passeggeri',
+            $target?->name ?? 'catamarano'
+        );
+
+        if ($ignored > 0) {
+            $message .= sprintf(' %d selezione ignorata (non appartiene a questa partenza).', $ignored);
+        }
+
+        return back()->with('success', $message);
     }
 
     /**

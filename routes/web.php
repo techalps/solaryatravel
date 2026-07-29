@@ -170,6 +170,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     // Assegnazione catamarani
     Route::get('/assegnazione', [AdminDepartureAssignmentController::class, 'index'])->name('assignments.index');
     Route::get('/assegnazione/{departure}', [AdminDepartureAssignmentController::class, 'show'])->name('assignments.show');
+    // Spostamento in blocco dei passeggeri selezionati su un altro catamarano.
+    Route::post('/assegnazione/{departure}/sposta-selezionati', [AdminDepartureAssignmentController::class, 'moveSeatsBulk'])
+        ->name('assignments.move-bulk');
 
     Route::resource('bookings', AdminBookingController::class);
     // Binding per id: il <select> tour invia l'id numerico, non lo slug (route key di default del Tour).
