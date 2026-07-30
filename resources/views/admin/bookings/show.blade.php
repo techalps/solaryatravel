@@ -495,7 +495,6 @@
                     // Dati documento per il JS di modifica (uno per seat non disdetto).
                     // Costruiti qui in PHP per evitare array associativi dentro il JS
                     // (che confondono il compilatore Blade → ParseError).
-                    $tripDateJs = optional($booking->departure)->departure_date?->toDateString();
                     $seatDocs = [];
                     foreach ($booking->seatRecords as $seat) {
                         if ($seat->cancelled_at) {
@@ -504,28 +503,18 @@
                         $seatDocs[$seat->id] = [
                             'doc_type' => $seat->doc_type,
                             'doc_number' => $seat->doc_number,
-                            'doc_expiry' => $seat->doc_expiry?->toDateString(),
-                            'doc_issue_country' => $seat->doc_issue_country ?: 'IT',
-                            'doc_issue_province' => $seat->doc_issue_province,
-                            'doc_issue_place' => $seat->doc_issue_place,
                         ];
                     }
                 @endphp
                 <script>
                 (function () {
-                    var tripDate = @json($tripDateJs);
                     var seatDocs = @json($seatDocs);
                     Object.keys(seatDocs).forEach(function (seatId) {
                         var slot = document.getElementById('doc-edit-fields-' + seatId);
                         if (!slot) return;
                         // prefix vuoto → name "flat" (doc_type), atteso da updateSeatDocument().
-                        slot.innerHTML = SolaryaDocFields.html('', 0, seatDocs[seatId], { tripDate: tripDate });
-                        var block = slot.querySelector('[data-doc-block]');
-                        if (block && block.querySelector('[data-doc-province]') && block.querySelector('[data-doc-province]').value) {
-                            SolaryaDocFields.loadComuniInto(block);
-                        }
+                        slot.innerHTML = SolaryaDocFields.html('', 0, seatDocs[seatId]);
                     });
-                    SolaryaDocFields.wire(document);
                 })();
                 </script>
                 @endpush

@@ -17,17 +17,17 @@
     <div class="tg-listing-card-thumb fix mb-15 p-relative">
         <a href="{{ route('tours.show', $tour->slug) }}">
             @if($tour->primaryImage)
-                <img class="tg-card-border w-100" src="{{ $tour->primaryImage->url }}" alt="{{ tdb($tour->name) }}">
+                <img class="tg-card-border w-100" src="{{ $tour->primaryImage->url }}" alt="{{ tdb($tour, 'name') }}">
             @else
-                <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($index % 5) + 1).'.jpg') }}" alt="{{ tdb($tour->name) }}">
+                <img class="tg-card-border w-100" src="{{ asset('assets/template/img/hero/hero-'.(($index % 5) + 1).'.jpg') }}" alt="{{ tdb($tour, 'name') }}">
             @endif
         </a>
     </div>
     <div class="tg-listing-card-content">
-        <h4 class="tg-listing-card-title"><a href="{{ route('tours.show', $tour->slug) }}">{{ tdb($tour->name) }}</a></h4>
+        <h4 class="tg-listing-card-title"><a href="{{ route('tours.show', $tour->slug) }}">{{ tdb($tour, 'name') }}</a></h4>
         <div class="tg-listing-card-duration-tour">
             <span class="tg-listing-card-duration-map mb-5">
-                <i class="fa-solid fa-location-dot me-1"></i> {{ tdb($tour->departure_point) ?? '' }}
+                <i class="fa-solid fa-location-dot me-1"></i> {{ tdb($tour, 'departure_point') ?? '' }}
             </span>
             @if($tour->duration_hours)
                 <span class="tg-listing-card-duration-time">

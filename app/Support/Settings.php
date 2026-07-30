@@ -190,6 +190,25 @@ class Settings
     }
 
     /**
+     * Minuti concessi per completare il pagamento con carta una volta APERTO il
+     * checkout. È la durata della "sessione di prenotazione": finché scorre, i
+     * posti restano bloccati; alla scadenza la prenotazione si annulla e i posti
+     * tornano in vendita.
+     *
+     * Il conto NON parte dalla creazione della prenotazione ma dall'apertura del
+     * checkout (vedi Booking::startCheckoutWindow()): il cliente che compila il
+     * form con calma non deve trovarsi il tempo già consumato.
+     *
+     * Prima questo valore era letto da config('booking.payment_expiry_minutes'),
+     * chiave che non esiste in config/booking.php: si cadeva sempre sul default
+     * hardcoded di 30 minuti e l'impostazione admin era ignorata.
+     */
+    public static function paymentDeadlineMinutes(): int
+    {
+        return max(1, (int) self::get('payment_deadline_minutes', 15));
+    }
+
+    /**
      * Numero minimo di partecipanti per confermare la partenza.
      */
     public static function minParticipants(): int

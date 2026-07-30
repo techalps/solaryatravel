@@ -16,8 +16,9 @@ class SitemapController extends Controller
 {
     public function __invoke(): Response
     {
-        $locales = (array) config('locales.supported', ['it']);
-        $xDefault = (string) config('locales.x_default', 'en');
+        // Solo le lingue attive vanno indicizzate.
+        $locales = \App\Support\Locales::active();
+        $xDefault = \App\Support\Locales::xDefault();
 
         $tours = Tour::active()->ordered()->get(['slug', 'updated_at']);
 

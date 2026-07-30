@@ -26,7 +26,9 @@ class SetLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $supported = (array) config('locales.supported', ['it']);
+        // Lingue ATTIVE (scelte in admin), non il catalogo: una lingua
+        // disattivata non deve essere servibile nemmeno via URL.
+        $supported = \App\Support\Locales::active();
         $default = (string) config('locales.default', 'it');
 
         $fromUrl = $this->localeFromUrl($request, $supported);

@@ -83,6 +83,7 @@ class UserController extends Controller
             // Campi agenzia: obbligatori solo per il ruolo b2b.
             'agency_name'      => ['required_if:role,b2b', 'nullable', 'string', 'max:255'],
             'commission_rate'  => ['required_if:role,b2b', 'nullable', 'numeric', 'min:0', 'max:100'],
+            'can_book_complimentary' => ['nullable', 'boolean'],
         ]);
 
         $isB2b = $validated['role'] === 'b2b';
@@ -97,6 +98,9 @@ class UserController extends Controller
             'date_of_birth'     => $validated['date_of_birth'] ?? null,
             'agency_name'       => $isB2b ? $validated['agency_name'] : null,
             'commission_rate'   => $isB2b ? $validated['commission_rate'] : null,
+            // Il permesso 0€ ha senso solo per le agenzie: sugli altri ruoli resta
+            // spento, così non si porta dietro un flag inerte.
+            'can_book_complimentary' => $isB2b && ! empty($validated['can_book_complimentary']),
             'email_verified_at' => now(),
         ]);
 
@@ -129,6 +133,7 @@ class UserController extends Controller
             'date_of_birth'    => ['nullable', 'date', 'before:today'],
             'agency_name'      => ['required_if:role,b2b', 'nullable', 'string', 'max:255'],
             'commission_rate'  => ['required_if:role,b2b', 'nullable', 'numeric', 'min:0', 'max:100'],
+            'can_book_complimentary' => ['nullable', 'boolean'],
         ]);
 
         // Prevent demoting the only super_admin
@@ -157,6 +162,8 @@ class UserController extends Controller
             // Campi agenzia valorizzati solo per b2b; azzerati se cambia ruolo.
             'agency_name'     => $isB2b ? $validated['agency_name'] : null,
             'commission_rate' => $isB2b ? $validated['commission_rate'] : null,
+            // Se l'utente esce dal ruolo b2b perde anche il permesso 0€.
+            'can_book_complimentary' => $isB2b && ! empty($validated['can_book_complimentary']),
         ];
 
         if (!empty($validated['password'])) {

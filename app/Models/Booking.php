@@ -288,6 +288,56 @@ class Booking extends Model
         return $this->status === BookingStatus::PENDING;
     }
 
+    /**
+     * Avvia (una sola volta) la finestra di pagamento con carta.
+     *
+     * Il timer parte all'apertura del checkout, non alla creazione della
+     * prenotazione: quest'ultima nasce senza scadenza, così chi compila il form
+     * con calma non consuma il tempo utile. Dalla seconda apertura in poi la
+     * scadenza NON si rinnova, altrimenti ricaricare la pagina terrebbe i posti
+     * bloccati all'infinito.
+     *
+     * Vale solo per le prenotazioni in attesa di pagamento carta: il bonifico ha
+     * una sua scadenza in ore, assegnata alla creazione.
+     */
+    public function startCheckoutWindow(): void
+    {
+        if ($this->status !== BookingStatus::PENDING || $this->payment_deadline !== null) {
+            return;
+        }
+
+        $this->forceFill([
+            'payment_deadline' => now()->addMinutes(\App\Support\Settings::paymentDeadlineMinutes()),
+        ])->save();
+    }
+
+    /**
+     * La finestra di pagamento è scaduta? Verificato ALLA LETTURA, così la
+     * scadenza è effettiva anche se lo scheduler è fermo: il job di pulizia
+     * ripassa poi a liberare i posti e a scrivere lo stato annullato.
+     *
+     * Una prenotazione senza payment_deadline non è scaduta: è un carrello a cui
+     * il checkout non è ancora stato aperto.
+     */
+    public function checkoutWindowExpired(): bool
+    {
+        return $this->payment_deadline !== null
+            && in_array($this->status, [BookingStatus::PENDING, BookingStatus::AWAITING_TRANSFER], true)
+            && $this->payment_deadline->isPast();
+    }
+
+    /**
+     * Prenotazioni in attesa la cui scadenza di pagamento è passata: sono i
+     * "carrelli" da svuotare (annullare, liberando i posti).
+     */
+    public function scopeExpiredCheckout($query)
+    {
+        return $query
+            ->whereIn('status', [BookingStatus::PENDING, BookingStatus::AWAITING_TRANSFER])
+            ->whereNotNull('payment_deadline')
+            ->where('payment_deadline', '<', now());
+    }
+
     public function isConfirmed(): bool
     {
         return $this->status === BookingStatus::CONFIRMED;

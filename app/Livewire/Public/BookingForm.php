@@ -6,6 +6,7 @@ use App\Models\Addon;
 use App\Models\Tour;
 use App\Models\TourDeparture;
 use App\Models\User;
+use App\Enums\BookingStatus;
 use App\Enums\UserRole;
 use App\Services\BookingService;
 use App\Services\PricingService;
@@ -45,47 +46,43 @@ class BookingForm extends Component
      * è sincronizzata con $adultsCount. Il primo adulto è il prenotante
      * (intestatario). Ogni passeggero DEVE avere un documento d'identità.
      *
-     * Data di scadenza NON richiesta: dopo il periodo di test i clienti hanno
-     * segnalato troppi campi nel blocco documento, quindi scadenza e codice
-     * fiscale sono stati rimossi dai canali di vendita (sito, agenzie, widget).
-     * La colonna a DB resta e l'admin può ancora compilarla.
+     * Del documento si chiedono solo TIPO e NUMERO. Scadenza, codice fiscale e
+     * luogo di rilascio (stato/provincia/comune) sono stati rimossi da tutti i
+     * form, admin compreso: troppi campi in fase di prenotazione. Le colonne a
+     * DB restano per non perdere lo storico.
      *
-     * @var array<int, array{first_name:string,last_name:string,doc_type:string,doc_number:string,doc_country:string,doc_province:string,doc_place:string}>
+     * @var array<int, array{first_name:string,last_name:string,doc_type:string,doc_number:string}>
      */
     public array $adults = [
-        ['first_name' => '', 'last_name' => '', 'doc_type' => '', 'doc_number' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''],
+        ['first_name' => '', 'last_name' => '', 'doc_type' => '', 'doc_number' => ''],
     ];
 
     /**
      * Bambini: data di nascita + nome/cognome + documento (obbligatorio anch'esso).
+     * La data di nascita resta perché determina la fascia d'età e quindi il prezzo.
      *
-     * @var array<int, array{dob:string,first_name:string,last_name:string,doc_type:string,doc_number:string,doc_country:string,doc_province:string,doc_place:string}>
+     * @var array<int, array{dob:string,first_name:string,last_name:string,doc_type:string,doc_number:string}>
      */
     public array $children = [];
 
     /** Struttura vuota di un blocco documento (riusata per adulti e bambini). */
     private static function emptyDocument(): array
     {
-        return ['doc_type' => '', 'doc_number' => '', 'doc_country' => 'IT', 'doc_province' => '', 'doc_place' => ''];
+        return ['doc_type' => '', 'doc_number' => ''];
     }
 
     /**
      * Normalizza i campi documento di un passeggero nel formato atteso dal
-     * BookingService. Se lo Stato non è Italia, la provincia non si applica.
+     * BookingService.
      *
      * @param  array<string,mixed>  $p
-     * @return array{doc_type:string,doc_number:string,doc_issue_country:string,doc_issue_province:?string,doc_issue_place:string}
+     * @return array{doc_type:string,doc_number:string}
      */
     private function documentFor(array $p): array
     {
-        $country = strtoupper(trim((string) ($p['doc_country'] ?? '')));
-
         return [
             'doc_type' => (string) ($p['doc_type'] ?? ''),
             'doc_number' => strtoupper(trim((string) ($p['doc_number'] ?? ''))),
-            'doc_issue_country' => $country,
-            'doc_issue_province' => $country === 'IT' ? (trim((string) ($p['doc_province'] ?? '')) ?: null) : null,
-            'doc_issue_place' => trim((string) ($p['doc_place'] ?? '')),
         ];
     }
 
@@ -168,6 +165,33 @@ class BookingForm extends Component
 
     /** Mostra il modale di avviso "il gruppo verrà diviso su più catamarani". */
     public bool $showSplitModal = false;
+
+    /**
+     * Prenotazione a 0€ richiesta dall'agenzia (posti omaggio).
+     *
+     * Disponibile SOLO in modalità B2B e solo alle agenzie con il permesso
+     * attivo (User::canBookComplimentary()): è una concessione per singola
+     * agenzia, come i posti omaggio dell'admin. Il permesso viene riverificato
+     * lato server al submit, quindi manomettere il campo non serve a nulla.
+     */
+    public bool $complimentary = false;
+
+    /** Motivo dell'omaggio: tracciato sulla prenotazione per i controlli. */
+    public string $complimentaryReason = '';
+
+    /**
+     * L'agenzia che sta operando può registrare prenotazioni a 0€?
+     * Unica fonte di verità, usata sia dalla vista sia dalla validazione.
+     */
+    #[Computed]
+    public function canBookComplimentary(): bool
+    {
+        if (! $this->b2bMode) {
+            return false;
+        }
+
+        return (bool) \App\Support\B2bContext::actingAgency()?->canBookComplimentary();
+    }
 
     public function mount(Tour $tour, ?TourDeparture $departure = null, array $availableDates = [], bool $b2bMode = false, bool $widgetMode = false): void
     {
@@ -417,8 +441,28 @@ class BookingForm extends Component
             $this->adultsCount,
             $resolved,
             $this->selectedAddons,
-            $this->discountValid ? $this->discountCode : null
+            $this->discountValid ? $this->discountCode : null,
+            // Omaggio: TUTTI i posti a 0€, extra compresi. Il conteggio passa dal
+            // permesso (complimentarySeats()), non dal solo campo del form.
+            $this->complimentarySeats(),
+            $this->complimentarySeats() > 0
         );
+    }
+
+    /**
+     * Quanti posti sono omaggio: tutti, oppure nessuno.
+     *
+     * Il permesso è riverificato qui, quindi un $complimentary manomesso da un
+     * agenzia non autorizzata non produce alcuno sconto — né nel riepilogo a
+     * schermo né al salvataggio, che passa per questa stessa funzione.
+     */
+    private function complimentarySeats(): int
+    {
+        if (! $this->complimentary || ! $this->canBookComplimentary()) {
+            return 0;
+        }
+
+        return max(0, (int) $this->totalSelected);
     }
 
     #[Computed]
@@ -509,19 +553,8 @@ class BookingForm extends Component
         return is_array($assignment) ? count($assignment) : 1;
     }
 
-    /** Stati del mondo (Italia in cima) per le select del documento. */
-    #[Computed]
-    public function countries(): array
-    {
-        return \App\Support\Geo::countries();
-    }
-
-    /** Province italiane (sigla + nome) per la select a cascata. */
-    #[Computed]
-    public function provinces(): array
-    {
-        return \App\Support\Geo::provinces();
-    }
+    // Le liste stati/province servivano al luogo di rilascio del documento, che
+    // non si chiede più: rimosse insieme ai campi.
 
     /** Tipi di documento accettati (value => label). */
     #[Computed]
@@ -580,9 +613,6 @@ class BookingForm extends Component
                 'last_name' => trim((string) ($prev['last_name'] ?? '')),
                 'doc_type' => (string) ($prev['doc_type'] ?? ''),
                 'doc_number' => (string) ($prev['doc_number'] ?? ''),
-                'doc_country' => (string) ($prev['doc_country'] ?? 'IT'),
-                'doc_province' => (string) ($prev['doc_province'] ?? ''),
-                'doc_place' => (string) ($prev['doc_place'] ?? ''),
             ];
         }
         $this->adults = $next;
@@ -605,45 +635,9 @@ class BookingForm extends Component
         $this->adults[0]['last_name'] = $value;
     }
 
-    /**
-     * Cambio dello Stato di emissione per un passeggero: se non è Italia, la
-     * provincia non ha senso (il comune diventa testo libero). Ripulisce i campi
-     * dipendenti per evitare valori incoerenti.
-     */
-    public function updatedAdults($value, $key): void
-    {
-        // $key es. "2.doc_country". Ci interessa solo il cambio di Stato.
-        if (is_string($key) && str_ends_with($key, '.doc_country')) {
-            $idx = (int) explode('.', $key)[0];
-            if (isset($this->adults[$idx])) {
-                $this->adults[$idx]['doc_province'] = '';
-                $this->adults[$idx]['doc_place'] = '';
-            }
-        }
-        if (is_string($key) && str_ends_with($key, '.doc_province')) {
-            $idx = (int) explode('.', $key)[0];
-            if (isset($this->adults[$idx])) {
-                $this->adults[$idx]['doc_place'] = '';
-            }
-        }
-    }
-
-    public function updatedChildren($value, $key): void
-    {
-        if (is_string($key) && str_ends_with($key, '.doc_country')) {
-            $idx = (int) explode('.', $key)[0];
-            if (isset($this->children[$idx])) {
-                $this->children[$idx]['doc_province'] = '';
-                $this->children[$idx]['doc_place'] = '';
-            }
-        }
-        if (is_string($key) && str_ends_with($key, '.doc_province')) {
-            $idx = (int) explode('.', $key)[0];
-            if (isset($this->children[$idx])) {
-                $this->children[$idx]['doc_place'] = '';
-            }
-        }
-    }
+    // I vecchi hook updatedAdults()/updatedChildren() servivano solo a ripulire
+    // provincia e comune al cambio dello Stato di emissione: con il luogo di
+    // rilascio non più richiesto non c'è più nessuna cascata da mantenere.
 
     // ===== Children stepper =====
 
@@ -758,14 +752,11 @@ class BookingForm extends Component
             'children.*.last_name' => 'required|string|max:100',
             'terms' => 'accepted',
         ];
-        // Documento obbligatorio per OGNI passeggero (adulti + bambini).
+        // Documento obbligatorio per OGNI passeggero (adulti + bambini): del
+        // documento si chiedono solo tipo e numero.
         foreach (['adults', 'children'] as $group) {
             $rules[$group.'.*.doc_type'] = 'required|in:'.$docTypes;
             $rules[$group.'.*.doc_number'] = 'required|string|max:40';
-            $rules[$group.'.*.doc_country'] = 'required|string|size:2';
-            // Provincia obbligatoria solo se lo Stato è Italia.
-            $rules[$group.'.*.doc_province'] = 'nullable|string|max:4';
-            $rules[$group.'.*.doc_place'] = 'required|string|max:120';
         }
 
         $this->validate($rules, [
@@ -777,28 +768,10 @@ class BookingForm extends Component
             'adults.*.doc_type.required' => __('booking.validation.doc_type_required'),
             'adults.*.doc_type.in' => __('booking.validation.doc_type_invalid'),
             'adults.*.doc_number.required' => __('booking.validation.doc_number_required'),
-            'adults.*.doc_country.required' => __('booking.validation.doc_country_required'),
-            'adults.*.doc_place.required' => __('booking.validation.doc_place_required'),
             'children.*.doc_type.required' => __('booking.validation.doc_type_required'),
             'children.*.doc_type.in' => __('booking.validation.doc_type_invalid'),
             'children.*.doc_number.required' => __('booking.validation.doc_number_required'),
-            'children.*.doc_country.required' => __('booking.validation.doc_country_required'),
-            'children.*.doc_place.required' => __('booking.validation.doc_place_required'),
         ]);
-
-        // Provincia obbligatoria quando lo Stato è Italia (il comune è ISTAT).
-        $provinceErrors = [];
-        foreach (['adults', 'children'] as $group) {
-            foreach ($this->{$group} as $i => $p) {
-                $country = strtoupper((string) ($p['doc_country'] ?? ''));
-                if ($country === 'IT' && trim((string) ($p['doc_province'] ?? '')) === '') {
-                    $provinceErrors[$group.'.'.$i.'.doc_province'] = __('booking.validation.doc_province_required');
-                }
-            }
-        }
-        if ($provinceErrors) {
-            throw \Illuminate\Validation\ValidationException::withMessages($provinceErrors);
-        }
 
         // Validazione password solo se l'ospite ha scelto di creare un account.
         // In modalità B2B l'agenzia non crea account per il cliente.
@@ -909,6 +882,22 @@ class BookingForm extends Component
             'use_deposit' => $useDeposit,
         ];
 
+        // Prenotazione omaggio dell'agenzia autorizzata: tutti i posti a 0€.
+        // complimentarySeats() riverifica il permesso, quindi qui non serve
+        // ricontrollarlo. A totale zero non c'è nulla da incassare: la
+        // prenotazione nasce già CONFERMATA e salta acconto/bonifico/Stripe.
+        $complimentarySeats = $this->complimentarySeats();
+        if ($complimentarySeats > 0) {
+            $payload['complimentary_seats'] = $complimentarySeats;
+            $payload['complimentary_includes_addons'] = true;
+            $payload['complimentary_reason'] = trim($this->complimentaryReason) !== ''
+                ? trim($this->complimentaryReason)
+                : 'Prenotazione omaggio registrata dall\'agenzia.';
+            $payload['status'] = BookingStatus::CONFIRMED;
+            $payload['payment_type'] = 'full';
+            $payload['use_deposit'] = false;
+        }
+
         // In modalità B2B chi è loggato è l'AGENZIA, non il cliente: la
         // prenotazione deve far capo al cliente finale. Passiamo user_id esplicito
         // = account cliente con quella email (se esiste), altrimenti null (ospite).
@@ -925,6 +914,15 @@ class BookingForm extends Component
             if ($this->b2bMode) {
                 app(\App\Services\CommissionService::class)
                     ->attributeToAgency($booking, \App\Support\B2bContext::actingAgency(), 'b2b_portal');
+
+                // Omaggio: non c'è niente da incassare, quindi nessun invio di
+                // estremi di pagamento (un'email "paga 0 €" sarebbe assurda per il
+                // cliente). La prenotazione è già confermata.
+                if ((float) $booking->total_amount <= 0) {
+                    session()->flash('success', 'Prenotazione omaggio creata e confermata: nessun pagamento richiesto al cliente.');
+
+                    return redirect()->route('b2b.bookings.show', $booking->uuid);
+                }
 
                 // Il cliente NON è presente (ha prenotato l'agenzia per lui): inviamo
                 // subito al cliente gli estremi di pagamento (link Stripe o bonifico),

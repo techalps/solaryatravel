@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Booking;
+use App\Mail\Concerns\SendsInBookingLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -12,17 +13,21 @@ use Illuminate\Queue\SerializesModels;
 class BookingRefunded extends Mailable
 {
     use Queueable, SerializesModels;
+    use SendsInBookingLocale;
 
     public function __construct(
         public Booking $booking,
         public ?float $amount = null,
         public ?string $note = null,
-    ) {}
+    )
+    {
+        $this->useBookingLocale($booking->locale);
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Rimborso effettuato · Prenotazione #' . $this->booking->booking_number,
+            subject: __('emails.refunded.subject', ['number' => $this->booking->booking_number]),
         );
     }
 

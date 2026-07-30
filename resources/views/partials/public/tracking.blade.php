@@ -4,12 +4,23 @@
     viene scritto finché l'utente non acconsente tramite il banner.
     Il consenso è salvato in localStorage ('solarya_cookie_consent') e
     riapplicato a ogni caricamento pagina dal partial cookie-banner.
+
+    MAI IN LOCALE: fuori produzione non viene emesso nulla, nemmeno il
+    dataLayer, altrimenti le visite di sviluppo falsano le statistiche.
+    Vedi config/services.php → tracking.enabled.
 --}}
 @php
-    $gtmId       = config('services.tracking.gtm_id');
-    $ga4Id       = config('services.tracking.ga4_id');
-    $metaPixelId = config('services.tracking.meta_pixel_id');
+    $trackingEnabled = (bool) config('services.tracking.enabled');
+    $gtmId       = $trackingEnabled ? config('services.tracking.gtm_id') : null;
+    $ga4Id       = $trackingEnabled ? config('services.tracking.ga4_id') : null;
+    $metaPixelId = $trackingEnabled ? config('services.tracking.meta_pixel_id') : null;
 @endphp
+
+@unless($trackingEnabled)
+    {{-- Tracciamento disattivato in {{ app()->environment() }}: nessun tag emesso. --}}
+@endunless
+
+@if($trackingEnabled)
 
 {{-- Consent Mode: stato di default = negato. Va PRIMA di qualsiasi tag Google. --}}
 <script>
@@ -94,3 +105,5 @@
     <noscript><img height="1" width="1" style="display:none"
         src="https://www.facebook.com/tr?id={{ $metaPixelId }}&ev=PageView&noscript=1"/></noscript>
 @endif
+
+@endif {{-- /trackingEnabled --}}

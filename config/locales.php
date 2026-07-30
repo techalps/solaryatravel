@@ -17,19 +17,34 @@ return [
 
     'default' => 'it',
 
+    /*
+    | Lingue attive di DEFAULT, usate finché il cliente non fa una scelta in
+    | admin → Impostazioni. Da quel momento vale l'elenco salvato in
+    | settings.json ('active_locales'): vedi App\Support\Locales::active().
+    */
     'supported' => ['it', 'en'],
 
     /*
-    | Etichette dello switcher di lingua nell'header/footer.
+    | CATALOGO delle lingue selezionabili in admin, con l'etichetta usata dallo
+    | switcher nell'header/footer. Aggiungerne una qui la rende
+    | attivabile con una spunta; per una resa completa servono poi il file di
+    | interfaccia lang/{codice}/ e la bandiera SVG (partials/public/flags).
+    | I contenuti dei tour li traduce il cliente dall'admin.
     */
     'names' => [
         'it' => 'Italiano',
         'en' => 'English',
+        'de' => 'Deutsch',
+        'fr' => 'Français',
+        'es' => 'Español',
     ],
 
     'short' => [
         'it' => 'IT',
         'en' => 'EN',
+        'de' => 'DE',
+        'fr' => 'FR',
+        'es' => 'ES',
     ],
 
     /*
@@ -49,6 +64,9 @@ return [
     'flags' => [
         'it' => 'it',
         'en' => 'gb',
+        'de' => 'de',
+        'fr' => 'fr',
+        'es' => 'es',
     ],
 
     /*
@@ -57,6 +75,9 @@ return [
     'og' => [
         'it' => 'it_IT',
         'en' => 'en_GB',
+        'de' => 'de_DE',
+        'fr' => 'fr_FR',
+        'es' => 'es_ES',
     ],
 
     /*

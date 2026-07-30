@@ -10,6 +10,7 @@ use App\Models\Payment;
 
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Support\ReportCriteria;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\Response;
@@ -48,7 +49,13 @@ class ReportController extends Controller
             ->count();
 
         $totalPassengers = Booking::whereBetween('created_at', [$startDate, $endDate])->sum('seats');
-        $avgBookingValue = Booking::whereBetween('created_at', [$startDate, $endDate])->avg('total_amount') ?? 0;
+        // Valore medio sulle sole prenotazioni che fanno ricavo: includendo le
+        // annullate la media risultava più bassa del vero.
+        $avgBookingValue = ReportCriteria::collected($startDate, $endDate)->avg('total_amount') ?? 0;
+
+        // Ripartizione diretto / agenzie con le provvigioni (prima mancavano del
+        // tutto: il "venduto" sovrastimava quanto resta a Solarya).
+        $channels = ReportCriteria::channelBreakdown($startDate, $endDate);
 
         $topTours = Tour::withCount(['bookings' => function ($query) use ($startDate, $endDate) {
             $query->whereBetween('booking_date', [$startDate, $endDate]);
@@ -76,7 +83,7 @@ class ReportController extends Controller
             'period', 'startDate', 'endDate',
             'revenue', 'previousRevenue', 'collected',
             'totalBookings', 'confirmedBookings', 'totalPassengers', 'avgBookingValue',
-            'topTours', 'revenueByDay', 'bookingsByStatus'
+            'topTours', 'revenueByDay', 'bookingsByStatus', 'channels'
         ));
     }
 
@@ -152,9 +159,11 @@ class ReportController extends Controller
                 ->whereBetween('created_at', [$startDate, $endDate])->sum('amount'),
         ];
 
+        $channels = ReportCriteria::channelBreakdown($startDate, $endDate);
+
         return view('admin.reports.revenue', compact(
             'period', 'startDate', 'endDate',
-            'dailyRevenue', 'revenueByTour', 'revenueByGateway', 'monthlyRevenue', 'stats'
+            'dailyRevenue', 'revenueByTour', 'revenueByGateway', 'monthlyRevenue', 'stats', 'channels'
         ));
     }
 
@@ -183,19 +192,8 @@ class ReportController extends Controller
             ->get()
             ->mapWithKeys(fn($item) => [$item->status->value => $item->count]);
 
-        $bookingsByTimeSlot = Booking::with('departure')
-            ->whereBetween('booking_date', [$startDate, $endDate])
-            ->whereNotNull('tour_departure_id')
-            ->selectRaw('tour_departure_id, COUNT(*) as count')
-            ->groupBy('tour_departure_id')
-            ->orderByDesc('count')
-            ->limit(12)
-            ->get()
-            ->map(function ($item) {
-                $time = $item->departure?->start_time;
-                $item->time_slot = $time ? Carbon::parse($time)->format('H:i') : 'N/A';
-                return $item;
-            });
+        // Vedi timeSlotPopularity(): si raggruppa sull'orario, non sulla partenza.
+        $bookingsByTimeSlot = $this->timeSlotPopularity($startDate, $endDate, 12);
 
         $totalBookings = Booking::whereBetween('created_at', [$startDate, $endDate])->count();
         $cancelledBookings = Booking::where('status', BookingStatus::CANCELLED)
@@ -260,20 +258,12 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        $timeSlotPopularity = Booking::with('departure')
-            ->whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::COMPLETED])
-            ->whereBetween('booking_date', [$startDate, $endDate])
-            ->whereNotNull('tour_departure_id')
-            ->selectRaw('tour_departure_id, COUNT(*) as count, SUM(seats) as passengers')
-            ->groupBy('tour_departure_id')
-            ->orderByDesc('count')
-            ->limit(8)
-            ->get()
-            ->map(function ($item) {
-                $time = $item->departure?->start_time;
-                $item->time_slot = $time ? Carbon::parse($time)->format('H:i') : 'N/A';
-                return $item;
-            });
+        // Fasce orarie: si raggruppa sull'ORARIO della partenza, non sulla singola
+        // partenza. Il vecchio GROUP BY tour_departure_id restituiva una riga per
+        // ogni partenza e poi le etichettava con l'ora: la stessa fascia compariva
+        // ripetuta N volte (di fatto "sempre 09:00", l'orario più frequente in
+        // catalogo) invece di essere sommata una volta sola.
+        $timeSlotPopularity = $this->timeSlotPopularity($startDate, $endDate, 8);
 
         $dayOfWeekStats = Booking::whereIn('status', [BookingStatus::CONFIRMED, BookingStatus::COMPLETED])
             ->whereBetween('booking_date', [$startDate, $endDate])
@@ -350,6 +340,40 @@ class ReportController extends Controller
             'all' => Carbon::createFromDate(2020, 1, 1),
             default => now()->startOfMonth(),
         };
+    }
+
+    /**
+     * Fasce orarie più richieste, aggregate per ORARIO di partenza.
+     *
+     * Il bug precedente: si raggruppava per tour_departure_id (una riga per ogni
+     * partenza) e solo dopo si leggeva l'orario dalla relazione. Il risultato era
+     * un elenco di partenze diverse con la stessa etichetta ripetuta — in pratica
+     * "sempre 09:00", perché è l'orario di gran lunga più presente in catalogo —
+     * invece delle fasce sommate fra loro.
+     *
+     * Qui il GROUP BY sta sull'orario vero, con JOIN sulle partenze, e si contano
+     * solo le prenotazioni valide (le annullate non sono "richiesta").
+     *
+     * @return \Illuminate\Support\Collection<int, object{time_slot:string, count:int, passengers:int}>
+     */
+    private function timeSlotPopularity(Carbon $startDate, Carbon $endDate, int $limit): \Illuminate\Support\Collection
+    {
+        return Booking::query()
+            ->join('tour_departures', 'tour_departures.id', '=', 'bookings.tour_departure_id')
+            ->whereIn('bookings.status', BookingStatus::revenueStatusValues())
+            ->whereBetween('bookings.booking_date', [$startDate, $endDate])
+            ->selectRaw("TIME_FORMAT(tour_departures.start_time, '%H:%i') as time_slot")
+            ->selectRaw('COUNT(*) as count, SUM(bookings.seats) as passengers')
+            ->groupBy('time_slot')
+            ->orderByDesc('count')
+            ->orderBy('time_slot')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($row) => (object) [
+                'time_slot' => $row->time_slot ?: 'N/A',
+                'count' => (int) $row->count,
+                'passengers' => (int) $row->passengers,
+            ]);
     }
 
     private function getDayName(int $day): string

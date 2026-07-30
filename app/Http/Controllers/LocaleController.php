@@ -16,7 +16,7 @@ class LocaleController extends Controller
 {
     public function __invoke(Request $request, string $locale): RedirectResponse
     {
-        $supported = (array) config('locales.supported', ['it']);
+        $supported = \App\Support\Locales::active();
 
         if (! in_array($locale, $supported, true)) {
             $locale = (string) config('locales.default', 'it');

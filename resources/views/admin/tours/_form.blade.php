@@ -74,6 +74,26 @@
                             <i class="bi bi-cash-coin me-2"></i>Prezzi e periodi
                         </button>
                     </li>
+                    @if ($tour->exists)
+                        {{-- Traduzioni: solo in modifica. In creazione i testi italiani
+                             non sono ancora salvati, quindi non ci sarebbe nulla da
+                             affiancare come riferimento. --}}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $activeTab === 'translations' ? 'active' : '' }}" id="tab-translations-btn" data-bs-toggle="tab" data-bs-target="#tab-translations" type="button" role="tab">
+                                <i class="bi bi-translate me-2"></i>Traduzioni
+                                @php $trLocales = \App\Support\Locales::translatable(); @endphp
+                                @if (count($trLocales))
+                                    @php
+                                        $trDone = collect($trLocales)->sum(fn ($l) => $tour->translationProgress($l)['done']);
+                                        $trTotal = collect($trLocales)->sum(fn ($l) => $tour->translationProgress($l)['total']);
+                                    @endphp
+                                    <span class="badge rounded-pill {{ $trTotal > 0 && $trDone >= $trTotal ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }} ms-1">
+                                        {{ $trDone }}/{{ $trTotal }}
+                                    </span>
+                                @endif
+                            </button>
+                        </li>
+                    @endif
                 </ul>
             </div>
             <div class="dash-card-body">
@@ -349,6 +369,27 @@
                             </div>
                         @endif
                     </div>
+
+                    {{-- TAB 3: TRADUZIONI --}}
+                    @if ($tour->exists)
+                        <div class="tab-pane fade {{ $activeTab === 'translations' ? 'show active' : '' }}" id="tab-translations" role="tabpanel">
+                            <h5 class="form-section-title mb-1"><i class="bi bi-translate me-2 text-primary"></i>Traduzioni dei testi</h5>
+                            @include('admin.partials._translations', [
+                                'model' => $tour,
+                                'fields' => [
+                                    'name' => ['label' => 'Nome del tour', 'type' => 'text'],
+                                    'description_short' => ['label' => 'Sottotitolo', 'type' => 'textarea', 'rows' => 2],
+                                    'description' => ['label' => 'Descrizione', 'type' => 'textarea', 'rows' => 6],
+                                    'itinerary' => ['label' => 'Itinerario', 'type' => 'textarea', 'rows' => 5],
+                                    'departure_point' => ['label' => 'Punto di partenza', 'type' => 'text'],
+                                    'included' => ['label' => "Cosa è incluso", 'type' => 'list'],
+                                    'excluded' => ['label' => "Cosa è escluso", 'type' => 'list'],
+                                    'meta_title' => ['label' => 'Meta title (SEO)', 'type' => 'text'],
+                                    'meta_description' => ['label' => 'Meta description (SEO)', 'type' => 'textarea', 'rows' => 2],
+                                ],
+                            ])
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

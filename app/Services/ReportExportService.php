@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Tour;
+use App\Support\ReportCriteria;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -37,6 +38,7 @@ class ReportExportService
         $this->sheetRiepilogo($book->getActiveSheet(), $startDate, $endDate, $periodLabel, $revenueStatuses);
         $this->sheetRicaviGiornalieri($book->createSheet(), $startDate, $endDate, $revenueStatuses);
         $this->sheetRicaviPerTour($book->createSheet(), $startDate, $endDate, $revenueStatuses);
+        $this->sheetCanali($book->createSheet(), $startDate, $endDate);
         $this->sheetPrenotazioni($book->createSheet(), $startDate, $endDate);
         $this->sheetOccupazione($book->createSheet(), $startDate, $endDate);
 
@@ -91,17 +93,28 @@ class ReportExportService
         $sheet->setCellValue('A3', 'Generato il ' . now()->format('d/m/Y H:i'));
         $sheet->getStyle('A2:A3')->getFont()->getColor()->setRGB('64748B');
 
+        $channels = ReportCriteria::channelBreakdown($start, $end);
+
+        // Il criterio è scritto in chiaro accanto a ogni voce: le cifre monetarie
+        // sono di COMPETENZA (partenze del periodo, annullate escluse), i conteggi
+        // di prenotazioni sono per DATA DI CREAZIONE. Prima i due criteri erano
+        // mescolati senza dirlo e i totali non tornavano fra i fogli.
         $rows = [
             ['Voce', 'Valore'],
-            ['Venduto (totale prenotazioni)', $venduto],
+            ['Venduto (' . ReportCriteria::LABEL_COMPETENZA . ')', $venduto],
             ['Incassato (versato finora)', $incassato],
             ['Da incassare (saldi mancanti)', max(0, $venduto - $incassato)],
+            ['Provvigioni agenzie', $channels['total']['commission']],
+            ['Netto Solarya (venduto − provvigioni)', $channels['total']['net']],
             ['Rimborsi erogati', $rimborsi],
             ['', ''],
-            ['Prenotazioni create', $prenotazioni],
+            ['Prenotazioni create (' . ReportCriteria::LABEL_RACCOLTA . ')', $prenotazioni],
             ['di cui confermate', $confermate],
-            ['di cui annullate', $annullate],
+            ['di cui annullate (fuori dal venduto)', $annullate],
             ['Passeggeri (posti venduti)', $passeggeri],
+            ['', ''],
+            ['Venduto canale diretto', $channels['direct']['gross']],
+            ['Venduto canale agenzie', $channels['agency']['gross']],
         ];
 
         $r = 5;
@@ -112,9 +125,10 @@ class ReportExportService
         }
 
         $this->styleHeader($sheet, "A5:B5");
-        // Formato valuta sulle 4 righe monetarie (6..9).
-        $sheet->getStyle('B6:B9')->getNumberFormat()->setFormatCode(self::MONEY_FMT);
-        $sheet->getColumnDimension('A')->setWidth(34);
+        // Formato valuta sulle righe monetarie: venduto..rimborsi e i due canali.
+        $sheet->getStyle('B6:B11')->getNumberFormat()->setFormatCode(self::MONEY_FMT);
+        $sheet->getStyle('B18:B19')->getNumberFormat()->setFormatCode(self::MONEY_FMT);
+        $sheet->getColumnDimension('A')->setWidth(42);
         $sheet->getColumnDimension('B')->setWidth(20);
     }
 
@@ -177,6 +191,19 @@ class ReportExportService
         $this->autosize($sheet, ['A' => 34, 'B' => 13, 'C' => 13, 'D' => 14, 'E' => 14]);
     }
 
+    /**
+     * Elenco di dettaglio delle prenotazioni CREATE nel periodo.
+     *
+     * Qui nasceva l'incoerenza segnalata: il foglio elencava anche le ANNULLATE e
+     * ne sommava il totale nella colonna "Venduto", così la somma della colonna
+     * non tornava mai col totale dei ricavi (4.320 € contro 4.000 €, differenza =
+     * una prenotazione annullata da 320 €).
+     *
+     * Ora le annullate restano in elenco — serve vederle — ma con le colonne
+     * monetarie VUOTE e una colonna "Nel venduto" che dichiara riga per riga se
+     * quella prenotazione entra nei totali. Sommare la colonna Venduto dà quindi
+     * lo stesso importo dei report, a parità di criterio.
+     */
     private function sheetPrenotazioni($sheet, Carbon $start, Carbon $end): void
     {
         $sheet->setTitle('Prenotazioni');
@@ -186,39 +213,103 @@ class ReportExportService
             ->orderByDesc('created_at')
             ->get();
 
-        $headers = [
-            'Numero', 'Creata il', 'Data escursione', 'Orario', 'Tour', 'Cliente', 'Email',
-            'Posti', 'Stato', 'Pagamento', 'Venduto', 'Incassato', 'Saldo residuo',
-        ];
-        $this->writeHeaderRow($sheet, $headers);
+        $revenueStatuses = BookingStatus::revenueStatusValues();
 
-        $r = 2;
+        $sheet->setCellValue('A1', 'Prenotazioni create nel periodo (' . ReportCriteria::LABEL_RACCOLTA . ')'
+            . ' — gli importi contano solo per le righe con "Nel venduto" = Sì');
+        $sheet->getStyle('A1')->getFont()->setBold(true);
+        $sheet->getStyle('A1')->getFont()->getColor()->setRGB('64748B');
+
+        $headers = [
+            'Numero', 'Creata il', 'Data escursione', 'Orario', 'Tour', 'Canale', 'Cliente', 'Email',
+            'Posti', 'Stato', 'Nel venduto', 'Pagamento', 'Venduto', 'Incassato', 'Saldo residuo', 'Provvigione',
+        ];
+        $this->writeHeaderRow($sheet, $headers, 2);
+
+        $r = 3;
         foreach ($bookings as $b) {
             $time = $b->departure?->start_time;
+            $countsAsRevenue = in_array($b->status->value, $revenueStatuses, true);
             $venduto = (float) $b->total_amount;
             $incassato = (float) $b->amount_paid;
+
             $sheet->setCellValueExplicit("A{$r}", (string) $b->booking_number, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("B{$r}", $b->created_at->format('d/m/Y H:i'));
             $sheet->setCellValue("C{$r}", $b->booking_date?->format('d/m/Y') ?? '-');
             $sheet->setCellValue("D{$r}", $time ? Carbon::parse($time)->format('H:i') : '-');
             $sheet->setCellValue("E{$r}", $b->tour->name ?? '-');
-            $sheet->setCellValue("F{$r}", $b->customer_full_name);
-            $sheet->setCellValue("G{$r}", $b->customer_email);
-            $sheet->setCellValue("H{$r}", (int) $b->seats);
-            $sheet->setCellValue("I{$r}", $b->status->label());
-            $sheet->setCellValue("J{$r}", $this->paymentTypeLabel($b->payment_type));
-            $sheet->setCellValue("K{$r}", $venduto);
-            $sheet->setCellValue("L{$r}", $incassato);
-            $sheet->setCellValue("M{$r}", max(0, $venduto - $incassato));
+            $sheet->setCellValue("F{$r}", $b->b2b_user_id ? 'Agenzia' : 'Diretto');
+            $sheet->setCellValue("G{$r}", $b->customer_full_name);
+            $sheet->setCellValue("H{$r}", $b->customer_email);
+            $sheet->setCellValue("I{$r}", (int) $b->seats);
+            $sheet->setCellValue("J{$r}", $b->status->label());
+            $sheet->setCellValue("K{$r}", $countsAsRevenue ? 'Sì' : 'No');
+            $sheet->setCellValue("L{$r}", $this->paymentTypeLabel($b->payment_type));
+
+            // Annullate/rimborsate: colonne monetarie vuote, non zero, così una
+            // somma della colonna coincide col venduto dei report.
+            if ($countsAsRevenue) {
+                $sheet->setCellValue("M{$r}", $venduto);
+                $sheet->setCellValue("N{$r}", $incassato);
+                $sheet->setCellValue("O{$r}", max(0, $venduto - $incassato));
+                $sheet->setCellValue("P{$r}", (float) ($b->commission_amount ?? 0));
+            }
+
             $r++;
         }
 
-        $sheet->getStyle("K2:M{$r}")->getNumberFormat()->setFormatCode(self::MONEY_FMT);
+        $sheet->getStyle("M2:P{$r}")->getNumberFormat()->setFormatCode(self::MONEY_FMT);
         $this->autosize($sheet, [
-            'A' => 14, 'B' => 16, 'C' => 15, 'D' => 8, 'E' => 26, 'F' => 22, 'G' => 26,
-            'H' => 7, 'I' => 16, 'J' => 14, 'K' => 13, 'L' => 13, 'M' => 13,
+            'A' => 14, 'B' => 16, 'C' => 15, 'D' => 8, 'E' => 26, 'F' => 10, 'G' => 22, 'H' => 26,
+            'I' => 7, 'J' => 16, 'K' => 12, 'L' => 14, 'M' => 13, 'N' => 13, 'O' => 13, 'P' => 13,
         ]);
-        $sheet->freezePane('A2');
+        $sheet->freezePane('A3');
+    }
+
+    /**
+     * Ripartizione diretto vs agenzie con le provvigioni: prima non compariva in
+     * nessun foglio, quindi il venduto sovrastimava quanto resta a Solarya.
+     */
+    private function sheetCanali($sheet, Carbon $start, Carbon $end): void
+    {
+        $sheet->setTitle('Canali');
+
+        $c = ReportCriteria::channelBreakdown($start, $end);
+
+        $sheet->setCellValue('A1', 'Canale di vendita (' . ReportCriteria::LABEL_COMPETENZA . ')');
+        $sheet->getStyle('A1')->getFont()->setBold(true);
+
+        $headers = ['Canale', 'Prenotazioni', 'Passeggeri', 'Venduto', 'Incassato', 'Provvigioni', 'Netto Solarya'];
+        $this->writeHeaderRow($sheet, $headers, 2);
+
+        $rows = [
+            ['Diretto (sito)', $c['direct'], 0.0],
+            ['Agenzie (B2B)', $c['agency'], $c['agency']['commission']],
+        ];
+
+        $r = 3;
+        foreach ($rows as [$label, $data, $commission]) {
+            $sheet->setCellValue("A{$r}", $label);
+            $sheet->setCellValue("B{$r}", $data['bookings']);
+            $sheet->setCellValue("C{$r}", $data['seats']);
+            $sheet->setCellValue("D{$r}", $data['gross']);
+            $sheet->setCellValue("E{$r}", $data['collected']);
+            $sheet->setCellValue("F{$r}", $commission);
+            $sheet->setCellValue("G{$r}", $data['gross'] - $commission);
+            $r++;
+        }
+
+        $sheet->setCellValue("A{$r}", 'Totale');
+        $sheet->setCellValue("B{$r}", $c['total']['bookings']);
+        $sheet->setCellValue("C{$r}", $c['total']['seats']);
+        $sheet->setCellValue("D{$r}", $c['total']['gross']);
+        $sheet->setCellValue("E{$r}", $c['total']['collected']);
+        $sheet->setCellValue("F{$r}", $c['total']['commission']);
+        $sheet->setCellValue("G{$r}", $c['total']['net']);
+        $sheet->getStyle("A{$r}:G{$r}")->getFont()->setBold(true);
+
+        $sheet->getStyle("D3:G{$r}")->getNumberFormat()->setFormatCode(self::MONEY_FMT);
+        $this->autosize($sheet, ['A' => 20, 'B' => 14, 'C' => 13, 'D' => 15, 'E' => 15, 'F' => 15, 'G' => 16]);
     }
 
     private function sheetOccupazione($sheet, Carbon $start, Carbon $end): void
@@ -273,15 +364,16 @@ class ReportExportService
         };
     }
 
-    private function writeHeaderRow($sheet, array $headers): void
+    /** @param  int  $row  riga dell'intestazione (2 nei fogli con titolo in A1) */
+    private function writeHeaderRow($sheet, array $headers, int $row = 1): void
     {
         $col = 'A';
         foreach ($headers as $h) {
-            $sheet->setCellValue($col . '1', $h);
+            $sheet->setCellValue($col . $row, $h);
             $col++;
         }
         $lastCol = chr(ord('A') + count($headers) - 1);
-        $this->styleHeader($sheet, "A1:{$lastCol}1");
+        $this->styleHeader($sheet, "A{$row}:{$lastCol}{$row}");
     }
 
     private function styleHeader($sheet, string $range): void

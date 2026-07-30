@@ -12,8 +12,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Tour extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
+    use Concerns\HasTranslations;
 
     protected $fillable = [
+        'translations',
         'uuid',
         'name',
         'slug',
@@ -36,7 +38,27 @@ class Tour extends Model
         'meta_description',
     ];
 
+    /**
+     * Campi che il cliente può tradurre dall'admin (admin → Impostazioni
+     * per le lingue attive). L'italiano resta nelle colonne normali ed è
+     * il fallback quando una traduzione manca.
+     *
+     * @var array<int, string>
+     */
+    protected array $translatable = [
+        'name',
+        'description_short',
+        'description',
+        'itinerary',
+        'departure_point',
+        'included',
+        'excluded',
+        'meta_title',
+        'meta_description',
+    ];
+
     protected $casts = [
+        'translations' => 'array',
         'included' => 'array',
         'excluded' => 'array',
         'season_start' => 'date',

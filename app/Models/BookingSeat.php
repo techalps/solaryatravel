@@ -50,19 +50,16 @@ class BookingSeat extends Model
     }
 
     /**
-     * Il documento è completo (tutti i campi obbligatori valorizzati).
+     * Il documento è completo: tipo + numero.
      *
-     * La data di scadenza NON rientra più nel controllo: non viene più chiesta
-     * nei canali di vendita (sito, agenzie, widget), quindi pretenderla qui
-     * marcherebbe come "incompleta" ogni nuova prenotazione. Resta un campo
-     * facoltativo, compilabile dall'admin e presente sui dati storici.
+     * Scadenza e luogo di rilascio NON rientrano nel controllo perché non
+     * vengono più chiesti in nessun form (sito, agenzie, widget e admin):
+     * pretenderli qui marcherebbe come "incompleta" ogni nuova prenotazione.
+     * Restano campi facoltativi, valorizzati solo sui dati storici.
      */
     public function hasDocument(): bool
     {
-        return !empty($this->doc_type)
-            && !empty($this->doc_number)
-            && !empty($this->doc_issue_country)
-            && !empty($this->doc_issue_place);
+        return !empty($this->doc_type) && !empty($this->doc_number);
     }
 
     /** Etichetta leggibile del tipo documento. */

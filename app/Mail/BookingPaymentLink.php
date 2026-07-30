@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Booking;
+use App\Mail\Concerns\SendsInBookingLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -12,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 class BookingPaymentLink extends Mailable
 {
     use Queueable, SerializesModels;
+    use SendsInBookingLocale;
 
     /**
      * @param  string|null  $checkoutUrl  link Stripe diretto. Normalmente NON va
@@ -23,7 +25,10 @@ class BookingPaymentLink extends Mailable
     public function __construct(
         public Booking $booking,
         public ?string $checkoutUrl = null
-    ) {}
+    )
+    {
+        $this->useBookingLocale($booking->locale);
+    }
 
     /**
      * URL su cui puntare il pulsante dell'email: una pagina NOSTRA, permanente
@@ -43,7 +48,7 @@ class BookingPaymentLink extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Completa il pagamento per la tua prenotazione #' . $this->booking->booking_number,
+            subject: __('emails.payment_link.subject', ['number' => $this->booking->booking_number]),
         );
     }
 

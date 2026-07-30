@@ -16,7 +16,7 @@
         // pagine legali). Altrove (pagamenti, area utente) non emettiamo
         // hreflang: quelle pagine esistono in una sola versione.
         $i18nLocalized = locale_route_is_localized(locale_base_route_name());
-        $i18nLocales = (array) config('locales.supported', ['it']);
+        $i18nLocales = \App\Support\Locales::active();
     @endphp
 
     @if($i18nLocalized)
@@ -25,8 +25,9 @@
             <link rel="alternate" hreflang="{{ $altLocale }}" href="{{ locale_current_url($altLocale) }}">
         @endforeach
         {{-- x-default → inglese: il target primario del sito è la clientela
-             turistica straniera. Configurabile in config/locales.php. --}}
-        <link rel="alternate" hreflang="x-default" href="{{ locale_current_url(config('locales.x_default', 'en')) }}">
+             turistica straniera. Configurabile in config/locales.php; se quella
+             lingua venisse disattivata, Locales::xDefault() ricade sull'italiano. --}}
+        <link rel="alternate" hreflang="x-default" href="{{ locale_current_url(\App\Support\Locales::xDefault()) }}">
     @else
         <link rel="canonical" href="{{ url()->current() }}">
     @endif
@@ -323,12 +324,81 @@
            variante di header (fill rgba bianco, radius 6px) così il
            controllo sta accanto alla CTA senza competerle.
            ========================================================= */
+        /* Bandiera corrente + dropdown. L'ingombro è costante qualunque sia il
+           numero di lingue attive: il vecchio toggle segmentato le affiancava
+           tutte e con quattro o cinque sbordava dall'header. */
         .tg-lang {
+            position: relative;
             display: inline-flex;
             align-items: center;
-            gap: 2px;
             padding: 2px;
             border-radius: 8px;
+        }
+
+        /* Trigger: è un <button>, quindi va ripulito dagli stili UA. */
+        .tg-lang__current {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 26px;
+            padding: 0 8px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            font-family: var(--tg-ff-outfit, inherit);
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: .04em;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: color .18s cubic-bezier(.22, 1, .36, 1),
+                        background-color .18s cubic-bezier(.22, 1, .36, 1);
+        }
+
+        .tg-lang__caret {
+            width: 9px;
+            height: auto;
+            opacity: .7;
+            transition: transform .18s cubic-bezier(.22, 1, .36, 1);
+        }
+        .tg-lang__current[aria-expanded="true"] .tg-lang__caret { transform: rotate(180deg); }
+
+        /* Menu: fondo chiaro in ogni contesto (anche su header trasparente), così
+           le bandiere e i nomi restano leggibili senza doppie regole di colore. */
+        .tg-lang__menu {
+            --bs-dropdown-min-width: 11rem;
+            --bs-dropdown-padding-y: .35rem;
+            --bs-dropdown-border-radius: 10px;
+            --bs-dropdown-border-color: rgba(0, 0, 0, .08);
+            --bs-dropdown-box-shadow: 0 10px 30px rgba(2, 6, 21, .14);
+            --bs-dropdown-link-active-bg: rgba(0, 69, 96, .08);
+            --bs-dropdown-link-active-color: var(--tg-theme-primary);
+        }
+
+        .tg-lang__option {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: .45rem .8rem;
+            font-family: var(--tg-ff-outfit, inherit);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .tg-lang__name { flex: 1 1 auto; }
+
+        .tg-lang__code--muted {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .04em;
+            opacity: .55;
+        }
+
+        /* Nel menu la bandiera non è mai su fondo scuro: hairline sempre scura. */
+        .tg-lang__option .tg-lang__flag {
+            width: 19px;
+            box-shadow: 0 0 0 .5px rgba(0, 0, 0, .28);
         }
 
         /* Nell'header il selettore è l'ultimo elemento della riga: gli serve
@@ -342,30 +412,9 @@
             .tg-lang--inline { margin-right: 0; }
         }
 
-        .tg-lang__item {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            min-width: 32px;
-            height: 26px;
-            padding: 0 8px;
-            border-radius: 6px;
-            font-family: var(--tg-ff-outfit, inherit);
-            font-size: 13px;
-            font-weight: 600;
-            line-height: 1;
-            /* Le sigle sono acronimi: il maiuscolo è tipografico, non urlato */
-            letter-spacing: .04em;
-            text-decoration: none;
-            white-space: nowrap;
-            transition: color .18s cubic-bezier(.22, 1, .36, 1),
-                        background-color .18s cubic-bezier(.22, 1, .36, 1);
-        }
-
         /* Target touch ≥ 32px in altezza reale, senza gonfiare il layout */
-        .tg-lang__item::after {
+        .tg-lang__current { position: relative; }
+        .tg-lang__current::after {
             content: '';
             position: absolute;
             inset: -4px -2px;
@@ -388,26 +437,16 @@
             flex: 0 0 auto;
         }
 
-        /* Su fondo scuro la hairline nera sparisce: usa un velo bianco. */
-        .tg-header__area.tg-transparent .tg-lang__flag,
-        .tg-lang--stacked .tg-lang__flag {
+        /* Su fondo scuro la hairline nera sparisce: usa un velo bianco.
+           Vale solo per la bandiera nel trigger — quella nel menu sta sempre
+           su fondo chiaro e ha già la sua regola. */
+        .tg-header__area.tg-transparent .tg-lang__current .tg-lang__flag,
+        .tg-lang--stacked .tg-lang__current .tg-lang__flag {
             box-shadow: 0 0 0 .5px rgba(255, 255, 255, .45);
         }
-        /* …ma quando l'elemento attivo ha il fondo bianco, torna la hairline scura. */
-        .tg-header__area.tg-transparent .tg-lang__item.is-active .tg-lang__flag,
-        .tg-lang--stacked .tg-lang__item.is-active .tg-lang__flag {
-            box-shadow: 0 0 0 .5px rgba(0, 0, 0, .28);
-        }
 
-        /* La lingua non attiva è secondaria: la bandiera resta leggibile ma
-           non compete con quella dello stato corrente. */
-        .tg-lang a.tg-lang__item .tg-lang__flag {
-            opacity: .75;
-            transition: opacity .18s cubic-bezier(.22, 1, .36, 1);
-        }
-        .tg-lang a.tg-lang__item:hover .tg-lang__flag { opacity: 1; }
-
-        .tg-lang__item:focus-visible {
+        .tg-lang__current:focus-visible,
+        .tg-lang__option:focus-visible {
             outline: 2px solid var(--tg-theme-secondary);
             outline-offset: 2px;
         }
@@ -418,16 +457,12 @@
         .tg-header__area.tg-transparent .tg-lang {
             background: rgba(255, 255, 255, .14);
         }
-        .tg-header__area.tg-transparent .tg-lang__item {
-            color: rgba(255, 255, 255, .78);
-        }
-        .tg-header__area.tg-transparent a.tg-lang__item:hover {
+        .tg-header__area.tg-transparent .tg-lang__current {
             color: #fff;
-            background: rgba(255, 255, 255, .16);
         }
-        .tg-header__area.tg-transparent .tg-lang__item.is-active {
-            color: var(--tg-common-black, #020615);
-            background: #fff;
+        .tg-header__area.tg-transparent .tg-lang__current:hover,
+        .tg-header__area.tg-transparent .tg-lang__current[aria-expanded="true"] {
+            background: rgba(255, 255, 255, .16);
         }
 
         /* ---------- Header solido (pagine interne) e sticky ----------
@@ -437,34 +472,29 @@
         .header-sticky .tg-lang {
             background: #f1f3f5;
         }
-        .tg-header__area:not(.tg-transparent) .tg-lang__item,
-        .header-sticky .tg-lang__item {
-            color: #5a6570;
+        .tg-header__area:not(.tg-transparent) .tg-lang__current,
+        .header-sticky .tg-lang__current {
+            color: #34404d;
         }
-        .tg-header__area:not(.tg-transparent) a.tg-lang__item:hover,
-        .header-sticky a.tg-lang__item:hover {
+        .tg-header__area:not(.tg-transparent) .tg-lang__current:hover,
+        .tg-header__area:not(.tg-transparent) .tg-lang__current[aria-expanded="true"],
+        .header-sticky .tg-lang__current:hover,
+        .header-sticky .tg-lang__current[aria-expanded="true"] {
             color: var(--tg-theme-primary);
             background: rgba(0, 69, 96, .08);
-        }
-        .tg-header__area:not(.tg-transparent) .tg-lang__item.is-active,
-        .header-sticky .tg-lang__item.is-active {
-            color: #fff;
-            background: var(--tg-theme-primary);
         }
 
         /* La home diventa sticky scrollando: il velo trasparente non deve
            sopravvivere sul fondo bianco. Vince la regola sticky. */
         .header-sticky.tg-transparent .tg-lang { background: #f1f3f5; }
-        .header-sticky.tg-transparent .tg-lang__item { color: #5a6570; }
-        .header-sticky.tg-transparent .tg-lang__item.is-active {
-            color: #fff;
-            background: var(--tg-theme-primary);
+        .header-sticky.tg-transparent .tg-lang__current { color: #34404d; }
+        .header-sticky.tg-transparent .tg-lang__current .tg-lang__flag {
+            box-shadow: 0 0 0 .5px rgba(0, 0, 0, .28);
         }
 
         /* ---------- Variante offcanvas mobile / footer ----------
            Fondo scuro in entrambi i casi, larghezza piena per il pollice. */
         .tg-lang--stacked {
-            gap: 4px;
             padding: 3px;
             background: rgba(255, 255, 255, .10);
             border-radius: 10px;
@@ -475,27 +505,28 @@
             max-width: 200px;
         }
         .tg-lang--stacked.w-100 { max-width: none; }
-        .tg-lang--stacked .tg-lang__flag { width: 19px; }
+        .tg-lang--stacked .tg-lang__current .tg-lang__flag { width: 19px; }
 
-        .tg-lang--stacked .tg-lang__item {
-            flex: 1 1 0;
-            min-width: 74px;
+        .tg-lang--stacked .tg-lang__current {
+            width: 100%;
+            /* Il caret va a fondo riga: la bandiera e la sigla restano a
+               sinistra, come in una select. */
+            justify-content: flex-start;
             height: 38px;
             font-size: 14px;
             border-radius: 7px;
-            color: rgba(255, 255, 255, .8);
-        }
-        .tg-lang--stacked a.tg-lang__item:hover {
             color: #fff;
-            background: rgba(255, 255, 255, .14);
         }
-        .tg-lang--stacked .tg-lang__item.is-active {
-            color: var(--tg-common-black, #020615);
-            background: #fff;
+        .tg-lang--stacked .tg-lang__caret { margin-left: auto; }
+
+        .tg-lang--stacked .tg-lang__current:hover,
+        .tg-lang--stacked .tg-lang__current[aria-expanded="true"] {
+            background: rgba(255, 255, 255, .14);
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .tg-lang__item { transition: none; }
+            .tg-lang__current,
+            .tg-lang__caret { transition: none; }
         }
     </style>
 
@@ -503,7 +534,9 @@
     @stack('head')
 </head>
 <body>
-    @if(config('services.tracking.gtm_id'))
+    {{-- GTM (noscript): come lo script in <head>, solo in produzione.
+         Vedi config/services.php → tracking.enabled. --}}
+    @if(config('services.tracking.enabled') && config('services.tracking.gtm_id'))
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ config('services.tracking.gtm_id') }}"
             height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif

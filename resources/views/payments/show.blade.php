@@ -184,11 +184,21 @@
                         </small>
 
                         @if($booking->payment_deadline)
-                            <div class="text-center mt-3 pt-3" style="border-top:1px dotted #e4e4e4">
-                                <small class="text-muted d-block">Scadenza pagamento</small>
+                            {{-- Conto alla rovescia invece dell'orario assoluto: la
+                                 finestra è di pochi minuti, e "mancano 12:30" si
+                                 legge senza dover confrontare col proprio orologio.
+                                 A zero si ricarica: il server annulla il carrello e
+                                 rimanda alla lista dei tour. --}}
+                            <div class="text-center mt-3 pt-3" style="border-top:1px dotted #e4e4e4"
+                                 data-checkout-countdown
+                                 data-deadline="{{ $booking->payment_deadline->toIso8601String() }}">
+                                <small class="text-muted d-block">Posti riservati per</small>
                                 <small class="fw-semibold text-danger">
                                     <i class="fa-regular fa-clock me-1"></i>
-                                    {{ \Carbon\Carbon::parse($booking->payment_deadline)->locale('it')->isoFormat('D MMM YYYY · HH:mm') }}
+                                    <span data-countdown-value>--:--</span>
+                                </small>
+                                <small class="d-block text-muted mt-1" style="font-size:.72rem">
+                                    Scadenza {{ $booking->payment_deadline->locale('it')->isoFormat('D MMM · HH:mm') }}
                                 </small>
                             </div>
                         @endif
@@ -222,4 +232,38 @@
     .breadcrumb-item.active { color: #fff !important; }
     .breadcrumb-item + .breadcrumb-item::before { color: rgba(255,255,255,.6); }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+// Conto alla rovescia dei posti riservati. Lavora sull'ISO8601 stampato dal
+// server (comprensivo di offset), quindi il fuso del browser non lo sposta.
+// A zero ricarica la pagina: la scadenza vera la decide il server, che annulla
+// il carrello e rimanda ai tour. Qui non si annulla nulla di propria iniziativa.
+(function () {
+    var box = document.querySelector('[data-checkout-countdown]');
+    if (!box) return;
+
+    var out = box.querySelector('[data-countdown-value]');
+    var deadline = new Date(box.dataset.deadline).getTime();
+    if (isNaN(deadline)) return;
+
+    function tick() {
+        var left = Math.floor((deadline - Date.now()) / 1000);
+
+        if (left <= 0) {
+            out.textContent = 'scaduto';
+            window.location.reload();
+            return;
+        }
+
+        var m = Math.floor(left / 60);
+        var s = left % 60;
+        out.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        setTimeout(tick, 1000);
+    }
+
+    tick();
+})();
+</script>
 @endpush

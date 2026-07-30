@@ -11,8 +11,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Addon extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
+    use Concerns\HasTranslations;
 
     protected $fillable = [
+        'translations',
         'uuid',
         'name',
         'slug',
@@ -27,7 +29,20 @@ class Addon extends Model
         'sort_order',
     ];
 
+    /**
+     * Campi che il cliente può tradurre dall'admin (admin → Impostazioni
+     * per le lingue attive). L'italiano resta nelle colonne normali ed è
+     * il fallback quando una traduzione manca.
+     *
+     * @var array<int, string>
+     */
+    protected array $translatable = [
+        'name',
+        'description',
+    ];
+
     protected $casts = [
+        'translations' => 'array',
         'price' => 'decimal:2',
         'is_active' => 'boolean',
         'requires_advance_booking' => 'boolean',

@@ -59,14 +59,12 @@ class BookingController extends Controller
                 ->whereNotIn('status', [BookingStatus::CANCELLED->value, BookingStatus::REFUNDED->value, BookingStatus::NO_SHOW->value])
                 ->whereHas('seatRecords', function ($q) {
                     $q->whereNull('cancelled_at')->where(function ($q) {
-                        // NB: doc_expiry esclusa di proposito — non è più
-                        // richiesta nei canali di vendita, quindi includerla
+                        // Solo tipo + numero: scadenza e luogo di rilascio non
+                        // sono più richiesti in nessun form, quindi includerli
                         // marcherebbe come incompleta ogni nuova prenotazione.
                         // Deve restare allineata a BookingSeat::hasDocument().
                         $q->whereNull('doc_type')->orWhere('doc_type', '')
-                            ->orWhereNull('doc_number')->orWhere('doc_number', '')
-                            ->orWhereNull('doc_issue_country')->orWhere('doc_issue_country', '')
-                            ->orWhereNull('doc_issue_place')->orWhere('doc_issue_place', '');
+                            ->orWhereNull('doc_number')->orWhere('doc_number', '');
                     });
                 });
         }
@@ -137,11 +135,9 @@ class BookingController extends Controller
             ->whereNotIn('status', [BookingStatus::CANCELLED->value, BookingStatus::REFUNDED->value, BookingStatus::NO_SHOW->value])
             ->whereHas('seatRecords', function ($q) {
                 $q->whereNull('cancelled_at')->where(function ($q) {
-                    // Vedi nota sopra: doc_expiry non entra nel conteggio.
+                    // Vedi nota sopra: solo tipo + numero entrano nel conteggio.
                     $q->whereNull('doc_type')->orWhere('doc_type', '')
-                        ->orWhereNull('doc_number')->orWhere('doc_number', '')
-                        ->orWhereNull('doc_issue_country')->orWhere('doc_issue_country', '')
-                        ->orWhereNull('doc_issue_place')->orWhere('doc_issue_place', '');
+                        ->orWhereNull('doc_number')->orWhere('doc_number', '');
                 });
             })->count();
         // Agenzie B2B per il filtro (solo quelle che hanno almeno una prenotazione).
@@ -507,21 +503,12 @@ class BookingController extends Controller
             'children.*.dob' => 'required_with:children|date|before:today',
             'children.*.first_name' => 'required_with:children|string|max:100',
             'children.*.last_name' => 'required_with:children|string|max:100',
-            // Documento d'identità obbligatorio per OGNI passeggero (adulti + bambini).
-            // La scadenza è validata rispetto alla data del viaggio più sotto
-            // (serve prima risolvere la partenza).
+            // Documento d'identità obbligatorio per OGNI passeggero (adulti + bambini):
+            // solo tipo e numero. Scadenza e luogo di rilascio non si chiedono più.
             'adults.*.doc_type' => 'required|in:' . implode(',', array_keys(\App\Models\BookingSeat::DOC_TYPES)),
             'adults.*.doc_number' => 'required|string|max:40',
-            'adults.*.doc_expiry' => 'required|date',
-            'adults.*.doc_country' => 'required|string|size:2',
-            'adults.*.doc_province' => 'nullable|string|max:4',
-            'adults.*.doc_place' => 'required|string|max:120',
             'children.*.doc_type' => 'required_with:children|in:' . implode(',', array_keys(\App\Models\BookingSeat::DOC_TYPES)),
             'children.*.doc_number' => 'required_with:children|string|max:40',
-            'children.*.doc_expiry' => 'required_with:children|date',
-            'children.*.doc_country' => 'required_with:children|string|size:2',
-            'children.*.doc_province' => 'nullable|string|max:4',
-            'children.*.doc_place' => 'required_with:children|string|max:120',
             // Prezzo TOTALE manuale (solo tour "su richiesta", es. catamarano riservato).
             'total_price' => 'nullable|numeric|min:0',
             // Posti OMAGGIO: N partecipanti a 0€ (ospiti invitati). Occupano il
@@ -651,31 +638,9 @@ class BookingController extends Controller
         }
         $validated['tour_departure_id'] = $departureId;
 
-        // Data entro cui i documenti devono essere validi = ritorno del viaggio.
-        // Uso esclusivo multi-giorno: usa block_end_date; altrimenti la data partenza.
-        $tripReturnDate = $exclusive && !empty($validated['block_end_date'])
-            ? $validated['block_end_date']
-            : optional(\App\Models\TourDeparture::find($departureId))->departure_date?->toDateString();
-
-        // Documento: scadenza >= data del viaggio (bloccante) + provincia se Italia.
-        if ($tripReturnDate) {
-            $docErrors = [];
-            foreach (['adults', 'children'] as $group) {
-                foreach (($validated[$group] ?? []) as $i => $p) {
-                    $expiry = $p['doc_expiry'] ?? null;
-                    if ($expiry && strtotime($expiry) < strtotime($tripReturnDate)) {
-                        $docErrors[$group . '.' . $i . '.doc_expiry'] = 'Il documento deve essere valido fino alla data del viaggio (' . $tripReturnDate . ').';
-                    }
-                    $country = strtoupper((string) ($p['doc_country'] ?? ''));
-                    if ($country === 'IT' && trim((string) ($p['doc_province'] ?? '')) === '') {
-                        $docErrors[$group . '.' . $i . '.doc_province'] = 'Seleziona la provincia di emissione.';
-                    }
-                }
-            }
-            if ($docErrors) {
-                throw \Illuminate\Validation\ValidationException::withMessages($docErrors);
-            }
-        }
+        // Del documento si chiedono solo tipo e numero: non c'è più una scadenza da
+        // confrontare con la data del viaggio, né una provincia da pretendere per
+        // l'Italia. La validazione delle regole del form basta.
 
         // Risolvi ogni bambino sul bracket della data (in base al DOB) e prepara
         // la lista guests nell'ordine atteso dal service: adulti, poi bambini.
@@ -879,22 +844,16 @@ class BookingController extends Controller
      */
     /**
      * Normalizza i campi documento di un passeggero (form admin) nel formato
-     * atteso dal BookingService. Estero → provincia non applicabile.
+     * atteso dal BookingService: solo tipo e numero.
      *
      * @param  array<string,mixed>  $p
      * @return array<string,mixed>
      */
     private function documentFromInput(array $p): array
     {
-        $country = strtoupper(trim((string) ($p['doc_country'] ?? '')));
-
         return [
             'doc_type' => $p['doc_type'] ?? null,
             'doc_number' => isset($p['doc_number']) ? strtoupper(trim((string) $p['doc_number'])) : null,
-            'doc_expiry' => $p['doc_expiry'] ?? null,
-            'doc_issue_country' => $country ?: null,
-            'doc_issue_province' => $country === 'IT' ? (trim((string) ($p['doc_province'] ?? '')) ?: null) : null,
-            'doc_issue_place' => isset($p['doc_place']) ? trim((string) $p['doc_place']) : null,
         ];
     }
 
@@ -1738,32 +1697,15 @@ class BookingController extends Controller
             abort(404);
         }
 
-        // Data del viaggio (rientro) per il vincolo di scadenza.
-        $tripDate = optional($booking->departure)->departure_date?->toDateString();
-
+        // Solo tipo e numero: scadenza e luogo di rilascio non si chiedono più.
         $validated = $request->validate([
             'doc_type' => 'required|in:' . implode(',', array_keys(BookingSeat::DOC_TYPES)),
             'doc_number' => 'required|string|max:40',
-            'doc_expiry' => array_filter(['required', 'date', $tripDate ? 'after_or_equal:' . $tripDate : null]),
-            'doc_country' => 'required|string|size:2',
-            'doc_province' => 'nullable|string|max:4',
-            'doc_place' => 'required|string|max:120',
-        ], [
-            'doc_expiry.after_or_equal' => 'Il documento deve essere valido fino alla data del viaggio (' . $tripDate . ').',
         ]);
-
-        $country = strtoupper($validated['doc_country']);
-        if ($country === 'IT' && trim((string) ($validated['doc_province'] ?? '')) === '') {
-            return back()->withErrors(['doc_province' => 'Seleziona la provincia di emissione.'])->withInput();
-        }
 
         $seat->update([
             'doc_type' => $validated['doc_type'],
             'doc_number' => strtoupper(trim($validated['doc_number'])),
-            'doc_expiry' => $validated['doc_expiry'],
-            'doc_issue_country' => $country,
-            'doc_issue_province' => $country === 'IT' ? ($validated['doc_province'] ?: null) : null,
-            'doc_issue_place' => trim($validated['doc_place']),
         ]);
 
         \App\Support\BookingLog::info('seat_document_update', 'Documento passeggero aggiornato', $booking, [

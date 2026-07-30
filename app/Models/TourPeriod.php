@@ -10,8 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TourPeriod extends Model
 {
     use HasFactory;
+    use Concerns\HasTranslations;
 
     protected $fillable = [
+        'translations',
         'tour_id',
         'label',
         'start_date',
@@ -22,7 +24,19 @@ class TourPeriod extends Model
         'sort_order',
     ];
 
+    /**
+     * Campi che il cliente può tradurre dall'admin (admin → Impostazioni
+     * per le lingue attive). L'italiano resta nelle colonne normali ed è
+     * il fallback quando una traduzione manca.
+     *
+     * @var array<int, string>
+     */
+    protected array $translatable = [
+        'label',
+    ];
+
     protected $casts = [
+        'translations' => 'array',
         'start_date' => 'date',
         'end_date' => 'date',
         'weekdays' => 'array',

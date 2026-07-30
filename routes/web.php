@@ -71,7 +71,12 @@ $localizedPublicRoutes = function (): void {
 Route::group([], $localizedPublicRoutes);
 
 // Ogni altra lingua: prefisso di URI e di nome uguali al codice lingua.
-foreach ((array) config('locales.supported', ['it']) as $locale) {
+// NB: si registrano le route di TUTTE le lingue del catalogo, non solo di quelle
+// attive: le route vengono cachate al deploy (route:cache), mentre le lingue
+// attive cambiano a runtime dalle Impostazioni. Registrando tutto, attivare una
+// lingua è una spunta e non richiede un rilascio. Le lingue non attive non sono
+// raggiungibili perché SetLocale e lo switcher guardano Locales::active().
+foreach (array_keys((array) config('locales.names', [])) as $locale) {
     if ($locale === (string) config('locales.default', 'it')) {
         continue;
     }
@@ -89,7 +94,7 @@ Route::get('/it/{path?}', function (?string $path = null) {
 // Switcher di lingua: salva la preferenza e torna alla STESSA pagina
 // nell'altra lingua (non alla home).
 Route::get('/lingua/{locale}', LocaleController::class)
-    ->whereIn('locale', (array) config('locales.supported', ['it']))
+    ->whereIn('locale', array_keys((array) config('locales.names', [])))
     ->name('locale.switch');
 
 // Sitemap XML bilingue (annotazioni xhtml:link reciproche).

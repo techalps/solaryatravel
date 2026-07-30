@@ -197,13 +197,19 @@ class BookingService
 
             // Scadenza pagamento: rilevante solo finché la prenotazione resta in
             // attesa di pagamento. Se nasce già confermata (admin), nessuna scadenza.
+            //
+            // Carta: NESSUNA scadenza alla creazione. Il conto dei minuti parte
+            // all'apertura del checkout (Booking::startCheckoutWindow()), così i
+            // 15 minuti sono tempo per pagare e non tempo speso a compilare il
+            // form. Fino a quel momento i posti restano bloccati senza limite,
+            // esattamente come prima.
+            // Bonifico: scadenza in ore assegnata subito, il cliente deve avere
+            // il tempo di disporre il pagamento dalla sua banca.
             $paymentDeadline = match (true) {
                 $initialStatus === BookingStatus::PENDING && $paymentType === 'bank_transfer'
                     => now()->addHours(\App\Support\Settings::bankTransferExpiryHours()),
                 $initialStatus === BookingStatus::AWAITING_TRANSFER
                     => now()->addHours(\App\Support\Settings::bankTransferExpiryHours()),
-                $initialStatus === BookingStatus::PENDING
-                    => now()->addMinutes((int) config('booking.payment_expiry_minutes', 30)),
                 default => null,
             };
 
@@ -377,7 +383,9 @@ class BookingService
             'customer_phone' => $data['customer_phone'] ?? null,
             'customer_country' => $data['customer_country'] ?? 'IT',
             'special_requests' => $data['special_requests'] ?? null,
-            'payment_deadline' => now()->addMinutes(config('booking.payment_expiry_minutes', 30)),
+            // Nessuna scadenza alla creazione: parte all'apertura del checkout
+            // (vedi il ramo principale di create() e Booking::startCheckoutWindow()).
+            'payment_deadline' => null,
             'source' => $source,
             'locale' => app()->getLocale(),
             'ip_address' => request()?->ip(),
@@ -501,6 +509,38 @@ class BookingService
                 'difference' => round($newTotal - $oldTotal, 2),
             ];
         });
+    }
+
+    /**
+     * Svuota il "carrello" se la finestra di pagamento è scaduta: annulla la
+     * prenotazione e libera i posti. Da chiamare ALLA LETTURA, in testa alle
+     * pagine che espongono la prenotazione ancora pagabile.
+     *
+     * Applicare la scadenza in lettura invece di affidarsi al solo scheduler
+     * significa che il limite vale sempre, anche a cron fermo: il cliente non
+     * può pagare un carrello scaduto perché la pagina lo annulla prima di
+     * mostrarsi. Il job periodico serve poi a liberare i posti dei carrelli che
+     * nessuno riapre.
+     *
+     * @return bool true se la prenotazione era scaduta ed è stata annullata
+     */
+    public function expireIfCheckoutWindowPassed(Booking $booking): bool
+    {
+        if (! $booking->checkoutWindowExpired()) {
+            return false;
+        }
+
+        try {
+            $this->cancel($booking, 'Sessione di prenotazione scaduta: pagamento non completato entro il termine.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Impossibile annullare la prenotazione scaduta ' . $booking->booking_number . ': ' . $e->getMessage()
+            );
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -1068,6 +1108,11 @@ class BookingService
      * il modello BookingSeat. Restituisce chiavi sempre presenti (null se assenti)
      * così da poter fare merge diretto nel create().
      *
+     * Solo TIPO e NUMERO: scadenza, luogo di rilascio e codice fiscale non si
+     * chiedono più in nessun form. Le colonne restano a database per lo storico,
+     * ma non vengono più scritte: se un chiamante le passa comunque (dati vecchi,
+     * import) le rispettiamo, altrimenti restano null.
+     *
      * @param  array<string,mixed>  $guest
      * @return array<string,mixed>
      */
@@ -1076,10 +1121,6 @@ class BookingService
         return [
             'doc_type' => $guest['doc_type'] ?? null,
             'doc_number' => isset($guest['doc_number']) ? strtoupper(trim((string) $guest['doc_number'])) : null,
-            'doc_expiry' => $guest['doc_expiry'] ?? null,
-            'doc_issue_country' => isset($guest['doc_issue_country']) ? strtoupper(trim((string) $guest['doc_issue_country'])) : null,
-            'doc_issue_province' => $guest['doc_issue_province'] ?? null,
-            'doc_issue_place' => $guest['doc_issue_place'] ?? null,
         ];
     }
 

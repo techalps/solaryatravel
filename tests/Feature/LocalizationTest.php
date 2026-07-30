@@ -136,17 +136,25 @@ class LocalizationTest extends TestCase
     public function test_lo_switcher_marca_la_lingua_attiva_e_non_la_linka(): void
     {
         // Su /en la voce EN è lo stato corrente: non deve essere un link.
+        // Lo switcher non è più un toggle con tutte le lingue affiancate: mostra
+        // la lingua corrente (un <button> che apre il menu) e mette le altre nel
+        // dropdown. L'intento del test resta: la corrente non si linka.
         $html = $this->get('/en')->assertOk()->getContent();
 
-        $this->assertStringContainsString('aria-current="true"', $html);
         $this->assertMatchesRegularExpression(
-            '/<span class="tg-lang__item is-active"[^>]*>(?:(?!<\/span>).)*?>EN</s',
+            '/<button[^>]*class="tg-lang__current"(?:(?!<\/button>).)*?tg-lang__code">EN</s',
             $html,
-            'La lingua attiva (EN) deve essere uno <span>, non un link'
+            'La lingua attiva (EN) deve stare nel trigger <button>, non essere un link'
         );
+        // Nello SWITCHER nessuna voce punta alla lingua corrente. Il controllo va
+        // fatto sul solo markup del selettore: in <head> hreflang="en" c'è per
+        // forza (link rel=alternate per la SEO) ed è corretto che ci sia.
+        preg_match('/<div class="tg-lang tg-lang--inline.*?<\/ul>/s', $html, $switcher);
+        $this->assertNotEmpty($switcher, 'Lo switcher deve essere presente nella pagina.');
+        $this->assertStringNotContainsString('hreflang="en"', $switcher[0]);
 
         // …e IT deve invece essere un link con hreflang corretto.
-        $this->assertStringContainsString('hreflang="it"', $html);
+        $this->assertStringContainsString('hreflang="it"', $switcher[0]);
     }
 
     public function test_lo_switcher_resta_sulla_stessa_pagina(): void

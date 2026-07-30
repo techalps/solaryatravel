@@ -142,6 +142,17 @@ class AddonController extends Controller
 
         $addon->update($validated);
 
+        // Traduzioni dei testi (nome, descrizione) per le lingue attive.
+        $submitted = $request->input('translations');
+        if (is_array($submitted)) {
+            foreach (\App\Support\Locales::translatable() as $locale) {
+                if (isset($submitted[$locale]) && is_array($submitted[$locale])) {
+                    $addon->setTranslations($locale, $submitted[$locale]);
+                }
+            }
+            $addon->save();
+        }
+
         return redirect()
             ->route('admin.addons.index')
             ->with('success', 'Extra aggiornato con successo.');

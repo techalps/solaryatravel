@@ -16,13 +16,13 @@ use Tests\TestCase;
 /**
  * Documento d'identità obbligatorio per OGNI passeggero (intestatario compreso).
  *
- * Copre tipo, numero e luogo di emissione + persistenza sui booking_seats
- * attraverso il flusso pubblico.
+ * Del passeggero si chiedono SOLO quattro campi: nome, cognome, tipo di documento
+ * e numero. Si scegle la tipologia e si compila il numero.
  *
- * NB: codice fiscale e data di scadenza NON sono più richiesti nei canali di
- * vendita (sito, agenzie, widget) — troppi campi in prenotazione secondo i
- * riscontri del periodo di test. Le colonne restano a DB e l'admin può ancora
- * compilarle.
+ * NB: data di scadenza, codice fiscale e luogo di rilascio (stato/provincia/
+ * comune) NON sono più richiesti in NESSUN form — sito, agenzie, widget e admin
+ * compresi: troppi campi in fase di prenotazione. Le colonne restano a database
+ * per non perdere lo storico, ma non vengono più scritte né validate.
  */
 class PassengerDocumentTest extends TestCase
 {
@@ -54,14 +54,11 @@ class PassengerDocumentTest extends TestCase
     }
 
     /** Compila i campi documento validi dell'intestatario (adulto 0) sul componente. */
-    private function fillValidBookerDocument($component, TourDeparture $dep): void
+    private function fillValidBookerDocument($component): void
     {
         $component
             ->set('adults.0.doc_type', 'carta_identita')
-            ->set('adults.0.doc_number', 'CA12345AB')
-            ->set('adults.0.doc_country', 'IT')
-            ->set('adults.0.doc_province', 'TO')
-            ->set('adults.0.doc_place', 'Torino');
+            ->set('adults.0.doc_number', 'CA12345AB');
     }
 
     private function baseFilledComponent(Tour $tour, TourDeparture $dep)
@@ -73,37 +70,42 @@ class PassengerDocumentTest extends TestCase
             ->set('terms', true);
     }
 
-    public function test_la_scadenza_documento_non_e_piu_richiesta(): void
+    public function test_bastano_tipo_e_numero_per_prenotare(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
 
-        // Documento senza data di scadenza: la prenotazione deve andare a buon fine.
+        // Nessun luogo di rilascio, nessuna scadenza, nessun codice fiscale.
         $component = $this->baseFilledComponent($tour, $dep);
-        $this->fillValidBookerDocument($component, $dep);
+        $this->fillValidBookerDocument($component);
         $component->call('submit')->assertHasNoErrors();
 
         $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
-        $this->assertNotNull($booking, 'La prenotazione deve essere creata senza la scadenza.');
+        $this->assertNotNull($booking, 'La prenotazione deve andare a buon fine con soli tipo e numero.');
 
         $seat = $booking->seatRecords()->where('is_primary', true)->first();
-        $this->assertNull($seat->doc_expiry, 'La scadenza non viene più raccolta: resta null.');
+        $this->assertSame('carta_identita', $seat->doc_type);
+        $this->assertSame('CA12345AB', $seat->doc_number);
 
-        // Il documento è comunque considerato completo, così la prenotazione non
-        // finisce nel filtro admin "documenti mancanti".
+        // Il documento è considerato completo, così la prenotazione non finisce
+        // nel filtro admin "documenti mancanti".
         $this->assertTrue($seat->hasDocument());
     }
 
-    public function test_il_codice_fiscale_non_e_piu_richiesto(): void
+    public function test_i_campi_rimossi_non_vengono_piu_salvati(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
 
         $component = $this->baseFilledComponent($tour, $dep);
-        $this->fillValidBookerDocument($component, $dep);
-        // Nessun customer_tax_code impostato: non deve bloccare.
+        $this->fillValidBookerDocument($component);
         $component->call('submit')->assertHasNoErrors();
 
         $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
-        $this->assertNotNull($booking);
+        $seat = $booking->seatRecords()->where('is_primary', true)->first();
+
+        $this->assertNull($seat->doc_expiry, 'La scadenza non si chiede più: resta null.');
+        $this->assertNull($seat->doc_issue_country, 'Il luogo di rilascio non si chiede più: resta null.');
+        $this->assertNull($seat->doc_issue_province);
+        $this->assertNull($seat->doc_issue_place);
         $this->assertNull($booking->customer_tax_code, 'Senza CF il campo resta null, non stringa vuota.');
     }
 
@@ -113,69 +115,43 @@ class PassengerDocumentTest extends TestCase
 
         $this->baseFilledComponent($tour, $dep)
             ->call('submit')
-            ->assertHasErrors(['adults.0.doc_type', 'adults.0.doc_number', 'adults.0.doc_place'])
-            // La scadenza non è più tra i campi obbligatori.
-            ->assertHasNoErrors(['adults.0.doc_expiry']);
+            ->assertHasErrors(['adults.0.doc_type', 'adults.0.doc_number'])
+            // I campi rimossi non devono più comparire fra gli errori.
+            ->assertHasNoErrors([
+                'adults.0.doc_expiry',
+                'adults.0.doc_country',
+                'adults.0.doc_province',
+                'adults.0.doc_place',
+            ]);
 
         $this->assertSame(0, Booking::where('tour_id', $tour->id)->count());
     }
 
-    public function test_provincia_obbligatoria_se_italia(): void
+    public function test_il_tipo_documento_deve_essere_fra_quelli_previsti(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
 
         $this->baseFilledComponent($tour, $dep)
-            ->set('adults.0.doc_type', 'passaporto')
-            ->set('adults.0.doc_number', 'YA1234567')
-            ->set('adults.0.doc_country', 'IT')
-            ->set('adults.0.doc_province', '')   // manca la provincia
-            ->set('adults.0.doc_place', 'Torino')
+            ->set('adults.0.doc_type', 'tessera_sanitaria')  // non ammesso
+            ->set('adults.0.doc_number', 'XX1234567')
             ->call('submit')
-            ->assertHasErrors(['adults.0.doc_province']);
+            ->assertHasErrors(['adults.0.doc_type']);
     }
 
-    public function test_documento_valido_viene_salvato_sul_seat(): void
+    public function test_il_form_pubblico_non_mostra_piu_i_campi_rimossi(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
 
-        $component = $this->baseFilledComponent($tour, $dep);
-        $this->fillValidBookerDocument($component, $dep);
-        $component->call('submit')->assertHasNoErrors();
+        $html = Livewire::test(BookingForm::class, ['tour' => $tour, 'departure' => $dep])->html();
 
-        $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
-        $this->assertNotNull($booking, 'La prenotazione deve essere creata.');
-
-        $seat = $booking->seatRecords()->where('is_primary', true)->first();
-        $this->assertNotNull($seat);
-        $this->assertSame('carta_identita', $seat->doc_type);
-        $this->assertSame('CA12345AB', $seat->doc_number);
-        $this->assertSame('IT', $seat->doc_issue_country);
-        $this->assertSame('TO', $seat->doc_issue_province);
-        $this->assertSame('Torino', $seat->doc_issue_place);
-        $this->assertTrue($seat->hasDocument());
-        // La scadenza non viene più raccolta dal form pubblico: resta null.
-        $this->assertNull($seat->doc_expiry);
-    }
-
-    public function test_estero_senza_provincia_e_ammesso(): void
-    {
-        [$tour, $dep] = $this->makeTourWithDeparture();
-        $expiry = $dep->departure_date->copy()->addYear()->toDateString();
-
-        $component = $this->baseFilledComponent($tour, $dep)
-            ->set('adults.0.doc_type', 'passaporto')
-            ->set('adults.0.doc_number', 'FR9988776')
-            ->set('adults.0.doc_expiry', $expiry)
-            ->set('adults.0.doc_country', 'FR')
-            ->set('adults.0.doc_place', 'Paris');
-
-        $component->call('submit')->assertHasNoErrors();
-
-        $seat = Booking::where('tour_id', $tour->id)->latest('id')->first()
-            ->seatRecords()->where('is_primary', true)->first();
-        $this->assertSame('FR', $seat->doc_issue_country);
-        $this->assertNull($seat->doc_issue_province);
-        $this->assertSame('Paris', $seat->doc_issue_place);
+        // Tipo e numero ci sono...
+        $this->assertStringContainsString('adults.0.doc_type', $html);
+        $this->assertStringContainsString('adults.0.doc_number', $html);
+        // ...il resto no.
+        $this->assertStringNotContainsString('doc_country', $html);
+        $this->assertStringNotContainsString('doc_province', $html);
+        $this->assertStringNotContainsString('doc_place', $html);
+        $this->assertStringNotContainsString('doc_expiry', $html);
     }
 
     // ===== Admin =====
@@ -188,12 +164,9 @@ class PassengerDocumentTest extends TestCase
             'adults' => [[
                 'first_name' => 'Mario', 'last_name' => 'Rossi',
                 'doc_type' => 'carta_identita', 'doc_number' => 'CA12345AB',
-                'doc_expiry' => $dep->departure_date->copy()->addYear()->toDateString(),
-                'doc_country' => 'IT', 'doc_province' => 'TO', 'doc_place' => 'Torino',
             ]],
             'customer_first_name' => 'Mario', 'customer_last_name' => 'Rossi',
             'customer_email' => 'mario'.uniqid().'@example.com',
-            'customer_tax_code' => 'RSSMRA80A01H501U',
             'status' => 'confirmed',
         ], $overrides);
     }
@@ -204,35 +177,22 @@ class PassengerDocumentTest extends TestCase
         $admin = User::factory()->create(['role' => 'super_admin']);
 
         $payload = $this->adminBookingPayload($tour, $dep);
-        // Rimuovi i campi documento dall'adulto.
-        unset($payload['adults'][0]['doc_type'], $payload['adults'][0]['doc_number'],
-            $payload['adults'][0]['doc_expiry'], $payload['adults'][0]['doc_place']);
+        unset($payload['adults'][0]['doc_type'], $payload['adults'][0]['doc_number']);
 
         $this->actingAs($admin)
             ->post('/admin/bookings', $payload)
-            ->assertSessionHasErrors(['adults.0.doc_type', 'adults.0.doc_number', 'adults.0.doc_expiry', 'adults.0.doc_place']);
+            ->assertSessionHasErrors(['adults.0.doc_type', 'adults.0.doc_number']);
 
         $this->assertSame(0, Booking::where('tour_id', $tour->id)->count());
     }
 
-    public function test_admin_store_rifiuta_documento_scaduto(): void
+    public function test_admin_store_non_pretende_piu_scadenza_e_luogo(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
         $admin = User::factory()->create(['role' => 'super_admin']);
 
-        $payload = $this->adminBookingPayload($tour, $dep);
-        $payload['adults'][0]['doc_expiry'] = $dep->departure_date->copy()->subDay()->toDateString();
-
-        $this->actingAs($admin)
-            ->post('/admin/bookings', $payload)
-            ->assertSessionHasErrors(['adults.0.doc_expiry']);
-    }
-
-    public function test_admin_store_salva_il_documento(): void
-    {
-        [$tour, $dep] = $this->makeTourWithDeparture();
-        $admin = User::factory()->create(['role' => 'super_admin']);
-
+        // Payload con SOLI tipo e numero: prima veniva rifiutato perché scadenza
+        // e luogo di rilascio erano obbligatori anche in admin.
         $this->actingAs($admin)
             ->post('/admin/bookings', $this->adminBookingPayload($tour, $dep))
             ->assertSessionHasNoErrors();
@@ -240,8 +200,7 @@ class PassengerDocumentTest extends TestCase
         $seat = Booking::where('tour_id', $tour->id)->latest('id')->first()
             ->seatRecords()->where('is_primary', true)->first();
         $this->assertSame('carta_identita', $seat->doc_type);
-        $this->assertSame('TO', $seat->doc_issue_province);
-        $this->assertSame('Torino', $seat->doc_issue_place);
+        $this->assertSame('CA12345AB', $seat->doc_number);
         $this->assertTrue($seat->hasDocument());
     }
 
@@ -250,48 +209,20 @@ class PassengerDocumentTest extends TestCase
         [$tour, $dep] = $this->makeTourWithDeparture();
         $admin = User::factory()->create(['role' => 'super_admin']);
 
-        // Crea una prenotazione con documento iniziale.
         $this->actingAs($admin)->post('/admin/bookings', $this->adminBookingPayload($tour, $dep));
         $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
         $seat = $booking->seatRecords()->where('is_primary', true)->first();
 
-        // Modifica: passaporto emesso all'estero.
         $this->actingAs($admin)
             ->post(route('admin.bookings.seats.document', [$booking, $seat]), [
                 'doc_type' => 'passaporto',
                 'doc_number' => 'YB7654321',
-                'doc_expiry' => $dep->departure_date->copy()->addYears(2)->toDateString(),
-                'doc_country' => 'FR',
-                'doc_place' => 'Nice',
             ])
             ->assertSessionHasNoErrors();
 
         $seat->refresh();
         $this->assertSame('passaporto', $seat->doc_type);
         $this->assertSame('YB7654321', $seat->doc_number);
-        $this->assertSame('FR', $seat->doc_issue_country);
-        $this->assertNull($seat->doc_issue_province);
-        $this->assertSame('Nice', $seat->doc_issue_place);
-    }
-
-    public function test_admin_edit_rifiuta_documento_scaduto(): void
-    {
-        [$tour, $dep] = $this->makeTourWithDeparture();
-        $admin = User::factory()->create(['role' => 'super_admin']);
-        $this->actingAs($admin)->post('/admin/bookings', $this->adminBookingPayload($tour, $dep));
-        $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
-        $seat = $booking->seatRecords()->where('is_primary', true)->first();
-
-        $this->actingAs($admin)
-            ->post(route('admin.bookings.seats.document', [$booking, $seat]), [
-                'doc_type' => 'carta_identita',
-                'doc_number' => 'CA0000001',
-                'doc_expiry' => $dep->departure_date->copy()->subDay()->toDateString(),
-                'doc_country' => 'IT',
-                'doc_province' => 'MI',
-                'doc_place' => 'Milano',
-            ])
-            ->assertSessionHasErrors(['doc_expiry']);
     }
 
     public function test_helper_documenti_mancanti_e_filtro_admin(): void
@@ -309,10 +240,7 @@ class PassengerDocumentTest extends TestCase
             'customer_email' => 'senza'.uniqid().'@example.com',
         ]));
         $incomplete = Booking::where('tour_id', $tour->id)->latest('id')->first();
-        $incomplete->seatRecords()->update([
-            'doc_type' => null, 'doc_number' => null, 'doc_expiry' => null,
-            'doc_issue_country' => null, 'doc_issue_place' => null,
-        ]);
+        $incomplete->seatRecords()->update(['doc_type' => null, 'doc_number' => null]);
         $this->assertTrue($incomplete->fresh()->load('seatRecords')->hasMissingDocuments());
 
         // Il filtro admin mostra solo quella incompleta (futura).
@@ -320,6 +248,21 @@ class PassengerDocumentTest extends TestCase
         $res->assertOk();
         $res->assertSee('#' . $incomplete->booking_number);
         $res->assertDontSee('#' . $complete->booking_number);
+    }
+
+    /**
+     * Un documento storico privo di luogo di rilascio (dato vecchio) non deve
+     * risultare incompleto solo per quello: conta solo tipo + numero.
+     */
+    public function test_lo_storico_senza_luogo_di_rilascio_resta_completo(): void
+    {
+        [$tour, $dep] = $this->makeTourWithDeparture();
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($admin)->post('/admin/bookings', $this->adminBookingPayload($tour, $dep));
+        $booking = Booking::where('tour_id', $tour->id)->latest('id')->first();
+
+        $this->assertFalse($booking->fresh()->load('seatRecords')->hasMissingDocuments());
     }
 
     /**

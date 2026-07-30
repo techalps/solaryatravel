@@ -128,6 +128,11 @@ class PaymentService
      * Stripe ammette da 30 minuti a 24 ore dalla creazione.
      *
      * - Checkout dal sito: il cliente viene rediretto subito, 30 minuti bastano.
+     *   NB: il minimo imposto da Stripe (30 min) è più lungo della finestra del
+     *   carrello (15 min di default), quindi la sessione Stripe NON può fare da
+     *   sola da scadenza: chi comanda è payment_deadline, verificato in lettura
+     *   su /pagamento e dal job bookings:expire-unpaid. Una sessione Stripe
+     *   ancora tecnicamente aperta su un carrello scaduto viene intercettata là.
      * - Link inviato per EMAIL: 30 minuti non bastano affatto. Fra accodamento
      *   SMTP, ritardi di consegna e il tempo che il destinatario legge la posta,
      *   il link arrivava già scaduto (segnalato da un'agenzia sul canale B2B).

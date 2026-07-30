@@ -28,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'locale',
         'date_of_birth',
         'commission_rate',
+        'can_book_complimentary',
         'agency_name',
         'referral_token',
         'widget_allowed_domains',
@@ -55,8 +56,21 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'commission_rate' => 'decimal:2',
+            'can_book_complimentary' => 'boolean',
             'widget_allowed_domains' => 'array',
         ];
+    }
+
+    /**
+     * L'agenzia è autorizzata a registrare prenotazioni a 0€ (posti omaggio)?
+     *
+     * Concessione per singola agenzia, non un diritto del ruolo b2b: il flag si
+     * abilita dalle impostazioni di quell'agenzia. Vale solo per il ruolo b2b —
+     * l'admin ha già i posti omaggio per conto suo.
+     */
+    public function canBookComplimentary(): bool
+    {
+        return $this->role === 'b2b' && (bool) $this->can_book_complimentary;
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\Booking;
 use App\Services\QrCodeService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Mail\Concerns\SendsInBookingLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -15,13 +16,17 @@ use Illuminate\Queue\SerializesModels;
 class BookingTickets extends Mailable
 {
     use Queueable, SerializesModels;
+    use SendsInBookingLocale;
 
-    public function __construct(public Booking $booking) {}
+    public function __construct(public Booking $booking)
+    {
+        $this->useBookingLocale($booking->locale);
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'I tuoi biglietti · Prenotazione #' . $this->booking->booking_number,
+            subject: __('emails.tickets.subject', ['number' => $this->booking->booking_number]),
         );
     }
 

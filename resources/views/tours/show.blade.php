@@ -1,7 +1,14 @@
 @extends('layouts.public')
 
-@section('title', __('tours.meta.title_detail', ['tour' => tdb($tour->meta_title ?: $tour->name)]))
-@section('meta_description', tdb($tour->meta_description ?: ($tour->description_short ?: '')))
+@php
+    // Meta SEO: si prende la traduzione del campo specifico e, se il campo è
+    // vuoto in italiano, si ricade sul campo alternativo (già tradotto anch'esso).
+    $metaTitle = trim((string) tdb($tour, 'meta_title')) ?: tdb($tour, 'name');
+    $metaDescription = trim((string) tdb($tour, 'meta_description'))
+        ?: trim((string) tdb($tour, 'description_short'));
+@endphp
+@section('title', __('tours.meta.title_detail', ['tour' => $metaTitle]))
+@section('meta_description', $metaDescription)
 
 @section('content')
 
@@ -20,12 +27,12 @@
                         <ol class="breadcrumb justify-content-center mb-0">
                             <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white-50 text-decoration-none">{{ __('tours.breadcrumb.home') }}</a></li>
                             <li class="breadcrumb-item"><a href="{{ route('tours.index') }}" class="text-white-50 text-decoration-none">{{ __('tours.breadcrumb.tours') }}</a></li>
-                            <li class="breadcrumb-item active text-white" aria-current="page">{{ tdb($tour->name) }}</li>
+                            <li class="breadcrumb-item active text-white" aria-current="page">{{ tdb($tour, 'name') }}</li>
                         </ol>
                     </nav>
-                    <h1 class="mb-3 wow fadeInUp">{{ tdb($tour->name) }}</h1>
+                    <h1 class="mb-3 wow fadeInUp">{{ tdb($tour, 'name') }}</h1>
                     @if($tour->description_short)
-                        <p class="lead mb-4 wow fadeInUp" style="max-width:700px;margin:0 auto;">{{ tdb($tour->description_short) }}</p>
+                        <p class="lead mb-4 wow fadeInUp" style="max-width:700px;margin:0 auto;">{{ tdb($tour, 'description_short') }}</p>
                     @endif
                     @if($tour->booking_on_request)
                         <a href="mailto:{{ config('mail.from.address') }}" class="tg-btn tg-btn-hero-cta wow fadeInUp">
@@ -50,7 +57,7 @@
                     {{-- Quick meta strip (nascosto per i tour su richiesta) --}}
                     @if($tour->departure_point && ! $tour->booking_on_request)
                     <div class="tg-tour-details-video-location d-flex flex-wrap align-items-center mb-25 justify-content-center">
-                        <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ tdb($tour->departure_point) }}</span>
+                        <span class="mr-25"><i class="fa-regular fa-location-dot me-1"></i> {{ tdb($tour, 'departure_point') }}</span>
                     </div>
                     @endif
 
@@ -64,7 +71,7 @@
                         <div class="row gx-15 mb-25">
                             <div class="col-lg-7">
                                 <div class="tg-tour-details-video-thumb mb-15">
-                                    <img class="w-100" src="{{ $main->url }}" alt="{{ tdb($tour->name) }}" style="height:420px;object-fit:cover;border-radius:15px;">
+                                    <img class="w-100" src="{{ $main->url }}" alt="{{ tdb($tour, 'name') }}" style="height:420px;object-fit:cover;border-radius:15px;">
                                 </div>
                             </div>
                             <div class="col-lg-5">
@@ -108,7 +115,7 @@
                                         <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
                                         <div>
                                             <span class="title">{{ __('tours.detail.departure_label') }}</span>
-                                            <span class="duration">{{ tdb($tour->departure_point) }}</span>
+                                            <span class="duration">{{ tdb($tour, 'departure_point') }}</span>
                                         </div>
                                     </li>
                                 @endif
@@ -133,7 +140,7 @@
                     @if($tour->description)
                         <div class="tg-tour-about-inner mb-25">
                             <h4 class="tg-tour-about-title mb-15">{{ __('tours.detail.info_title') }}</h4>
-                            <p class="lh-28 mb-0">{!! nl2br(e(tdb($tour->description))) !!}</p>
+                            <p class="lh-28 mb-0">{!! nl2br(e(tdb($tour, 'description'))) !!}</p>
                         </div>
                     @endif
 
@@ -144,7 +151,7 @@
                     @if($tour->itinerary)
                         <div class="tg-tour-about-inner mb-40">
                             <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-route text-primary me-2"></i>{{ __('tours.detail.itinerary_title') }}</h4>
-                            <p class="lh-28 mb-0">{!! nl2br(e(tdb($tour->itinerary))) !!}</p>
+                            <p class="lh-28 mb-0">{!! nl2br(e(tdb($tour, 'itinerary'))) !!}</p>
                         </div>
                     @endif
 
@@ -159,7 +166,7 @@
                                         <h6 class="tg-tour-about-subtitle mb-10">{{ __('tours.detail.included') }}</h6>
                                         <div class="tg-tour-about-list tg-tour-about-list-2">
                                             <ul class="list-unstyled mb-0">
-                                                @foreach(tdb_list((array) $tour->included) as $item)
+                                                @foreach(tdb($tour, 'included') as $item)
                                                     <li>
                                                         <span class="icon mr-10"><i class="fa-sharp fa-solid fa-check fa-fw"></i></span>
                                                         <span class="text">{{ $item }}</span>
@@ -174,7 +181,7 @@
                                         <h6 class="tg-tour-about-subtitle mb-10">{{ __('tours.detail.excluded') }}</h6>
                                         <div class="tg-tour-about-list tg-tour-about-list-2 disable">
                                             <ul class="list-unstyled mb-0">
-                                                @foreach(tdb_list((array) $tour->excluded) as $item)
+                                                @foreach(tdb($tour, 'excluded') as $item)
                                                     <li>
                                                         <span class="icon mr-10"><i class="fa-sharp fa-solid fa-xmark"></i></span>
                                                         <span class="text">{{ $item }}</span>
@@ -230,7 +237,7 @@
                                                         <tbody>
                                                             @foreach($period->ageBrackets as $b)
                                                                 <tr>
-                                                                    <td><strong>{{ tdb($b->label) }}</strong></td>
+                                                                    <td><strong>{{ tdb($b, 'label') }}</strong></td>
                                                                     <td class="text-muted small">
                                                                         @if($b->max_age === null)
                                                                             {{ __('tours.detail.age_from', ['from' => $b->min_age]) }}
@@ -270,7 +277,7 @@
                     <strong style="font-size:.95rem;color:#0E1B33">{{ __('tours.detail.on_request_text') }}</strong>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    <a href="https://wa.me/393450884743?text={{ rawurlencode(__('tours.detail.whatsapp_message', ['tour' => tdb($tour->name)])) }}" target="_blank" rel="noopener"
+                    <a href="https://wa.me/393450884743?text={{ rawurlencode(__('tours.detail.whatsapp_message', ['tour' => tdb($tour, 'name')])) }}" target="_blank" rel="noopener"
                        style="background:#25D366;color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
                         <i class="fa-brands fa-whatsapp"></i><span class="d-none d-sm-inline">{{ __('tours.detail.whatsapp') }}</span>
                     </a>
@@ -300,7 +307,7 @@
                 <div class="row align-items-center">
                     <div class="col">
                         <span style="font-size:.75rem;color:#888;display:block;margin-bottom:2px">{{ __('tours.booking.you_are_booking') }}</span>
-                        <h6 style="margin:0;font-weight:700;color:#0E1B33">{{ tdb($tour->name) }}</h6>
+                        <h6 style="margin:0;font-weight:700;color:#0E1B33">{{ tdb($tour, 'name') }}</h6>
                     </div>
                     <div class="col-auto">
                         <button onclick="closeBookingDrawer()"
@@ -362,12 +369,12 @@
                             <a href="{{ route('tours.show', $st->slug) }}" class="text-decoration-none">
                                 <div class="bg-white border rounded-4 overflow-hidden h-100 shadow-sm tg-similar-card">
                                     @if($st->primaryImage)
-                                        <img src="{{ $st->primaryImage->url }}" class="w-100" alt="{{ tdb($st->name) }}" style="height:200px;object-fit:cover">
+                                        <img src="{{ $st->primaryImage->url }}" class="w-100" alt="{{ tdb($st, 'name') }}" style="height:200px;object-fit:cover">
                                     @else
-                                        <img src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" class="w-100" alt="{{ tdb($st->name) }}" style="height:200px;object-fit:cover">
+                                        <img src="{{ asset('assets/template/img/hero/hero-'.(($i % 5) + 1).'.jpg') }}" class="w-100" alt="{{ tdb($st, 'name') }}" style="height:200px;object-fit:cover">
                                     @endif
                                     <div class="p-3">
-                                        <h6 class="text-dark mb-1">{{ tdb($st->name) }}</h6>
+                                        <h6 class="text-dark mb-1">{{ tdb($st, 'name') }}</h6>
                                         <div class="d-flex justify-content-between text-muted small">
                                             <span>@if($st->duration_hours) <i class="fa-regular fa-clock me-1"></i>{{ $st->duration_hours }}h @endif</span>
                                             <strong class="text-primary">@if($st->price_from && ! $st->booking_on_request){{ __('tours.card.from_price', ['price' => number_format($st->price_from, 0, ',', '.')]) }}@else {{ __('tours.card.on_request') }} @endif</strong>

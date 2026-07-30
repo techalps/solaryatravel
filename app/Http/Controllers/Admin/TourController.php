@@ -79,6 +79,7 @@ class TourController extends Controller
         $data = $this->validateData($request, $tour);
         return DB::transaction(function () use ($data, $tour, $request) {
             $tour->update($this->extractTourFields($data));
+            $this->saveTranslations($tour, $request);
             $this->syncPeriods($tour, $data['periods'] ?? []);
             $this->syncCatamarans($tour, $data['catamarans'] ?? []);
             $this->syncCatamaranBlocks($tour, $data['catamaran_blocks'] ?? []);
@@ -126,6 +127,32 @@ class TourController extends Controller
     }
 
     // ----- Helpers -----
+
+    /**
+     * Salva le traduzioni inviate dal form (tab "Traduzioni").
+     *
+     * Accetta solo le lingue ATTIVE: una lingua disattivata nel frattempo non
+     * deve poter scrivere contenuti che nessuno vedrebbe. I campi non
+     * traducibili sono scartati dal trait.
+     */
+    protected function saveTranslations(Tour $tour, Request $request): void
+    {
+        $submitted = $request->input('translations');
+
+        if (! is_array($submitted)) {
+            return;
+        }
+
+        foreach (\App\Support\Locales::translatable() as $locale) {
+            if (! isset($submitted[$locale]) || ! is_array($submitted[$locale])) {
+                continue;
+            }
+
+            $tour->setTranslations($locale, $submitted[$locale]);
+        }
+
+        $tour->save();
+    }
 
     protected function validateData(Request $request, ?Tour $tour = null): array
     {

@@ -144,7 +144,7 @@
                         {{ __('tours.booking.reductions') }}
                         @foreach($this->childBrackets as $b)
                             <span class="bk-reduction-chip">
-                                {{ tdb($b->label) }}
+                                {{ tdb($b, 'label') }}
                                 <em class="text-nowrap">
                                     @if($b->max_age !== null && $b->min_age)
                                         ({{ $b->min_age }}–{{ $b->max_age }})
@@ -173,7 +173,7 @@
                                 <li wire:key="addon-{{ $addon->id }}">
                                     <div class="checkbox d-flex align-items-center">
                                         <input class="tg-checkbox" type="checkbox" id="addon-{{ $addon->id }}" wire:click="toggleAddon({{ $addon->id }})" @checked($isActive)>
-                                        <label for="addon-{{ $addon->id }}" class="tg-label ms-2 mb-0">{{ tdb($addon->name) }}</label>
+                                        <label for="addon-{{ $addon->id }}" class="tg-label ms-2 mb-0">{{ tdb($addon, 'name') }}</label>
                                     </div>
                                     <span class="quantity">€{{ number_format((float) $addon->price, 0, ',', '.') }}</span>
                                 </li>
@@ -310,7 +310,7 @@
                                 @elseif($c['ready'])
                                     <div class="bk-child-resolved">
                                         <i class="fa-solid fa-check-circle me-1"></i>
-                                        <strong>{{ tdb($c['bracket']->label) }}</strong> ({{ __('tours.booking.child_years', ['age' => $c['age']]) }})
+                                        <strong>{{ tdb($c['bracket'], 'label') }}</strong> ({{ __('tours.booking.child_years', ['age' => $c['age']]) }})
                                         <span class="text-primary fw-bold">€{{ number_format($c['unit_price'], 0, ',', '.') }}</span>
                                     </div>
                                 @elseif($c['dob'] === '')
@@ -420,6 +420,29 @@
                     ? \App\Support\Settings::minParticipantsNotice()
                     : __('tours.detail.min_participants') }}
             </div>
+
+            {{-- Prenotazione a 0€: visibile solo all'agenzia AUTORIZZATA (il
+                 permesso si abilita agenzia per agenzia dalle impostazioni admin).
+                 Il conteggio dei posti omaggio riverifica il permesso lato server,
+                 quindi non basta manomettere il campo per ottenere lo sconto. --}}
+            @if($this->canBookComplimentary())
+                <div class="bk-doc-block mb-15 p-2 rounded" style="background:#fff8e6;border:1px solid #f3d98b">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" wire:model.live="complimentary" id="bk-complimentary">
+                        <label class="form-check-label small fw-semibold" for="bk-complimentary">
+                            <i class="fa-solid fa-gift text-warning me-1"></i>Prenotazione omaggio (0 €)
+                        </label>
+                    </div>
+                    @if($complimentary)
+                        <input type="text" wire:model.blur="complimentaryReason" class="bk-input mt-2"
+                               maxlength="200" placeholder="Motivo dell'omaggio (facoltativo)">
+                        <small class="d-block text-muted mt-1" style="font-size:.75rem">
+                            I posti occupano comunque la barca. Nessun pagamento verrà richiesto al cliente
+                            e su questa prenotazione non maturano provvigioni.
+                        </small>
+                    @endif
+                </div>
+            @endif
 
             {{-- Terms --}}
             @php

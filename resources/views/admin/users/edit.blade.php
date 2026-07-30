@@ -213,6 +213,27 @@
                                 </div>
                                 <div class="form-text"><i class="bi bi-info-circle me-1"></i>% sul totale (IVA inclusa). Modificarla NON cambia le commissioni già maturate (snapshot sulla prenotazione).</div>
                             </div>
+
+                            {{-- Prenotazioni a 0€: concessione per SINGOLA agenzia, non
+                                 un diritto del ruolo b2b. Stessa funzione dei posti
+                                 omaggio dell'admin, ma va abilitata qui una per una. --}}
+                            <hr class="my-3">
+                            <div class="mb-1">
+                                <input type="hidden" name="can_book_complimentary" value="0">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" role="switch"
+                                           id="can_book_complimentary" name="can_book_complimentary" value="1"
+                                           {{ old('can_book_complimentary', $user->can_book_complimentary) ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-semibold" for="can_book_complimentary">
+                                        Prenotazioni a 0€ (posti omaggio)
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>Se attivo, questa agenzia può registrare
+                                    ospiti a 0€ dal proprio portale, come fa l'admin. I posti occupano comunque la
+                                    barca e su di essi non maturano provvigioni.
+                                </div>
+                            </div>
                         </div>
                     </div>
 

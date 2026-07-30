@@ -42,8 +42,16 @@ return [
     | Gli script vengono caricati solo previo consenso dell'utente tramite il
     | banner cookie. Lasciare vuoto un ID disattiva il relativo strumento.
     | La verifica Search Console è un meta tag e non installa cookie.
+    |
+    | IMPORTANTE — mai in locale. Il tracciamento è attivo SOLO in produzione:
+    | in locale/staging le visite di sviluppo falserebbero le statistiche (e in
+    | GA4 non si ripuliscono). Il controllo sta qui e non nelle viste, così vale
+    | per GTM, GA4 e Meta Pixel in un colpo solo: anche con gli ID presenti in
+    | .env (comodo per allineare gli ambienti) fuori produzione non viene
+    | emesso nessun tag. Per una prova in locale: 'tracking.enabled' => true.
     */
     'tracking' => [
+        'enabled' => env('TRACKING_ENABLED', env('APP_ENV') === 'production'),
         'gtm_id' => env('GTM_ID'),                            // GTM-XXXXXXX
         'ga4_id' => env('GOOGLE_ANALYTICS_ID'),               // G-XXXXXXXXXX
         'meta_pixel_id' => env('META_PIXEL_ID'),              // ID numerico

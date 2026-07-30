@@ -40,6 +40,10 @@
                                     <i class="bi bi-building"></i>Generale
                                 </a>
                                 <a class="nav-link d-flex align-items-center gap-2 fw-semibold"
+                                   data-bs-toggle="pill" href="#sec-locales" role="tab">
+                                    <i class="bi bi-translate"></i>Lingue
+                                </a>
+                                <a class="nav-link d-flex align-items-center gap-2 fw-semibold"
                                    data-bs-toggle="pill" href="#sec-booking" role="tab">
                                     <i class="bi bi-receipt"></i>Prenotazioni
                                 </a>
@@ -132,6 +136,71 @@
                     </div>
 
                     {{-- Booking --}}
+                    {{-- Lingue --}}
+                    <div class="tab-pane fade" id="sec-locales" role="tabpanel">
+                        {{-- Lingue del sito pubblico --}}
+                        <div class="dash-card mb-3">
+                            <div class="dash-card-header">
+                                <h3><i class="bi bi-translate me-2 text-primary"></i>Lingue del sito</h3>
+                            </div>
+                            <div class="dash-card-body">
+                                @php
+                                    $defaultLocale = \App\Support\Locales::default();
+                                    $activeLocales = old('active_locales', \App\Support\Locales::active());
+                                @endphp
+                                <p class="text-muted small mb-3">
+                                    Le lingue attive compaiono nel selettore del sito. L'italiano è sempre
+                                    attivo: è la lingua principale e quella mostrata quando una traduzione manca.
+                                    I testi dei tour e degli extra si traducono dalle rispettive schede.
+                                </p>
+                                <div class="row g-2">
+                                    @foreach (\App\Support\Locales::available() as $loc)
+                                        @php
+                                            $isDefault = $loc === $defaultLocale;
+                                            $checked = $isDefault || in_array($loc, (array) $activeLocales, true);
+                                            $hasUi = is_dir(lang_path($loc));
+                                        @endphp
+                                        <div class="col-md-6 col-lg-4">
+                                            <label class="d-flex align-items-start gap-2 p-3 border rounded-3 h-100 {{ $checked ? 'border-primary' : '' }}"
+                                                   style="cursor:{{ $isDefault ? 'default' : 'pointer' }};{{ $checked ? 'background:rgba(13,110,253,.04)' : '' }}">
+                                                <input type="checkbox" name="active_locales[]" value="{{ $loc }}"
+                                                       class="form-check-input mt-1 flex-shrink-0"
+                                                       {{ $checked ? 'checked' : '' }}
+                                                       {{ $isDefault ? 'disabled' : '' }}>
+                                                {{-- La default è disabilitata ma va inviata: hidden dedicato. --}}
+                                                @if ($isDefault)
+                                                    <input type="hidden" name="active_locales[]" value="{{ $loc }}">
+                                                @endif
+                                                <span class="min-w-0">
+                                                    <span class="fw-semibold d-block">
+                                                        {{ \App\Support\Locales::name($loc) }}
+                                                        <span class="text-muted small">({{ \App\Support\Locales::short($loc) }})</span>
+                                                    </span>
+                                                    @if ($isDefault)
+                                                        <span class="badge bg-primary-subtle text-primary mt-1">Lingua principale</span>
+                                                    @elseif (! $hasUi)
+                                                        {{-- Senza il file di interfaccia menù e bottoni resterebbero
+                                                             in italiano: meglio dirlo prima di attivarla. --}}
+                                                        <span class="badge bg-warning-subtle text-warning mt-1">
+                                                            <i class="bi bi-exclamation-triangle me-1"></i>Interfaccia non tradotta
+                                                        </span>
+                                                    @endif
+                                                </span>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="alert alert-light border mt-3 mb-0 small">
+                                    <i class="bi bi-info-circle me-1 text-primary"></i>
+                                    Attivando una lingua senza interfaccia tradotta, i testi dei tour che avrai
+                                    inserito appariranno nella nuova lingua, ma menù e bottoni resteranno in
+                                    italiano. Segnalacelo e completiamo la traduzione dell'interfaccia.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
                     <div class="tab-pane fade" id="sec-booking" role="tabpanel">
                         <div class="dash-card mb-3">
                             <div class="dash-card-header">
@@ -192,7 +261,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold text-secondary mb-1">
-                                            <i class="bi bi-hourglass-split me-1"></i>Scadenza pagamento
+                                            <i class="bi bi-hourglass-split me-1"></i>Scadenza pagamento carta
                                         </label>
                                         <div class="input-group">
                                             <input type="number" name="payment_deadline_minutes" min="5" max="1440"
@@ -200,6 +269,10 @@
                                                    class="form-control" required>
                                             <span class="input-group-text">min</span>
                                         </div>
+                                        <small class="text-muted" style="font-size:.75rem">
+                                            Minuti per pagare dall'apertura del checkout. Scaduti, la prenotazione
+                                            si annulla e i posti tornano in vendita.
+                                        </small>
                                     </div>
                                 </div>
                             </div>

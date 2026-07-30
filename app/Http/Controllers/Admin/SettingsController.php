@@ -50,6 +50,10 @@ class SettingsController extends Controller
             'cancel_penalty_days_2' => 'required|integer|min:0|max:365',
             'cancel_penalty_refund_2' => 'required|integer|min:0|max:100',
             'cancel_penalty_refund_under' => 'required|integer|min:0|max:100',
+            // Lingue attive sul sito pubblico. L'italiano è sempre attivo (è la
+            // lingua di default e il fallback dei contenuti): non arriva dal form.
+            'active_locales' => 'nullable|array',
+            'active_locales.*' => 'string|in:'.implode(',', \App\Support\Locales::available()),
             // Acconto
             'deposit_enabled' => 'boolean',
             'deposit_percentage' => 'required|integer|min:1|max:99',
@@ -95,6 +99,18 @@ class SettingsController extends Controller
         $validated['maintenance_mode'] = $request->boolean('maintenance_mode');
         $validated['deposit_enabled'] = $request->boolean('deposit_enabled');
         $validated['bank_transfer_enabled'] = $request->boolean('bank_transfer_enabled');
+
+        // Lingue attive: l'italiano è sempre incluso (lingua di default e
+        // fallback dei contenuti), l'ordine segue il catalogo in config/locales.
+        $default = \App\Support\Locales::default();
+        $chosen = array_values(array_unique(array_merge(
+            [$default],
+            array_intersect((array) ($validated['active_locales'] ?? []), \App\Support\Locales::available())
+        )));
+        $validated['active_locales'] = array_values(array_intersect(
+            \App\Support\Locales::available(),
+            $chosen
+        ));
 
         $this->saveSettings($validated);
 
@@ -211,7 +227,7 @@ class SettingsController extends Controller
             'booking_advance_days' => 30,
             'cancellation_hours' => 24,
             'default_seats' => 1,
-            'payment_deadline_minutes' => 30,
+            'payment_deadline_minutes' => 15,
             // Penali di storno
             'cancel_penalty_days_1' => 14,
             'cancel_penalty_refund_1' => 70,
@@ -219,6 +235,7 @@ class SettingsController extends Controller
             'cancel_penalty_refund_2' => 50,
             'cancel_penalty_refund_under' => 0,
             // Acconto
+            'active_locales' => (array) config('locales.supported', ['it']),
             'deposit_enabled' => false,
             'deposit_percentage' => 50,
             'balance_due_days' => 3,

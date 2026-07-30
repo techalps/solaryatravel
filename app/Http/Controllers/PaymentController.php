@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
+use App\Services\BookingService;
 use App\Services\PaymentService;
 use App\Support\BookingLog;
 use Illuminate\Http\Request;
@@ -21,7 +22,8 @@ use Stripe\Webhook;
 class PaymentController extends Controller
 {
     public function __construct(
-        protected PaymentService $paymentService
+        protected PaymentService $paymentService,
+        protected BookingService $bookingService
     ) {
         Stripe::setApiKey(config('payment.stripe.secret_key'));
     }
@@ -33,12 +35,24 @@ class PaymentController extends Controller
     {
         $booking->loadMissing(['tour', 'departure', 'addons']);
 
+        // Carrello scaduto: si annulla qui, prima di mostrare la pagina, così il
+        // limite vale anche a scheduler fermo.
+        if ($this->bookingService->expireIfCheckoutWindowPassed($booking)) {
+            return redirect()
+                ->route('tours.index')
+                ->with('warning', 'La sessione di prenotazione è scaduta e i posti sono tornati disponibili. Puoi ricominciare la prenotazione.');
+        }
+
         // Check if booking is still payable
         if (!$booking->isPending()) {
             return redirect()
                 ->route('booking.show', $booking->uuid)
                 ->with('info', 'Questa prenotazione è già stata pagata o non è più valida.');
         }
+
+        // Apre la finestra di pagamento: da qui partono i minuti utili. Se era
+        // già aperta, la scadenza non si rinnova (ricaricare non regala tempo).
+        $booking->startCheckoutWindow();
 
         return view('payments.show', compact('booking'));
     }
@@ -48,6 +62,15 @@ class PaymentController extends Controller
      */
     public function process(Booking $booking): RedirectResponse
     {
+        // Ricontrollo la scadenza anche qui: la pagina può essere rimasta aperta
+        // a lungo prima del click, e il pagamento non deve partire per un
+        // carrello i cui posti sono già stati liberati.
+        if ($this->bookingService->expireIfCheckoutWindowPassed($booking)) {
+            return redirect()
+                ->route('tours.index')
+                ->with('warning', 'La sessione di prenotazione è scaduta e i posti sono tornati disponibili. Puoi ricominciare la prenotazione.');
+        }
+
         if (!$booking->isPending()) {
             return redirect()
                 ->route('booking.show', $booking->uuid)
@@ -179,6 +202,9 @@ class PaymentController extends Controller
                 $booking->update([
                     'status' => BookingStatus::DEPOSIT_PAID,
                     'confirmed_at' => $booking->confirmed_at ?? now(),
+                    // Il pagamento è arrivato: la finestra del carrello non serve
+                    // più e non deve restare a video come conto alla rovescia.
+                    'payment_deadline' => null,
                 ]);
             }
             // Biglietti emessi solo a saldo completo: qui niente invio.
@@ -194,6 +220,8 @@ class PaymentController extends Controller
             $booking->update([
                 'status' => BookingStatus::CONFIRMED,
                 'confirmed_at' => $booking->confirmed_at ?? now(),
+                // Vedi sopra: pagata, quindi nessuna scadenza residua.
+                'payment_deadline' => null,
             ]);
         }
 

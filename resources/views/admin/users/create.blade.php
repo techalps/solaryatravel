@@ -196,6 +196,24 @@
                                 </div>
                                 <div class="form-text"><i class="bi bi-info-circle me-1"></i>% sul totale (IVA inclusa) di ogni prenotazione dell'agenzia.</div>
                             </div>
+
+                            {{-- Vedi edit.blade.php: concessione per singola agenzia. --}}
+                            <hr class="my-3">
+                            <div class="mb-1">
+                                <input type="hidden" name="can_book_complimentary" value="0">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" role="switch"
+                                           id="can_book_complimentary" name="can_book_complimentary" value="1"
+                                           {{ old('can_book_complimentary') ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-semibold" for="can_book_complimentary">
+                                        Prenotazioni a 0€ (posti omaggio)
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>Se attivo, l'agenzia può registrare ospiti
+                                    a 0€ dal proprio portale. I posti occupano la barca e non generano provvigioni.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

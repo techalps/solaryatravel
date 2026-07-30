@@ -58,13 +58,63 @@ if (! function_exists('i18n_normalize_db_key')) {
 
 if (! function_exists('tdb')) {
     /**
-     * Traduce un contenuto proveniente dal DB usando il dizionario
-     * lang/{locale}/db.php. Se manca la voce, restituisce il testo
-     * originale (fallback italiano) e logga la stringa mancante.
+     * Traduce un contenuto proveniente dal DB.
+     *
+     * Due forme d'uso:
+     *
+     *   tdb($tour, 'description')  → traduzione salvata dal cliente in admin
+     *                                (colonna JSON translations), con fallback
+     *                                all'italiano. È la forma da preferire.
+     *
+     *   tdb($testo)                → vecchio dizionario statico lang/{locale}/db.php.
+     *                                Mantenuta perché copre i contenuti già
+     *                                tradotti da noi finché il cliente non li
+     *                                riscrive dall'admin: senza questo fallback
+     *                                il sito inglese tornerebbe in italiano di
+     *                                colpo al rilascio.
+     *
+     * @param  \Illuminate\Database\Eloquent\Model|string|null  $subject
      */
-    function tdb(?string $text): ?string
+    function tdb($subject, ?string $field = null): mixed
     {
-        if ($text === null || trim($text) === '' || app()->getLocale() === 'it') {
+        // Forma modello+campo: la traduzione del cliente vince sul dizionario.
+        if ($field !== null) {
+            if (! $subject instanceof \Illuminate\Database\Eloquent\Model) {
+                return null;
+            }
+
+            $locale = app()->getLocale();
+            $original = $subject->getAttribute($field);
+
+            if ($locale === (string) config('locales.default', 'it')) {
+                return $original;
+            }
+
+            // 1) Traduzione inserita dal cliente.
+            if (method_exists($subject, 'translationFor')) {
+                $own = $subject->translationFor($locale, $field);
+                $hasOwn = is_array($own) ? $own !== [] : trim((string) $own) !== '';
+
+                if ($hasOwn) {
+                    return $own;
+                }
+            }
+
+            // 2) Ripiego sul dizionario storico (solo per i testi semplici).
+            if (is_string($original)) {
+                return tdb($original);
+            }
+
+            if (is_array($original)) {
+                return tdb_list($original);
+            }
+
+            return $original;
+        }
+
+        $text = $subject;
+
+        if (! is_string($text) || trim($text) === '' || app()->getLocale() === (string) config('locales.default', 'it')) {
             return $text;
         }
 

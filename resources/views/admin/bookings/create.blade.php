@@ -454,11 +454,10 @@
     let byDate = {};           // 'Y-m-d' => [departure,...]
     let currentDeparture = null;
     let adultsCount = 1;
-    const emptyDoc = () => ({ doc_type: '', doc_number: '', doc_expiry: '', doc_country: 'IT', doc_province: '', doc_place: '' });
+    // Del documento si chiedono solo tipo e numero.
+    const emptyDoc = () => ({ doc_type: '', doc_number: '' });
     let adults = [Object.assign({ first_name: '', last_name: '' }, emptyDoc())];
     let children = [];         // [{dob, first_name, last_name, price?, doc_*}]
-    // Data del viaggio (partenza corrente) per il min di scadenza documento.
-    function tripDateIso() { return currentDeparture ? currentDeparture.iso_date : ''; }
     let fp = null;             // flatpickr data di partenza
     let fpReturn = null;       // flatpickr data di ritorno (uso esclusivo)
     let onRequest = false;     // tour "su richiesta": prezzo totale inserito a mano
@@ -813,7 +812,7 @@
             bookerSlot.innerHTML = `
                 <input type="hidden" name="adults[0][first_name]" value="${escapeHtml(adults[0].first_name)}">
                 <input type="hidden" name="adults[0][last_name]" value="${escapeHtml(adults[0].last_name)}">
-                ${SolaryaDocFields.html('adults', 0, adults[0], { tripDate: tripDateIso() })}`;
+                ${SolaryaDocFields.html('adults', 0, adults[0])}`;
         }
 
         // Nella sezione "Dati passeggeri" in fondo: solo gli adulti dal 2° in poi.
@@ -832,13 +831,9 @@
                             name="adults[${i}][last_name]" value="${escapeHtml(a.last_name)}" data-adult="${i}" data-field="last_name">
                     </div>
                 </div>
-                ${SolaryaDocFields.html('adults', i, a, { tripDate: tripDateIso() })}
+                ${SolaryaDocFields.html('adults', i, a)}
             </div>`;
         }).join('');
-        // Ripristina le liste comuni per i blocchi con provincia già scelta.
-        document.querySelectorAll('#booker-doc-slot [data-doc-block], #adults-list [data-doc-block]').forEach(b => {
-            if (b.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(b);
-        });
     }
 
     // ===== Bambini =====
@@ -905,12 +900,9 @@
                     </div>
                 </div>
                 <div data-child-badge="${i}">${childBadgeHtml(c)}</div>
-                ${SolaryaDocFields.html('children', i, c, { tripDate: tripDateIso() })}
+                ${SolaryaDocFields.html('children', i, c)}
             </div>`;
         }).join('');
-        childrenList.querySelectorAll('[data-doc-block]').forEach(b => {
-            if (b.querySelector('[data-doc-province]')?.value) SolaryaDocFields.loadComuniInto(b);
-        });
     }
 
     // ===== Riepilogo =====

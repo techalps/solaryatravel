@@ -23,8 +23,10 @@
             array_splice($miniStatuses, 1, 0, ['deposit_paid']);
         }
 
-        // Fuso orario di visualizzazione (il DB resta in UTC).
-        $TZ = 'Europe/Rome';
+        // Fuso orario di visualizzazione. Ora coincide con quello dell'app
+        // (config/app.php è su Europe/Rome), quindi la conversione è a vuoto:
+        // resta come rete di sicurezza in caso di ambienti configurati male.
+        $TZ = config('app.timezone', 'Europe/Rome');
 
         // Helper per le intestazioni ordinabili: link che alterna asc/desc + freccia.
         $sortLink = function (string $key, string $label, string $thClass = '') use ($sort, $dir) {

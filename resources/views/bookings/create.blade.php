@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', __('tours.booking.page_title').' — '.tdb($tour->name))
+@section('title', __('tours.booking.page_title').' — '.tdb($tour, 'name'))
 
 @section('content')
 
@@ -18,7 +18,7 @@
                     <nav aria-label="breadcrumb" class="mb-3">
                         <ol class="breadcrumb justify-content-center mb-0">
                             <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white-50 text-decoration-none">{{ __('tours.breadcrumb.home') }}</a></li>
-                            <li class="breadcrumb-item"><a href="{{ route('tours.show', $tour->slug) }}" class="text-white-50 text-decoration-none">{{ tdb($tour->name) }}</a></li>
+                            <li class="breadcrumb-item"><a href="{{ route('tours.show', $tour->slug) }}" class="text-white-50 text-decoration-none">{{ tdb($tour, 'name') }}</a></li>
                             <li class="breadcrumb-item active text-white" aria-current="page">{{ __('tours.breadcrumb.book') }}</li>
                         </ol>
                     </nav>

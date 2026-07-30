@@ -30,10 +30,16 @@ class I18nMissing extends Command
     public function handle(): int
     {
         $locale = (string) ($this->option('locale') ?: $this->defaultTargetLocale());
-        $supported = (array) config('locales.supported', ['it']);
 
-        if (! in_array($locale, $supported, true)) {
-            $this->error("Lingua «{$locale}» non configurata. Disponibili: ".implode(', ', $supported));
+        // Le lingue verificabili sono quelle del CATALOGO (locales.names), non
+        // solo config('locales.supported'): quest'ultima è il default statico e
+        // non tiene conto delle lingue attivate in admin. Con il solo elenco
+        // 'supported' il comando rifiutava 'es'/'fr' anche a dizionario presente.
+        $catalogue = array_keys((array) config('locales.names', []));
+        $available = $catalogue !== [] ? $catalogue : (array) config('locales.supported', ['it']);
+
+        if (! in_array($locale, $available, true)) {
+            $this->error("Lingua «{$locale}» non in catalogo. Disponibili: ".implode(', ', $available));
 
             return self::FAILURE;
         }

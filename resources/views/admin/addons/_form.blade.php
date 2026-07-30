@@ -63,6 +63,25 @@
             </div>
         </div>
 
+        @if($a)
+            {{-- Traduzioni: solo in modifica (in creazione i testi italiani non
+                 sono ancora salvati, quindi non c'è nulla da affiancare). --}}
+            <div class="dash-card mb-3">
+                <div class="dash-card-header">
+                    <h3><i class="bi bi-translate me-2 text-primary"></i>Traduzioni</h3>
+                </div>
+                <div class="dash-card-body">
+                    @include('admin.partials._translations', [
+                        'model' => $a,
+                        'fields' => [
+                            'name' => ['label' => 'Nome', 'type' => 'text'],
+                            'description' => ['label' => 'Descrizione', 'type' => 'textarea', 'rows' => 3],
+                        ],
+                    ])
+                </div>
+            </div>
+        @endif
+
         {{-- Pricing --}}
         <div class="dash-card mb-3">
             <div class="dash-card-header">

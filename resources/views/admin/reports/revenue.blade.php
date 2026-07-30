@@ -24,7 +24,11 @@
         <div class="rpt-kpis">
             @php $outstanding = max(0, (float) $stats['total'] - (float) $stats['collected']); @endphp
             <div class="rpt-kpi is-accent-success">
-                <span class="rpt-kpi-label"><i class="bi bi-cash-coin"></i>Venduto</span>
+                {{-- Il criterio è dichiarato accanto alla cifra: i ricavi sono di
+                     COMPETENZA (partenze del periodo), mentre i conteggi di
+                     prenotazioni vanno per data di creazione. Senza dirlo, i due
+                     numeri sembravano in contraddizione. --}}
+                <span class="rpt-kpi-label"><i class="bi bi-cash-coin"></i>Venduto <small class="fw-normal opacity-75">· {{ \App\Support\ReportCriteria::LABEL_COMPETENZA }}</small></span>
                 <span class="rpt-kpi-value">€{{ number_format($stats['total'], 0, ',', '.') }}</span>
                 <span class="rpt-kpi-sub"><i class="bi bi-wallet2"></i>€{{ number_format($stats['collected'], 0, ',', '.') }} incassato · €{{ number_format($outstanding, 0, ',', '.') }} da incassare</span>
             </div>
@@ -44,6 +48,61 @@
                 <span class="rpt-kpi-sub">erogati nel periodo</span>
             </div>
         </div>
+
+        {{-- Diretto vs agenzie: le provvigioni B2B non comparivano in nessun
+             report, quindi il "venduto" sovrastimava quanto resta a Solarya. --}}
+        <section class="rpt-section">
+            <div class="rpt-section-head">
+                <h2 class="rpt-section-title"><i class="bi bi-diagram-3"></i>Canale di vendita</h2>
+                <span class="rpt-section-sub">{{ \App\Support\ReportCriteria::LABEL_COMPETENZA }} · provvigioni incluse</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr class="text-muted small">
+                            <th>Canale</th>
+                            <th class="text-end">Prenotazioni</th>
+                            <th class="text-end">Passeggeri</th>
+                            <th class="text-end">Venduto</th>
+                            <th class="text-end">Incassato</th>
+                            <th class="text-end">Provvigioni</th>
+                            <th class="text-end">Netto Solarya</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-globe me-1 text-primary"></i>Diretto (sito)</td>
+                            <td class="text-end">{{ $channels['direct']['bookings'] }}</td>
+                            <td class="text-end">{{ $channels['direct']['seats'] }}</td>
+                            <td class="text-end">€{{ number_format($channels['direct']['gross'], 2, ',', '.') }}</td>
+                            <td class="text-end">€{{ number_format($channels['direct']['collected'], 2, ',', '.') }}</td>
+                            <td class="text-end text-muted">—</td>
+                            <td class="text-end">€{{ number_format($channels['direct']['gross'], 2, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-shop me-1 text-warning"></i>Agenzie (B2B)</td>
+                            <td class="text-end">{{ $channels['agency']['bookings'] }}</td>
+                            <td class="text-end">{{ $channels['agency']['seats'] }}</td>
+                            <td class="text-end">€{{ number_format($channels['agency']['gross'], 2, ',', '.') }}</td>
+                            <td class="text-end">€{{ number_format($channels['agency']['collected'], 2, ',', '.') }}</td>
+                            <td class="text-end text-danger">−€{{ number_format($channels['agency']['commission'], 2, ',', '.') }}</td>
+                            <td class="text-end">€{{ number_format($channels['agency']['gross'] - $channels['agency']['commission'], 2, ',', '.') }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-semibold border-top">
+                            <td>Totale</td>
+                            <td class="text-end">{{ $channels['total']['bookings'] }}</td>
+                            <td class="text-end">{{ $channels['total']['seats'] }}</td>
+                            <td class="text-end">€{{ number_format($channels['total']['gross'], 2, ',', '.') }}</td>
+                            <td class="text-end">€{{ number_format($channels['total']['collected'], 2, ',', '.') }}</td>
+                            <td class="text-end text-danger">−€{{ number_format($channels['total']['commission'], 2, ',', '.') }}</td>
+                            <td class="text-end">€{{ number_format($channels['total']['net'], 2, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
 
         <section class="rpt-section">
             <div class="rpt-section-head">

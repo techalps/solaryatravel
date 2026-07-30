@@ -59,13 +59,18 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | Fuso orario dell'applicazione. Deve restare Europe/Rome: l'attività è
+    | interamente locale (partenze, cut-off, scadenze di pagamento) e i
+    | timestamp vengono mostrati così come sono salvati, senza conversione.
+    |
+    | Lasciando "UTC" (default di Laravel) le scadenze nascevano 2h indietro
+    | rispetto all'ora reale in CEST: now() era UTC ma la stampa a video la
+    | trattava come ora locale, quindi una scadenza a +30 min risultava già
+    | passata. Il valore arriva da APP_TIMEZONE, prima ignorato.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Europe/Rome'),
 
     /*
     |--------------------------------------------------------------------------
