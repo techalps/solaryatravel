@@ -21,29 +21,42 @@ class DashboardController extends Controller
         // Coerente con i Report (vedi ReportController).
         $revenueStatuses = BookingStatus::revenueStatusValues();
 
-        // Today's stats
+        // Oggi: partenze di oggi (competenza) e prenotazioni ricevute oggi
+        // (raccolta). Prima esisteva solo la prima, ma l'etichetta diceva
+        // "Prenotazioni oggi" facendo pensare alla seconda.
         $todayStats = [
-            'bookings' => Booking::whereDate('booking_date', today())->count(),
+            'departures' => Booking::whereDate('booking_date', today())
+                ->whereIn('status', $revenueStatuses)
+                ->count(),
             'guests' => Booking::whereDate('booking_date', today())
-                ->where('status', '!=', BookingStatus::CANCELLED)
+                ->whereIn('status', BookingStatus::boardableStatuses())
                 ->sum('seats'),
+            // Valore delle partenze di oggi (dovuto, non cassa).
             'revenue' => Booking::whereDate('booking_date', today())
+                ->whereIn('status', $revenueStatuses)
+                ->sum('total_amount'),
+            // Prenotazioni ARRIVATE oggi, a prescindere da quando si parte.
+            'booked' => Booking::whereDate('created_at', today())
+                ->whereIn('status', $revenueStatuses)
+                ->count(),
+            'booked_value' => Booking::whereDate('created_at', today())
                 ->whereIn('status', $revenueStatuses)
                 ->sum('total_amount'),
         ];
 
-        // Monthly stats
+        // Mese: le due viste affiancate, stessa finestra usata dai Report.
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
 
+        $monthViews = \App\Support\ReportCriteria::bothViews($monthStart, $monthEnd);
+
         $monthlyStats = [
-            'bookings' => Booking::whereBetween('booking_date', [$monthStart, $monthEnd])->count(),
-            'revenue' => Booking::whereBetween('booking_date', [$monthStart, $monthEnd])
-                ->whereIn('status', $revenueStatuses)
-                ->sum('total_amount'),
-            'avg_booking_value' => Booking::whereBetween('booking_date', [$monthStart, $monthEnd])
-                ->whereIn('status', $revenueStatuses)
-                ->avg('total_amount') ?? 0,
+            // Conteggio sui soli stati che fanno ricavo: prima includeva anche
+            // annullate e rimborsate, a differenza degli altri due riquadri.
+            'bookings' => $monthViews['competenza']['bookings'],
+            'revenue' => $monthViews['competenza']['gross'],
+            'collected' => $monthViews['competenza']['collected'],
+            'avg_booking_value' => $monthViews['competenza']['avg'],
         ];
 
         // Pending bookings
@@ -59,11 +72,21 @@ class DashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Weekly revenue chart data (stessa definizione di ricavo: prenotazioni
-        // incassate/confermate per data partenza).
-        $weeklyRevenue = Booking::whereIn('status', $revenueStatuses)
-            ->whereBetween('booking_date', [now()->subDays(7)->startOfDay(), now()->endOfDay()])
-            ->selectRaw('DATE(booking_date) as date, SUM(total_amount) as total')
+        // Grafico 7 giorni: incassi REALI per data di pagamento (payments.paid_at).
+        // Prima mostrava il valore delle partenze, quindi era la curva delle
+        // uscite passate e non diceva nulla su quanto stava entrando in cassa.
+        $weeklyCash = Payment::where('status', PaymentStatus::SUCCEEDED)
+            ->whereBetween('paid_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()])
+            ->selectRaw('DATE(paid_at) as date, SUM(amount) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        // Curva di confronto: quanto è stato venduto (prenotato) negli stessi giorni.
+        $weeklyBooked = Booking::whereIn('status', $revenueStatuses)
+            ->whereBetween('created_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()])
+            ->selectRaw('DATE(created_at) as date, SUM(total_amount) as total')
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('total', 'date')
@@ -71,10 +94,12 @@ class DashboardController extends Controller
 
         $chartLabels = [];
         $chartData = [];
+        $chartBooked = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
-            $chartLabels[] = now()->subDays($i)->locale('it')->isoFormat('ddd');
-            $chartData[] = $weeklyRevenue[$date] ?? 0;
+            $chartLabels[] = now()->subDays($i)->locale('it')->isoFormat('ddd D');
+            $chartData[] = (float) ($weeklyCash[$date] ?? 0);
+            $chartBooked[] = (float) ($weeklyBooked[$date] ?? 0);
         }
 
         // Bookings by status
@@ -135,10 +160,12 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact(
             'todayStats',
             'monthlyStats',
+            'monthViews',
             'pendingBookings',
             'todayBookings',
             'chartLabels',
             'chartData',
+            'chartBooked',
             'bookingsByStatus',
             'popularCatamarans',
             'recentActivity'

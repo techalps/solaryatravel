@@ -153,6 +153,135 @@
     .rpt-kpi.is-accent-warning .rpt-kpi-value { color: #b45309; }
     .rpt-kpi.is-accent-danger .rpt-kpi-value { color: #dc2626; }
 
+    /* --- I tre criteri affiancati -------------------------------------- */
+    /* Ogni colonna è un blocco autonomo con la propria base di calcolo
+       dichiarata: separarli visivamente è il punto, perché mescolarli è
+       ciò che rendeva i numeri incomprensibili. */
+    .rpt-basis-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    @media (max-width: 991.98px) { .rpt-basis-grid { grid-template-columns: 1fr; } }
+    .rpt-basis {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-top: 3px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .rpt-basis.is-raccolta { border-top-color: #1d4ed8; }
+    .rpt-basis.is-competenza { border-top-color: #059669; }
+    .rpt-basis.is-cassa { border-top-color: #b45309; }
+    .rpt-basis-head { display: flex; flex-direction: column; gap: 4px; }
+    .rpt-basis-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-start;
+        font-size: .68rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+    }
+    .rpt-basis.is-raccolta .rpt-basis-tag { background: #eff6ff; color: #1d4ed8; }
+    .rpt-basis.is-competenza .rpt-basis-tag { background: #ecfdf5; color: #047857; }
+    .rpt-basis.is-cassa .rpt-basis-tag { background: #fffbeb; color: #b45309; }
+    .rpt-basis-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+    .rpt-basis-help {
+        font-size: .75rem;
+        line-height: 1.45;
+        color: #64748b;
+        margin: 0;
+    }
+    .rpt-basis-value {
+        font-size: 1.9rem;
+        font-weight: 800;
+        line-height: 1.05;
+        color: #0f172a;
+        margin-top: 2px;
+    }
+    .rpt-basis.is-raccolta .rpt-basis-value { color: #1d4ed8; }
+    .rpt-basis.is-competenza .rpt-basis-value { color: #059669; }
+    .rpt-basis.is-cassa .rpt-basis-value { color: #b45309; }
+    .rpt-basis-rows {
+        margin: 6px 0 0;
+        padding-top: 10px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .rpt-basis-rows > div {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+    }
+    .rpt-basis-rows dt { font-size: .8rem; font-weight: 500; color: #64748b; }
+    .rpt-basis-rows dd { font-size: .88rem; font-weight: 700; color: #0f172a; margin: 0; }
+
+    /* --- Da incassare, scomposto ---------------------------------------- */
+    .rpt-out-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+    @media (max-width: 767.98px) { .rpt-out-grid { grid-template-columns: 1fr; } }
+    .rpt-out-cell {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        background: #f8fafc;
+    }
+    .rpt-out-cell.is-alert { background: #fef2f2; border-color: #fecaca; }
+    .rpt-out-cell.is-total { background: #fff; border-color: #cbd5e1; }
+    .rpt-out-label {
+        font-size: .7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #64748b;
+    }
+    .rpt-out-value { font-size: 1.4rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
+    .rpt-out-cell.is-alert .rpt-out-value { color: #dc2626; }
+    .rpt-out-sub { font-size: .75rem; color: #94a3b8; }
+    .rpt-pastdue { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #e2e8f0; }
+    .rpt-pastdue-intro {
+        font-size: .85rem;
+        color: #475569;
+        margin: 0 0 10px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+    .rpt-pastdue-intro i { color: #b45309; }
+    .rpt-note-warn {
+        margin: 14px 0 0;
+        padding: 10px 12px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        font-size: .82rem;
+        color: #78350f;
+    }
+
     .rpt-section {
         background: #fff;
         border: 1px solid #e2e8f0;

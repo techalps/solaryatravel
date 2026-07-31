@@ -302,6 +302,16 @@ body.admin-body { letter-spacing: -.01em; }
         gap: .25rem;
     }
 
+    // Riga di dettaglio sotto l'etichetta: dichiara il criterio di calcolo
+    // (per data di incasso / prenotazione / partenza) così il numero non è
+    // mai ambiguo.
+    .dash-stat-note {
+        margin-top: .35rem;
+        font-size: .75rem;
+        color: #94a3b8;
+        line-height: 1.35;
+    }
+
     &::after {
         content: '';
         position: absolute;
@@ -312,6 +322,32 @@ body.admin-body { letter-spacing: -.01em; }
         opacity: .04;
         background: currentColor;
         pointer-events: none;
+    }
+}
+
+// Striscia di raccordo sotto i riquadri: tiene visibile il valore delle
+// partenze del mese senza confonderlo con la cassa.
+.dash-basis-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.5rem;
+    padding: .75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid rgba(15,23,42,.06);
+    border-radius: .75rem;
+
+    .dash-basis-strip-item {
+        display: inline-flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: .35rem;
+        font-size: .85rem;
+        color: #475569;
+
+        strong { color: #0f172a; font-weight: 700; }
+        small { color: #94a3b8; font-size: .75rem; }
+        a { color: #1d4ed8; font-size: .78rem; text-decoration: none; }
+        a:hover { text-decoration: underline; }
     }
 }
 

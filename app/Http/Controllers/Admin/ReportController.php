@@ -22,36 +22,34 @@ class ReportController extends Controller
     {
         $period = $request->input('period', 'month');
         $startDate = $this->getStartDate($period);
-        $endDate = now();
+        $endDate = $this->getEndDate($period);
 
-        // Ricavi = prenotazioni in stato incassato/confermato (qualsiasi canale,
-        // incluse le retroattive/manuali senza pagamento Stripe), per data partenza.
+        // Le DUE viste affiancate: mai un numero senza il suo criterio.
+        //   competenza (data escursione) = quanto valgono le partenze del periodo
+        //   raccolta   (data prenotazione) = quanto è stato venduto nel periodo
+        $views = ReportCriteria::bothViews($startDate, $endDate);
+
+        // Scomposizione del "da incassare": saldi aperti vs incassi mai registrati.
+        $outstanding = ReportCriteria::outstandingBreakdown($startDate, $endDate);
+        $pastDueBookings = ReportCriteria::pastDepartureOutstanding($startDate, $endDate);
+        // Incassi dichiarati sulla prenotazione ma senza pagamento registrato:
+        // invisibili alla cassa, vanno sanati.
+        $unregistered = ReportCriteria::unregisteredCollections($startDate, $endDate);
+
+        // Confronto col periodo precedente di PARI durata e allineato al
+        // calendario (mese su mese, anno su anno): prima si sottraeva un numero
+        // di giorni variabile, quindi a inizio mese si confrontavano 2 giorni
+        // contro 1 e il delta % non voleva dire nulla.
+        [$prevStart, $prevEnd] = $this->getPreviousRange($period, $startDate, $endDate);
+        $previousViews = ReportCriteria::bothViews($prevStart, $prevEnd);
+
         $revenueStatuses = BookingStatus::revenueStatusValues();
 
-        $revenue = Booking::whereIn('status', $revenueStatuses)
-            ->whereBetween('booking_date', [$startDate, $endDate])
-            ->sum('total_amount');
-
-        // Incassato = quanto è EFFETTIVAMENTE entrato in cassa (amount_paid),
-        // sulle stesse prenotazioni del venduto. Per acconto/attesa bonifico è
-        // inferiore al totale finché non c'è il saldo.
-        $collected = Booking::whereIn('status', $revenueStatuses)
-            ->whereBetween('booking_date', [$startDate, $endDate])
-            ->sum('amount_paid');
-
-        $previousRevenue = Booking::whereIn('status', $revenueStatuses)
-            ->whereBetween('booking_date', [$startDate->copy()->subDays($startDate->diffInDays($endDate)), $startDate])
-            ->sum('total_amount');
-
-        $totalBookings = Booking::whereBetween('created_at', [$startDate, $endDate])->count();
+        // Conteggi di servizio (tutti gli stati) per il grafico a torta.
+        $totalBookings = $views['raccolta']['bookings'];
         $confirmedBookings = Booking::where('status', BookingStatus::CONFIRMED)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->count();
-
-        $totalPassengers = Booking::whereBetween('created_at', [$startDate, $endDate])->sum('seats');
-        // Valore medio sulle sole prenotazioni che fanno ricavo: includendo le
-        // annullate la media risultava più bassa del vero.
-        $avgBookingValue = ReportCriteria::collected($startDate, $endDate)->avg('total_amount') ?? 0;
 
         // Ripartizione diretto / agenzie con le provvigioni (prima mancavano del
         // tutto: il "venduto" sovrastimava quanto resta a Solarya).
@@ -64,14 +62,25 @@ class ReportController extends Controller
             ->limit(5)
             ->get();
 
-        $revenueByDay = Booking::whereIn('status', $revenueStatuses)
-            ->whereBetween('booking_date', [$startDate, $endDate])
-            ->selectRaw('DATE(booking_date) as date, SUM(total_amount) as total')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->pluck('total', 'date')
-            ->toArray();
+        // Tre serie giornaliere sovrapponibili sullo stesso grafico: partenze,
+        // vendite e incassi reali. Separate, mai sommate fra loro.
+        $revenueByDay = $this->dailySeries('booking_date', $startDate, $endDate);
+        $bookedByDay = $this->dailySeries('created_at', $startDate, $endDate);
+        $cashByDay = $this->dailyCashSeries($startDate, $endDate);
+
+        // Asse comune: l'unione delle date delle serie, così le curve sono
+        // allineate giorno per giorno e i buchi valgono zero.
+        $chartDays = collect(array_keys($revenueByDay))
+            ->merge(array_keys($bookedByDay))
+            ->merge(array_keys($cashByDay))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        $chartCompetenza = array_map(fn ($d) => (float) ($revenueByDay[$d] ?? 0), $chartDays);
+        $chartRaccolta = array_map(fn ($d) => (float) ($bookedByDay[$d] ?? 0), $chartDays);
+        $chartCassa = array_map(fn ($d) => (float) ($cashByDay[$d] ?? 0), $chartDays);
 
         $bookingsByStatus = Booking::whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('status, COUNT(*) as count')
@@ -81,17 +90,52 @@ class ReportController extends Controller
 
         return view('admin.reports.index', compact(
             'period', 'startDate', 'endDate',
-            'revenue', 'previousRevenue', 'collected',
-            'totalBookings', 'confirmedBookings', 'totalPassengers', 'avgBookingValue',
-            'topTours', 'revenueByDay', 'bookingsByStatus', 'channels'
+            'views', 'previousViews', 'outstanding', 'pastDueBookings', 'unregistered',
+            'totalBookings', 'confirmedBookings',
+            'topTours', 'revenueByDay', 'bookingsByStatus', 'channels',
+            'chartDays', 'chartCompetenza', 'chartRaccolta', 'chartCassa'
         ));
+    }
+
+    /**
+     * Serie giornaliera degli INCASSI reali (payments.paid_at): una riga per
+     * rata, quindi acconto e saldo cadono ciascuno nel proprio giorno.
+     *
+     * @return array<string, float>
+     */
+    private function dailyCashSeries(Carbon $startDate, Carbon $endDate): array
+    {
+        return Payment::where('status', PaymentStatus::SUCCEEDED)
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->selectRaw('DATE(paid_at) as date, SUM(amount) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+    }
+
+    /**
+     * Serie giornaliera del venduto su un dato campo data (booking_date =
+     * competenza, created_at = raccolta). Sempre solo stati che fanno ricavo.
+     *
+     * @return array<string, float>
+     */
+    private function dailySeries(string $field, Carbon $startDate, Carbon $endDate): array
+    {
+        return Booking::whereIn('status', BookingStatus::revenueStatusValues())
+            ->whereBetween($field, [$startDate, $endDate])
+            ->selectRaw("DATE({$field}) as date, SUM(total_amount) as total")
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
     }
 
     public function revenue(Request $request): View
     {
         $period = $request->input('period', 'month');
         $startDate = $this->getStartDate($period);
-        $endDate = now();
+        $endDate = $this->getEndDate($period);
 
         // Ricavi = prenotazioni in stato incassato/confermato (qualsiasi canale,
         // incluse le retroattive/manuali), aggregati per data partenza.
@@ -161,9 +205,16 @@ class ReportController extends Controller
 
         $channels = ReportCriteria::channelBreakdown($startDate, $endDate);
 
+        // Doppia vista + scomposizione del residuo, come nell'overview.
+        $views = ReportCriteria::bothViews($startDate, $endDate);
+        $outstanding = ReportCriteria::outstandingBreakdown($startDate, $endDate);
+        $pastDueBookings = ReportCriteria::pastDepartureOutstanding($startDate, $endDate);
+        $unregistered = ReportCriteria::unregisteredCollections($startDate, $endDate);
+
         return view('admin.reports.revenue', compact(
             'period', 'startDate', 'endDate',
-            'dailyRevenue', 'revenueByTour', 'revenueByGateway', 'monthlyRevenue', 'stats', 'channels'
+            'dailyRevenue', 'revenueByTour', 'revenueByGateway', 'monthlyRevenue', 'stats', 'channels',
+            'views', 'outstanding', 'pastDueBookings', 'unregistered'
         ));
     }
 
@@ -171,7 +222,7 @@ class ReportController extends Controller
     {
         $period = $request->input('period', 'month');
         $startDate = $this->getStartDate($period);
-        $endDate = now();
+        $endDate = $this->getEndDate($period);
 
         $dailyBookings = Booking::whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as total, SUM(seats) as passengers')
@@ -222,7 +273,7 @@ class ReportController extends Controller
     {
         $period = $request->input('period', 'month');
         $startDate = $this->getStartDate($period);
-        $endDate = now();
+        $endDate = $this->getEndDate($period);
 
         $tours = Tour::where('is_active', true)->get();
 
@@ -295,7 +346,7 @@ class ReportController extends Controller
     {
         $period = $request->input('period', 'month');
         $startDate = $this->getStartDate($period);
-        $endDate = now();
+        $endDate = $this->getEndDate($period);
 
         $periodLabel = [
             'today' => 'Oggi', 'week' => 'Settimana', 'month' => 'Mese',
@@ -317,7 +368,7 @@ class ReportController extends Controller
         $type = $request->input('type', 'bookings');
         $period = $request->input('period', 'month');
         $startDate = $this->getStartDate($period);
-        $endDate = now();
+        $endDate = $this->getEndDate($period);
 
         $data = match($type) {
             'bookings' => $this->getBookingsExportData($startDate, $endDate),
@@ -339,6 +390,50 @@ class ReportController extends Controller
             'year' => now()->startOfYear(),
             'all' => Carbon::createFromDate(2020, 1, 1),
             default => now()->startOfMonth(),
+        };
+    }
+
+    /**
+     * Fine del periodo = fine del CALENDARIO, non "adesso".
+     *
+     * Prima i report troncavano a now() mentre la dashboard arrivava a fine
+     * mese: i due riquadri "mese" non coincidevano mai durante il mese, ed
+     * essendo la competenza per data di partenza si perdevano le uscite già
+     * vendute nei giorni restanti. Ora la finestra è la stessa ovunque.
+     */
+    private function getEndDate(string $period): Carbon
+    {
+        return match($period) {
+            'today' => now()->endOfDay(),
+            'week' => now()->endOfWeek(),
+            'month' => now()->endOfMonth(),
+            'quarter' => now()->endOfQuarter(),
+            'year' => now()->endOfYear(),
+            'all' => now()->endOfYear(),
+            default => now()->endOfMonth(),
+        };
+    }
+
+    /**
+     * Periodo precedente allineato al calendario: mese su mese, anno su anno.
+     *
+     * Il calcolo precedente sottraeva a $startDate il numero di giorni fra
+     * inizio e fine periodo, ottenendo intervalli di durata diversa (a inizio
+     * mese: 2 giorni contro 1). Per 'all' non esiste un precedente.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function getPreviousRange(string $period, Carbon $startDate, Carbon $endDate): array
+    {
+        return match($period) {
+            'today' => [now()->subDay()->startOfDay(), now()->subDay()->endOfDay()],
+            'week' => [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()],
+            'month' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()],
+            'quarter' => [now()->subQuarter()->startOfQuarter(), now()->subQuarter()->endOfQuarter()],
+            'year' => [now()->subYear()->startOfYear(), now()->subYear()->endOfYear()],
+            // Nessun periodo precedente sensato: finestra vuota (delta assente).
+            'all' => [Carbon::createFromDate(2019, 12, 31), Carbon::createFromDate(2019, 12, 31)],
+            default => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()],
         };
     }
 

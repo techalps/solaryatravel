@@ -40,36 +40,41 @@
 
     {{-- Stats grid --}}
     <div class="row g-3 mb-4">
+        {{-- Le etichette dichiarano il criterio: "Partenze oggi" NON è
+             "prenotazioni ricevute oggi", ed erano confondibili. --}}
         <div class="col-sm-6 col-xl-3">
             <div class="dash-stat text-info">
                 <div class="d-flex align-items-start justify-content-between mb-3">
-                    <div class="dash-stat-icon bg-info-subtle text-info"><i class="bi bi-journal-bookmark-fill"></i></div>
+                    <div class="dash-stat-icon bg-info-subtle text-info"><i class="bi bi-airplane-engines"></i></div>
                     <span class="dash-stat-trend bg-info-subtle text-info"><i class="bi bi-calendar3"></i>Oggi</span>
                 </div>
-                <div class="dash-stat-value">{{ $todayStats['bookings'] }}</div>
-                <div class="dash-stat-label mt-1">Prenotazioni oggi</div>
+                <div class="dash-stat-value">{{ $todayStats['departures'] }}</div>
+                <div class="dash-stat-label mt-1">Partenze oggi</div>
+                <div class="dash-stat-note">{{ $todayStats['guests'] }} ospiti da imbarcare</div>
             </div>
         </div>
 
         <div class="col-sm-6 col-xl-3">
             <div class="dash-stat text-success">
                 <div class="d-flex align-items-start justify-content-between mb-3">
-                    <div class="dash-stat-icon bg-success-subtle text-success"><i class="bi bi-people-fill"></i></div>
-                    <span class="dash-stat-trend bg-success-subtle text-success"><i class="bi bi-person-check"></i>Confermati</span>
+                    <div class="dash-stat-icon bg-success-subtle text-success"><i class="bi bi-cart-check"></i></div>
+                    <span class="dash-stat-trend bg-success-subtle text-success"><i class="bi bi-bag-plus"></i>Vendite</span>
                 </div>
-                <div class="dash-stat-value">{{ $todayStats['guests'] }}</div>
-                <div class="dash-stat-label mt-1">Ospiti oggi</div>
+                <div class="dash-stat-value">{{ $todayStats['booked'] }}</div>
+                <div class="dash-stat-label mt-1">Prenotazioni ricevute oggi</div>
+                <div class="dash-stat-note">€{{ number_format($todayStats['booked_value'], 0, ',', '.') }} venduto</div>
             </div>
         </div>
 
         <div class="col-sm-6 col-xl-3">
             <div class="dash-stat text-warning">
                 <div class="d-flex align-items-start justify-content-between mb-3">
-                    <div class="dash-stat-icon bg-warning-subtle text-warning"><i class="bi bi-currency-euro"></i></div>
-                    <span class="dash-stat-trend bg-warning-subtle text-warning"><i class="bi bi-cash-stack"></i>Incassato</span>
+                    <div class="dash-stat-icon bg-warning-subtle text-warning"><i class="bi bi-cash-stack"></i></div>
+                    <span class="dash-stat-trend bg-warning-subtle text-warning"><i class="bi bi-calendar-month"></i>Mese</span>
                 </div>
-                <div class="dash-stat-value">€{{ number_format($todayStats['revenue'], 0, ',', '.') }}</div>
-                <div class="dash-stat-label mt-1">Incasso oggi</div>
+                <div class="dash-stat-value">€{{ number_format($monthViews['cassa']['net'], 0, ',', '.') }}</div>
+                <div class="dash-stat-label mt-1">Incassato nel mese</div>
+                <div class="dash-stat-note">{{ \App\Support\ReportCriteria::LABEL_CASSA }} · {{ $monthViews['cassa']['payments'] }} rate</div>
             </div>
         </div>
 
@@ -79,10 +84,31 @@
                     <div class="dash-stat-icon bg-primary-subtle text-primary"><i class="bi bi-graph-up-arrow"></i></div>
                     <span class="dash-stat-trend bg-primary-subtle text-primary"><i class="bi bi-calendar-month"></i>Mese</span>
                 </div>
-                <div class="dash-stat-value">€{{ number_format($monthlyStats['revenue'], 0, ',', '.') }}</div>
-                <div class="dash-stat-label mt-1">Incasso mese</div>
+                <div class="dash-stat-value">€{{ number_format($monthViews['raccolta']['gross'], 0, ',', '.') }}</div>
+                <div class="dash-stat-label mt-1">Venduto nel mese</div>
+                <div class="dash-stat-note">{{ \App\Support\ReportCriteria::LABEL_RACCOLTA }} · {{ $monthViews['raccolta']['bookings'] }} prenotazioni</div>
             </div>
         </div>
+    </div>
+
+    {{-- Riga di raccordo: il valore delle partenze del mese resta visibile,
+         ma dichiarato come criterio distinto invece di essere confuso con la
+         cassa (era il "€ Incasso mese" che non tornava mai). --}}
+    <div class="dash-basis-strip mb-4">
+        <span class="dash-basis-strip-item">
+            <i class="bi bi-calendar-event text-success"></i>
+            Partenze di {{ now()->locale('it')->isoFormat('MMMM') }}:
+            <strong>€{{ number_format($monthViews['competenza']['gross'], 0, ',', '.') }}</strong>
+            <small>{{ \App\Support\ReportCriteria::LABEL_COMPETENZA }} · {{ $monthViews['competenza']['bookings'] }} escursioni</small>
+        </span>
+        @if($monthViews['competenza']['outstanding'] > 0)
+            <span class="dash-basis-strip-item">
+                <i class="bi bi-exclamation-triangle text-warning"></i>
+                Da incassare su quelle partenze:
+                <strong>€{{ number_format($monthViews['competenza']['outstanding'], 0, ',', '.') }}</strong>
+                <a href="{{ route('admin.reports.revenue') }}">dettaglio</a>
+            </span>
+        @endif
     </div>
 
     {{-- Chart + Today bookings --}}
@@ -90,7 +116,7 @@
         <div class="col-xl-8">
             <div class="dash-card h-100">
                 <div class="dash-card-header">
-                    <h3><i class="bi bi-bar-chart-line me-2 text-primary"></i>Incassi ultimi 7 giorni</h3>
+                    <h3><i class="bi bi-bar-chart-line me-2 text-primary"></i>Incassato e venduto · ultimi 7 giorni</h3>
                     <a href="{{ route('admin.reports.revenue') }}" class="small text-primary text-decoration-none fw-medium">
                         Report completo <i class="bi bi-arrow-right ms-1"></i>
                     </a>
@@ -252,35 +278,57 @@
             type: 'line',
             data: {
                 labels: {!! json_encode($chartLabels) !!},
-                datasets: [{
-                    label: 'Incasso',
-                    data: {!! json_encode($chartData) !!},
-                    backgroundColor: gradient,
-                    borderColor: '#0284c7',
-                    borderWidth: 2.5,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#0284c7',
-                    pointBorderWidth: 2,
-                    tension: 0.35,
-                    fill: true,
-                }]
+                datasets: [
+                    {
+                        // Incassi reali, rata per rata (payments.paid_at).
+                        label: 'Incassato',
+                        data: {!! json_encode($chartData) !!},
+                        backgroundColor: gradient,
+                        borderColor: '#0284c7',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#0284c7',
+                        pointBorderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                    },
+                    {
+                        // Venduto per data di prenotazione: curva di confronto.
+                        label: 'Venduto',
+                        data: {!! json_encode($chartBooked) !!},
+                        borderColor: '#94a3b8',
+                        borderWidth: 2,
+                        borderDash: [5, 4],
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#94a3b8',
+                        pointBorderWidth: 2,
+                        tension: 0.35,
+                        fill: false,
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { intersect: false, mode: 'index' },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 24, padding: 12 }
+                    },
                     tooltip: {
                         backgroundColor: '#0f172a',
                         padding: 12,
                         titleFont: { family: "'Google Sans', sans-serif", weight: '600' },
                         bodyFont: { family: "'Google Sans', sans-serif" },
                         cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: { label: (c) => '€' + c.parsed.y.toLocaleString('it-IT') }
+                        callbacks: { label: (c) => c.dataset.label + ': €' + c.parsed.y.toLocaleString('it-IT') }
                     }
                 },
                 scales: {

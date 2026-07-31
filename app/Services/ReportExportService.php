@@ -74,17 +74,6 @@ class ReportExportService
 
         $venduto = (float) Booking::whereIn('status', $statuses)
             ->whereBetween('booking_date', [$start, $end])->sum('total_amount');
-        $incassato = (float) Booking::whereIn('status', $statuses)
-            ->whereBetween('booking_date', [$start, $end])->sum('amount_paid');
-        $rimborsi = (float) Payment::where('status', PaymentStatus::REFUNDED)
-            ->whereBetween('created_at', [$start, $end])->sum('amount');
-
-        $prenotazioni = Booking::whereBetween('created_at', [$start, $end])->count();
-        $confermate = Booking::where('status', BookingStatus::CONFIRMED)
-            ->whereBetween('created_at', [$start, $end])->count();
-        $annullate = Booking::where('status', BookingStatus::CANCELLED)
-            ->whereBetween('created_at', [$start, $end])->count();
-        $passeggeri = (int) Booking::whereBetween('created_at', [$start, $end])->sum('seats');
 
         $sheet->setCellValue('A1', 'Report Solarya Travel');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
@@ -94,41 +83,73 @@ class ReportExportService
         $sheet->getStyle('A2:A3')->getFont()->getColor()->setRGB('64748B');
 
         $channels = ReportCriteria::channelBreakdown($start, $end);
+        $views = ReportCriteria::bothViews($start, $end);
+        $outstanding = ReportCriteria::outstandingBreakdown($start, $end);
 
-        // Il criterio è scritto in chiaro accanto a ogni voce: le cifre monetarie
-        // sono di COMPETENZA (partenze del periodo, annullate escluse), i conteggi
-        // di prenotazioni sono per DATA DI CREAZIONE. Prima i due criteri erano
-        // mescolati senza dirlo e i totali non tornavano fra i fogli.
+        // I TRE criteri sono in blocchi separati, ciascuno con la propria base
+        // dichiarata. Mescolarli in un unico elenco era il motivo per cui i
+        // totali sembravano non tornare fra un foglio e l'altro.
         $rows = [
             ['Voce', 'Valore'],
-            ['Venduto (' . ReportCriteria::LABEL_COMPETENZA . ')', $venduto],
-            ['Incassato (versato finora)', $incassato],
-            ['Da incassare (saldi mancanti)', max(0, $venduto - $incassato)],
+
+            ['VENDUTO — ' . ReportCriteria::LABEL_RACCOLTA, ''],
+            ['Venduto nel periodo', $views['raccolta']['gross']],
+            ['Prenotazioni', $views['raccolta']['bookings']],
+            ['Passeggeri', $views['raccolta']['seats']],
+            ['Valore medio per prenotazione', $views['raccolta']['avg']],
+            ['di cui annullate (fuori dal venduto)', $views['raccolta']['cancelled']],
+            ['', ''],
+
+            ['PARTENZE — ' . ReportCriteria::LABEL_COMPETENZA, ''],
+            ['Valore delle partenze del periodo', $venduto],
+            ['Escursioni', $views['competenza']['bookings']],
+            ['Passeggeri imbarcati', $views['competenza']['seats']],
             ['Provvigioni agenzie', $channels['total']['commission']],
             ['Netto Solarya (venduto − provvigioni)', $channels['total']['net']],
-            ['Rimborsi erogati', $rimborsi],
-            ['', ''],
-            ['Prenotazioni create (' . ReportCriteria::LABEL_RACCOLTA . ')', $prenotazioni],
-            ['di cui confermate', $confermate],
-            ['di cui annullate (fuori dal venduto)', $annullate],
-            ['Passeggeri (posti venduti)', $passeggeri],
-            ['', ''],
             ['Venduto canale diretto', $channels['direct']['gross']],
             ['Venduto canale agenzie', $channels['agency']['gross']],
+            ['', ''],
+
+            ['INCASSATO — ' . ReportCriteria::LABEL_CASSA, ''],
+            ['Entrate lorde del periodo', $views['cassa']['gross_in']],
+            ['Rimborsi erogati nel periodo', $views['cassa']['refunds']],
+            ['Incassato netto', $views['cassa']['net']],
+            ['Rate incassate', $views['cassa']['payments']],
+            ['', ''],
+
+            ['DA INCASSARE sulle partenze del periodo', ''],
+            ['Saldi aperti (acconto versato)', $outstanding['partial']['amount']],
+            ['Nessun pagamento registrato', $outstanding['unpaid']['amount']],
+            ['Totale da incassare', $outstanding['total']['amount']],
         ];
 
         $r = 5;
+        $moneyRows = [];
+        $blockRows = [];
         foreach ($rows as $row) {
             $sheet->setCellValue("A{$r}", $row[0]);
-            $sheet->setCellValue("B{$r}", $row[1]);
+            if ($row[1] !== '') {
+                $sheet->setCellValue("B{$r}", $row[1]);
+            }
+            // Le intestazioni di blocco hanno la colonna valore vuota.
+            if ($row[1] === '' && $row[0] !== '') {
+                $blockRows[] = $r;
+            }
+            if (is_float($row[1])) {
+                $moneyRows[] = $r;
+            }
             $r++;
         }
 
         $this->styleHeader($sheet, "A5:B5");
-        // Formato valuta sulle righe monetarie: venduto..rimborsi e i due canali.
-        $sheet->getStyle('B6:B11')->getNumberFormat()->setFormatCode(self::MONEY_FMT);
-        $sheet->getStyle('B18:B19')->getNumberFormat()->setFormatCode(self::MONEY_FMT);
-        $sheet->getColumnDimension('A')->setWidth(42);
+        foreach ($moneyRows as $mr) {
+            $sheet->getStyle("B{$mr}")->getNumberFormat()->setFormatCode(self::MONEY_FMT);
+        }
+        foreach ($blockRows as $br) {
+            $sheet->getStyle("A{$br}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$br}")->getFont()->getColor()->setRGB('0F172A');
+        }
+        $sheet->getColumnDimension('A')->setWidth(46);
         $sheet->getColumnDimension('B')->setWidth(20);
     }
 
