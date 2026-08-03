@@ -219,12 +219,24 @@
                             <div class="small text-muted mt-1"><i class="bi bi-envelope-check me-1"></i>Richiesta inviata il {{ $booking->balance_reminder_sent_at->timezone('Europe/Rome')->format('d/m/Y H:i') }}</div>
                         @endif
                     </div>
-                    <form action="{{ route('admin.bookings.send-balance-request', $booking) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-warning rounded-pill px-3 fw-semibold">
-                            <i class="bi bi-envelope-arrow-up me-2"></i>{{ $booking->balance_reminder_sent_at ? 'Reinvia' : 'Invia' }} richiesta di saldo
-                        </button>
-                    </form>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form action="{{ route('admin.bookings.send-balance-request', $booking) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-warning rounded-pill px-3 fw-semibold">
+                                <i class="bi bi-envelope-arrow-up me-2"></i>{{ $booking->balance_reminder_sent_at ? 'Reinvia' : 'Invia' }} richiesta di saldo
+                            </button>
+                        </form>
+                        {{-- Registrazione dell'incasso del saldo: prima mancava del
+                             tutto, quindi l'unica strada era il pulsante del primo
+                             bonifico, che però ricalcolava sempre l'acconto. --}}
+                        <form action="{{ route('admin.bookings.confirm-transfer', $booking) }}" method="POST"
+                              onsubmit="return confirm('Confermi di aver incassato il saldo di € {{ number_format((float) $booking->balance_amount, 2, ',', '.') }}?');">
+                            @csrf
+                            <button type="submit" class="btn btn-success rounded-pill px-3 fw-semibold">
+                                <i class="bi bi-bank me-2"></i>Registra incasso saldo
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Il cliente riceve un'email con il link per saldare (carta) o le istruzioni per il bonifico, secondo il metodo scelto.</div>
             </div>

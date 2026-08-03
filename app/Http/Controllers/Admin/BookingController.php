@@ -1414,49 +1414,112 @@ class BookingController extends Controller
     }
 
     /**
-     * Conferma l'incasso di un bonifico: registra il pagamento, aggiorna lo stato
-     * (CONFIRMED, oppure DEPOSIT_PAID se era un acconto con saldo residuo) e
-     * triggera l'invio biglietti tramite l'Observer sul passaggio a CONFIRMED.
+     * Conferma l'incasso di un bonifico: registra il pagamento, aggiorna stato e
+     * residuo, e triggera l'invio biglietti tramite l'Observer su CONFIRMED.
+     *
+     * Vale sia per il PRIMO incasso (prenotazione in attesa di bonifico) sia per
+     * il SALDO di una prenotazione con acconto già versato.
+     *
+     * Difetto corretto (caso reale SLY-2026-00209, e altre 4 prenotazioni per
+     * 3.380 € di eccedenza complessiva): l'importo era sempre e solo l'acconto,
+     * e lo stato si decideva leggendo `balance_amount` PRIMA dell'update — un
+     * valore mai aggiornato dopo la creazione. Incassando il saldo la condizione
+     * restava vera, quindi lo stato non passava a "confermata": l'admin vedeva
+     * la pagina invariata, pensava che il click non avesse funzionato e
+     * ricliccava, registrando un secondo incasso. Nessun controllo impediva di
+     * incassare più del dovuto.
+     *
+     * Ora: si incassa il RESIDUO effettivo, `balance_amount` viene ricalcolato,
+     * e se non c'è nulla da incassare l'operazione viene rifiutata.
      */
     public function confirmTransfer(Booking $booking): RedirectResponse
     {
-        if ($booking->status !== BookingStatus::AWAITING_TRANSFER) {
+        $ammessi = [BookingStatus::AWAITING_TRANSFER, BookingStatus::DEPOSIT_PAID];
+        if (! in_array($booking->status, $ammessi, true)) {
             return back()->with('error', 'Questa prenotazione non è in attesa di bonifico.');
         }
 
-        // Importo incassato: acconto se previsto, altrimenti intero.
-        $isDeposit = $booking->payment_type === 'deposit' && (float) $booking->deposit_amount > 0;
-        $amount = $isDeposit ? (float) $booking->deposit_amount : (float) $booking->total_amount;
+        // Il residuo REALE, non l'acconto: è la cifra che manca alla cassa.
+        $totale = (float) $booking->total_amount;
+        $giaIncassato = (float) $booking->amount_paid;
+        $residuo = round($totale - $giaIncassato, 2);
 
-        // Registra il pagamento bonifico.
-        Payment::create([
-            'booking_id' => $booking->id,
-            'gateway' => 'bank_transfer',
-            'amount' => $amount,
-            'currency' => $booking->currency ?: 'EUR',
-            'status' => PaymentStatus::SUCCEEDED,
-            'payment_method_type' => 'bank_transfer',
-            'paid_at' => now(),
-        ]);
+        // Nulla da incassare: rifiuta invece di registrare un doppione. È la
+        // protezione che mancava contro il secondo click.
+        if ($residuo <= 0) {
+            BookingLog::warning('booking_transfer_duplicate', 'Incasso bonifico rifiutato: già saldata', $booking, [
+                'total_amount' => $totale,
+                'amount_paid' => $giaIncassato,
+            ]);
 
-        $newStatus = ($isDeposit && (float) $booking->balance_amount > 0)
-            ? BookingStatus::DEPOSIT_PAID
-            : BookingStatus::CONFIRMED;
+            return back()->with('error', sprintf(
+                'Nessun importo da incassare: risultano già versati € %s su un totale di € %s. Nessun pagamento è stato registrato.',
+                number_format($giaIncassato, 2, ',', '.'),
+                number_format($totale, 2, ',', '.')
+            ));
+        }
 
-        $booking->update([
-            'amount_paid' => (float) $booking->amount_paid + $amount,
-            'status' => $newStatus,
-            'confirmed_at' => $booking->confirmed_at ?? now(),
-        ]);
+        // Primo incasso di un acconto: si prende l'acconto, non l'intero totale.
+        // Dal secondo in poi (saldo) si prende tutto il residuo.
+        $isPrimoAcconto = $booking->status === BookingStatus::AWAITING_TRANSFER
+            && $booking->payment_type === 'deposit'
+            && (float) $booking->deposit_amount > 0
+            && $giaIncassato <= 0;
+
+        $amount = $isPrimoAcconto
+            ? min((float) $booking->deposit_amount, $residuo)
+            : $residuo;
+
+        $nuovoIncassato = round($giaIncassato + $amount, 2);
+        $nuovoResiduo = round($totale - $nuovoIncassato, 2);
+
+        DB::transaction(function () use ($booking, $amount, $nuovoIncassato, $nuovoResiduo, &$newStatus) {
+            Payment::create([
+                'booking_id' => $booking->id,
+                'gateway' => 'bank_transfer',
+                'amount' => $amount,
+                'currency' => $booking->currency ?: 'EUR',
+                'status' => PaymentStatus::SUCCEEDED,
+                'payment_method_type' => 'bank_transfer',
+                'paid_at' => now(),
+            ]);
+
+            // Lo stato dipende dal residuo DOPO l'incasso, non da quello prima.
+            $newStatus = $nuovoResiduo > 0
+                ? BookingStatus::DEPOSIT_PAID
+                : BookingStatus::CONFIRMED;
+
+            $booking->update([
+                'amount_paid' => $nuovoIncassato,
+                // Senza questo il residuo restava congelato al valore iniziale.
+                'balance_amount' => max(0, $nuovoResiduo),
+                'status' => $newStatus,
+                'confirmed_at' => $booking->confirmed_at ?? now(),
+            ]);
+        });
 
         BookingLog::info('booking_transfer_confirm', 'Incasso bonifico confermato', $booking->fresh(), [
             'amount' => $amount,
-            'is_deposit' => $isDeposit,
+            'amount_paid' => $nuovoIncassato,
+            'balance_left' => max(0, $nuovoResiduo),
             'new_status' => $newStatus->value,
         ]);
 
+        $msg = $nuovoResiduo > 0
+            ? sprintf(
+                'Incasso di € %s registrato. Resta un saldo di € %s: la prenotazione è ora %s.',
+                number_format($amount, 2, ',', '.'),
+                number_format($nuovoResiduo, 2, ',', '.'),
+                $newStatus->label()
+            )
+            : sprintf(
+                'Bonifico di € %s confermato: la prenotazione è saldata ed è ora %s.',
+                number_format($amount, 2, ',', '.'),
+                $newStatus->label()
+            );
+
         // L'Observer su CONFIRMED invia biglietti + notifica admin.
-        return back()->with('success', 'Bonifico confermato. La prenotazione è ora ' . $newStatus->label() . '.');
+        return back()->with('success', $msg);
     }
 
     public function cancel(Request $request, Booking $booking): RedirectResponse

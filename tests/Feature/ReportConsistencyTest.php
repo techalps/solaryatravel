@@ -63,6 +63,20 @@ class ReportConsistencyTest extends TestCase
         return [$tour, $departures];
     }
 
+    /**
+     * `created_at` NON è fillable: passarlo a create() lo fa ignorare e la
+     * prenotazione nasce con now(). I test sui criteri devono poterlo fissare,
+     * altrimenti passano o falliscono a seconda del mese in cui si esegue la
+     * suite (successe davvero: verdi a luglio, rossi dal 1° agosto).
+     */
+    private function makeBookingAt(Tour $tour, TourDeparture $dep, string $createdAt, array $attributes = []): Booking
+    {
+        $booking = $this->makeBooking($tour, $dep, $attributes);
+        $booking->forceFill(['created_at' => $createdAt])->saveQuietly();
+
+        return $booking->fresh();
+    }
+
     private function makeBooking(Tour $tour, TourDeparture $dep, array $attributes = []): Booking
     {
         return Booking::create(array_merge([
@@ -252,10 +266,9 @@ class ReportConsistencyTest extends TestCase
     {
         [$tour, $deps] = $this->makeTour();
 
-        $booking = $this->makeBooking($tour, $deps[0], [
+        $booking = $this->makeBookingAt($tour, $deps[0], '2026-07-10 09:00:00', [
             'total_amount' => 1000,
             'amount_paid' => 1000,
-            'created_at' => '2026-07-10 09:00:00',
             'booking_date' => '2026-08-20',
         ]);
 
@@ -286,10 +299,9 @@ class ReportConsistencyTest extends TestCase
     {
         [$tour, $deps] = $this->makeTour();
 
-        $booking = $this->makeBooking($tour, $deps[0], [
+        $booking = $this->makeBookingAt($tour, $deps[0], '2026-07-10 09:00:00', [
             'total_amount' => 1000,
             'amount_paid' => 1000,
-            'created_at' => '2026-07-10 09:00:00',
             'booking_date' => '2026-08-20',
         ]);
 
@@ -315,10 +327,9 @@ class ReportConsistencyTest extends TestCase
     {
         [$tour, $deps] = $this->makeTour();
 
-        $booking = $this->makeBooking($tour, $deps[0], [
+        $booking = $this->makeBookingAt($tour, $deps[0], '2026-07-10 09:00:00', [
             'total_amount' => 1000,
             'amount_paid' => 300,
-            'created_at' => '2026-07-10 09:00:00',   // prenotata a luglio
             'booking_date' => '2026-08-20',          // parte ad agosto
         ]);
 
