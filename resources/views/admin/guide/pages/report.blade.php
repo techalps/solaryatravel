@@ -70,6 +70,19 @@
     Nota: se una prenotazione risulta incassata ma <em>senza</em> un pagamento registrato, quell'importo non compare
     nella colonna «Incassato», perché privo di data. Un avviso in fondo alla sezione te lo segnala.
 </p>
+<div class="guide-tip">
+    <strong>Come si sistema.</strong> Apri la prenotazione dall'elenco (il numero è cliccabile) e registra
+    l'incasso dal riquadro <em>Da incassare</em>. Se il denaro era già entrato ma non era mai stato segnato,
+    il dato si allinea e l'importo comparirà nell'incassato del periodo in cui lo registri.
+    Se invece il saldo è davvero ancora aperto, è un credito da riscuotere: usa
+    <em>"Invia richiesta di saldo"</em> per sollecitare il cliente.
+</div>
+<div class="guide-tip">
+    <strong>Perché i numeri possono cambiare a posteriori.</strong> La colonna «Incassato» segue la data in
+    cui il pagamento viene <em>registrato</em>. Registrando oggi un incasso di due mesi fa, quella somma
+    entra nella cassa di oggi, non in quella di allora. È il motivo per cui conviene registrare gli incassi
+    appena avvengono.
+</div>
 
 <hr>
 

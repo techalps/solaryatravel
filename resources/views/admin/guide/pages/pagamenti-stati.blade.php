@@ -43,6 +43,36 @@
     i relativi stati e scelte non compaiono.
 </div>
 
+<h2>Registrare l'incasso di un bonifico</h2>
+<p>
+    I bonifici arrivano in banca, non nel gestionale: finché non lo dici tu, il sistema non sa che
+    il denaro è entrato. Nel <strong>dettaglio</strong> della prenotazione trovi il pulsante che
+    chiude il ciclo:
+</p>
+<ul>
+    <li><strong>"Conferma incasso bonifico"</strong> — sulle prenotazioni in <em>Attesa bonifico</em>,
+        in alto accanto al titolo.</li>
+    <li><strong>"Registra incasso"</strong> — nel riquadro <em>Da incassare</em>, quando resta un
+        importo scoperto (saldo di un acconto, oppure differenza dopo un aumento di prezzo).</li>
+</ul>
+<p>
+    In entrambi i casi viene registrato l'<strong>importo che manca davvero</strong>, non una cifra
+    fissa, e lo stato avanza da solo: resta <em>Acconto versato</em> se rimane un residuo, passa a
+    <em>Confermata</em> quando la prenotazione è saldata.
+</p>
+<div class="guide-tip">
+    <strong>Se premi due volte non succede nulla di male.</strong> Quando non c'è più niente da
+    incassare il sistema <strong>rifiuta</strong> l'operazione con un messaggio, invece di registrare
+    un secondo pagamento. Prima non era così: un doppio clic creava un incasso doppio e la
+    prenotazione risultava pagata più del dovuto.
+</div>
+<div class="guide-tip">
+    <strong>Registra sempre gli incassi, anche quelli in contanti.</strong> Una prenotazione pagata
+    ma senza incasso registrato risulta a sistema come <em>non pagata</em>: finisce fra i crediti da
+    riscuotere e sparisce dall'incassato dei report. Se te ne accorgi dopo, registra comunque il
+    pagamento: il dato si sistema.
+</div>
+
 <h2>Saldo (prenotazioni con acconto)</h2>
 <p>
     Quando crei una prenotazione con <strong>acconto</strong>, in creazione vedi l'importo dell'acconto,
@@ -51,10 +81,15 @@
     <strong>Modifica</strong>.
 </p>
 <p>
-    Nel <strong>dettaglio</strong> della prenotazione, finché c'è un saldo aperto, compare il riquadro
-    <em>"Saldo da incassare"</em> con importo e scadenza e il pulsante
-    <strong>"Invia richiesta di saldo"</strong>: il cliente riceve un'email con il link per saldare
-    (carta) o le istruzioni per il bonifico, secondo il metodo scelto.
+    Nel <strong>dettaglio</strong> della prenotazione, finché resta del denaro da incassare, compare il
+    riquadro <em>"Da incassare"</em> con totale, quanto è già stato versato e quanto manca. Da lì puoi
+    <strong>"Inviare la richiesta di saldo"</strong> (il cliente riceve un'email con il link per saldare
+    o le istruzioni per il bonifico) oppure <strong>"Registrare l'incasso"</strong> quando i soldi
+    sono arrivati.
+</p>
+<p>
+    Il riquadro non riguarda solo gli acconti: compare ogni volta che il versato è inferiore al totale,
+    quindi anche dopo un <strong>aumento di prezzo</strong> su una prenotazione già pagata.
 </p>
 <p>
     Inoltre il sistema invia <strong>automaticamente</strong> un promemoria di saldo al cliente quando la

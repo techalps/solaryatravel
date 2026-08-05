@@ -35,4 +35,55 @@ class GuidePageTest extends TestCase
             ->assertSee('Il sito è bilingue', false)
             ->assertSee('i18n:missing', false);
     }
+
+    /**
+     * Ogni capitolo deve renderizzarsi: un errore Blade in una pagina della
+     * guida passerebbe altrimenti inosservato fino alla segnalazione in uso.
+     */
+    public function test_tutti_i_capitoli_si_renderizzano(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $capitoli = collect(glob(resource_path('views/admin/guide/pages/*.blade.php')))
+            ->map(fn ($p) => basename($p, '.blade.php'));
+
+        $this->assertGreaterThan(5, $capitoli->count(), 'Capitoli non trovati: percorso cambiato?');
+
+        foreach ($capitoli as $slug) {
+            $this->actingAs($admin)
+                ->get(route('admin.guide.show', $slug))
+                ->assertOk();
+        }
+    }
+
+    /**
+     * Le funzioni che toccano il denaro devono restare documentate: sono quelle
+     * dove un fraintendimento costa soldi veri (doppio incasso, storni, sconti).
+     */
+    public function test_la_guida_copre_incassi_storni_e_sconti(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'pagamenti-stati'))
+            ->assertOk()
+            // Dove si registra un bonifico e cosa succede premendo due volte.
+            ->assertSee('Registrare l\'incasso di un bonifico', false)
+            ->assertSee('Se premi due volte', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'prenotazioni'))
+            ->assertOk()
+            ->assertSee('Applicare uno sconto', false)
+            ->assertSee('Cambiare il prezzo', false)
+            // Nessuna email automatica: se l'admin lo ignora, il cliente
+            // riceve un addebito senza spiegazioni.
+            ->assertSee('non viene avvisato dal sistema', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'report'))
+            ->assertOk()
+            ->assertSee('per data di incasso', false)
+            ->assertSee('Come si sistema', false);
+    }
 }

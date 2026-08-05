@@ -76,13 +76,20 @@
     <li><strong>Genera link di pagamento</strong> → viene creato un link Stripe per la <em>sola
         differenza</em>. Lo trovi nel dettaglio prenotazione, con il pulsante per copiarlo: lo mandi
         tu al cliente (WhatsApp, email, come vuoi) e resta salvato sulla prenotazione.</li>
-    <li><strong>Bonifico</strong> → la differenza resta come importo da incassare. Quando i soldi
-        arrivano, la confermi dal dettaglio con <em>"Registra incasso saldo"</em>.</li>
+    <li><strong>Bonifico</strong> → la differenza resta come importo da incassare. Nel dettaglio
+        compare il riquadro <em>Da incassare</em>: quando i soldi arrivano premi
+        <em>"Registra incasso"</em>.</li>
 </ul>
 <p class="text-muted">
     In entrambi i casi la prenotazione <strong>resta confermata</strong>: è valida e il cliente parte
     comunque, cambia solo l'importo ancora da incassare.
 </p>
+<div class="guide-tip">
+    <strong>Il cliente non viene avvisato dal sistema.</strong> Nessuna email parte in automatico su
+    una variazione di prezzo, né in aumento né in diminuzione: è una scelta voluta, perché queste
+    cose si concordano prima a voce. Ricordati quindi di contattarlo tu, altrimenti riceverà un
+    addebito o un rimborso senza spiegazioni.
+</div>
 <p><strong>Se il prezzo diminuisce</strong> — scegli se e come restituire la differenza:</p>
 <ul>
     <li><strong>Storno su Stripe</strong> → il rimborso parte subito sulla carta del cliente
@@ -150,18 +157,37 @@
     il prezzo si aggiorna man mano, ma il campo non perde la digitazione.
 </div>
 
+<h2>Applicare uno sconto</h2>
+<p>
+    Nel <strong>riepilogo</strong> a destra, sotto il dettaglio dei prezzi, trovi il campo
+    <strong>Sconto</strong>. Scrivi l'importo e scegli se è in <strong>€</strong> o in
+    <strong>%</strong>: il totale si aggiorna mentre digiti, così vedi subito quanto pagherà
+    davvero il cliente.
+</p>
+<ul>
+    <li>Lo sconto si applica <strong>dopo</strong> gli eventuali posti omaggio, su quel che resta.
+        Esempio: 450&euro; con un omaggio da 150&euro; &rarr; restano 300&euro;, e uno sconto del
+        10% li porta a 270&euro;.</li>
+    <li>Non può mai superare il totale: se scrivi 500&euro; su una prenotazione da 300&euro;, il
+        totale si ferma a zero e un avviso te lo segnala (utile contro gli errori di battitura).</li>
+    <li>Vale solo in <strong>creazione</strong>. Per cambiare il prezzo di una prenotazione già
+        salvata usa la modifica del prezzo (vedi sopra), che gestisce anche l'incasso o lo storno
+        della differenza.</li>
+</ul>
+
 <h2>Regalare un posto (omaggio)</h2>
 <p>
-    Nel form di prenotazione, nel blocco verde <strong>Posti omaggio</strong>, indica quanti
-    partecipanti non devono pagare. Serve quando vuoi invitare qualcuno: un ospite dello staff,
-    un partner, un accompagnatore.
+    Sempre nel <strong>riepilogo</strong>, accanto allo sconto, il campo <strong>Omaggio</strong>
+    indica quanti partecipanti non devono pagare. Serve quando vuoi invitare qualcuno: un ospite
+    dello staff, un partner, un accompagnatore. Indicando almeno un posto compaiono il campo per
+    il motivo e l'opzione sugli extra.
 </p>
 <ul>
     <li>I posti omaggio <strong>occupano il posto in barca</strong> come tutti gli altri: contano per la
         capienza e ricevono biglietto e QR per l'imbarco.</li>
     <li>L'omaggio si applica ai posti di <strong>maggior valore</strong>. Esempio: 1 adulto (150&euro;) +
         1 bambino (100&euro;) con 1 posto omaggio &rarr; resta da pagare il bambino, 100&euro;.</li>
-    <li>Il riepilogo a destra mostra subito la riga verde con lo sconto, così vedi il totale reale
+    <li>Il riepilogo mostra subito la riga verde con l'importo omaggiato, così vedi il totale reale
         prima di salvare.</li>
     <li>Puoi scrivere un <strong>motivo</strong> (es. "ospite dello staff"): resta salvato sulla
         prenotazione insieme a chi ha concesso l'omaggio e quando.</li>
