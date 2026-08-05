@@ -173,13 +173,22 @@
         </div>
     @endif
 
-    {{-- Link di pagamento Stripe: presente quando la prenotazione attende il pagamento --}}
-    @if ($booking->checkout_url && in_array($statusValue, ['pending', 'deposit_paid']))
+    {{-- Link di pagamento Stripe: quando la prenotazione attende un pagamento,
+         oppure quando resta un residuo da incassare (es. dopo un aumento di
+         prezzo, dove lo stato resta "confermata" ma il link serve comunque:
+         legandolo ai soli stati in attesa, il link generato spariva). --}}
+    @php $residuoDaIncassare = round((float) $booking->total_amount - (float) $booking->amount_paid, 2); @endphp
+    @if ($booking->checkout_url && (in_array($statusValue, ['pending', 'deposit_paid']) || $residuoDaIncassare > 0))
         <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-primary">
             <div class="card-body p-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div class="min-w-0">
-                        <div class="fw-bold mb-1"><i class="bi bi-link-45deg me-1 text-primary"></i>Link di pagamento</div>
+                        <div class="fw-bold mb-1">
+                            <i class="bi bi-link-45deg me-1 text-primary"></i>Link di pagamento
+                            @if ($residuoDaIncassare > 0)
+                                <span class="badge rounded-pill text-bg-warning ms-1">{{ $fmtMoney($residuoDaIncassare) }} da incassare</span>
+                            @endif
+                        </div>
                         <div class="input-group input-group-sm" style="max-width:520px">
                             <input type="text" class="form-control font-monospace small" id="payLinkInput" value="{{ $booking->checkout_url }}" readonly>
                             <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('payLinkInput').value); this.innerHTML='<i class=\'bi bi-check2\'></i>'">
@@ -194,6 +203,34 @@
                         @csrf
                         <button type="submit" class="btn btn-primary rounded-pill px-3 fw-semibold">
                             <i class="bi bi-envelope-arrow-up me-2"></i>{{ $booking->payment_link_sent_at ? 'Reinvia' : 'Invia' }} al cliente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Storno via bonifico ancora da eseguire: il denaro esce fuori dal
+         sistema, quindi l'impegno resta visibile finché l'admin non conferma. --}}
+    @if ((float) $booking->pending_refund_amount > 0)
+        <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-info">
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="min-w-0">
+                        <div class="fw-bold mb-1"><i class="bi bi-arrow-return-left me-1 text-info"></i>Storno da restituire</div>
+                        <div class="small">
+                            Da rimborsare al cliente via bonifico:
+                            <strong class="text-info">{{ $fmtMoney($booking->pending_refund_amount) }}</strong>
+                        </div>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-info-circle me-1"></i>Esegui il bonifico e poi conferma qui: l'uscita verrà registrata in cassa.
+                        </div>
+                    </div>
+                    <form action="{{ route('admin.bookings.confirm-refund', $booking) }}" method="POST"
+                          onsubmit="return confirm('Confermi di aver eseguito il bonifico di {{ $fmtMoney($booking->pending_refund_amount) }} al cliente?');">
+                        @csrf
+                        <button type="submit" class="btn btn-info text-white rounded-pill px-3 fw-semibold">
+                            <i class="bi bi-check2-circle me-2"></i>Ho eseguito lo storno
                         </button>
                     </form>
                 </div>

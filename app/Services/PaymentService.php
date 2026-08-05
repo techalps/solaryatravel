@@ -8,6 +8,7 @@ use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Support\BookingLog;
 use App\Support\Settings;
+use Illuminate\Support\Facades\DB;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
 use Stripe\Refund;
@@ -176,6 +177,24 @@ class PaymentService
                     'currency' => 'eur',
                     'product_data' => ['name' => "Saldo · {$tourName}", 'description' => '#' . $booking->booking_number],
                     'unit_amount' => (int) round($amount * 100),
+                ],
+                'quantity' => 1,
+            ]]];
+        }
+
+        // Conguaglio: SOLO la differenza da versare dopo un aumento di prezzo
+        // (servizi aggiunti in corsa). Non è il saldo di un acconto: qui il
+        // residuo nasce da una variazione del totale a prenotazione già pagata.
+        if ($intent === 'surcharge') {
+            $amount = round((float) $booking->total_amount - (float) $booking->amount_paid, 2);
+            return [max(0, $amount), [[
+                'price_data' => [
+                    'currency' => 'eur',
+                    'product_data' => [
+                        'name' => "Integrazione · {$tourName}",
+                        'description' => '#' . $booking->booking_number . ' · differenza da versare',
+                    ],
+                    'unit_amount' => (int) round(max(0, $amount) * 100),
                 ],
                 'quantity' => 1,
             ]]];
@@ -587,6 +606,126 @@ class PaymentService
             'penalty' => $penalty,
             'message' => $result['message'] ?? null,
         ];
+    }
+
+    /**
+     * STORNO COMMERCIALE: restituisce al cliente una somma concordata dopo una
+     * riduzione di prezzo (sconto, malinteso, servizio tolto).
+     *
+     * Diverso da applyCancellationRefund(), che è pensato per gli annullamenti:
+     * quello applica la penale da policy e scrive penalty_amount, cose che qui
+     * non c'entrano. Se si concordano 200 € di sconto, al cliente tornano 200 €
+     * interi, e non è una penale: è una correzione del prezzo.
+     *
+     * Il canale lo sceglie l'admin, non il metodo di pagamento originale
+     * (richiesta esplicita di Solarya): può stornare su Stripe una prenotazione
+     * pagata con carta, oppure gestire tutto a bonifico. Con 'bank_transfer' non
+     * si muove denaro qui: l'admin esegue il bonifico fuori dal sistema e poi
+     * conferma, così la traccia resta a sistema.
+     *
+     * @param  'stripe'|'bank_transfer'  $channel
+     * @return array{executed:bool, pending:bool, amount:float, channel:string, message:?string}
+     */
+    public function applyPriceReduction(Booking $booking, float $amount, string $channel, ?string $note = null): array
+    {
+        $amount = round(max(0, $amount), 2);
+
+        if ($amount <= 0) {
+            return ['executed' => false, 'pending' => false, 'amount' => 0.0,
+                    'channel' => $channel, 'message' => 'Nessun importo da stornare.'];
+        }
+
+        // Non si può restituire più di quanto è stato incassato.
+        $paid = $this->amountPaid($booking);
+        if ($amount > $paid) {
+            $amount = round($paid, 2);
+        }
+
+        if ($amount <= 0) {
+            return ['executed' => false, 'pending' => false, 'amount' => 0.0, 'channel' => $channel,
+                    'message' => 'Il cliente non ha ancora versato nulla: non c\'è denaro da restituire.'];
+        }
+
+        if ($channel === 'stripe') {
+            $stripePayment = $booking->payments()
+                ->where('gateway', 'stripe')
+                ->whereIn('status', [PaymentStatus::SUCCEEDED, PaymentStatus::PARTIALLY_REFUNDED])
+                ->latest('paid_at')
+                ->first();
+
+            if (! $stripePayment) {
+                return ['executed' => false, 'pending' => false, 'amount' => $amount, 'channel' => $channel,
+                        'message' => 'Nessun pagamento Stripe da stornare su questa prenotazione.'];
+            }
+
+            $result = $this->refund($booking, $amount);
+            $ok = (bool) ($result['success'] ?? false);
+
+            if ($ok) {
+                $booking->update(['amount_paid' => round($paid - $amount, 2)]);
+            }
+
+            BookingLog::info('booking_price_reduction', 'Storno su Stripe', $booking, [
+                'amount' => $amount, 'ok' => $ok, 'note' => $note,
+            ]);
+
+            return ['executed' => $ok, 'pending' => false, 'amount' => $amount, 'channel' => 'stripe',
+                    'message' => $result['message'] ?? null];
+        }
+
+        // Bonifico: il denaro esce fuori dal sistema. Qui si registra soltanto
+        // che lo storno è dovuto; sarà l'admin a confermarne l'esecuzione.
+        $booking->update([
+            'pending_refund_amount' => round((float) $booking->pending_refund_amount + $amount, 2),
+        ]);
+
+        BookingLog::info('booking_price_reduction', 'Storno via bonifico da eseguire', $booking, [
+            'amount' => $amount, 'note' => $note,
+        ]);
+
+        return ['executed' => false, 'pending' => true, 'amount' => $amount, 'channel' => 'bank_transfer',
+                'message' => 'Storno da eseguire tramite bonifico.'];
+    }
+
+    /**
+     * Conferma che lo storno via bonifico è stato realmente eseguito: registra
+     * il movimento in uscita (così la cassa lo vede alla data giusta) e azzera
+     * il residuo dovuto.
+     */
+    public function confirmPendingRefund(Booking $booking, float $amount): array
+    {
+        $amount = round(max(0, min($amount, (float) $booking->pending_refund_amount)), 2);
+
+        if ($amount <= 0) {
+            return ['executed' => false, 'amount' => 0.0, 'message' => 'Nessuno storno in attesa.'];
+        }
+
+        DB::transaction(function () use ($booking, $amount) {
+            // Movimento negativo tracciato come rimborso: entra nei report di
+            // cassa alla data in cui il denaro è davvero uscito.
+            Payment::create([
+                'booking_id' => $booking->id,
+                'gateway' => 'bank_transfer',
+                'amount' => $amount,
+                'refunded_amount' => $amount,
+                'currency' => $booking->currency ?: 'EUR',
+                'status' => PaymentStatus::REFUNDED,
+                'payment_method_type' => 'bank_transfer',
+                'paid_at' => now(),
+                'refunded_at' => now(),
+            ]);
+
+            $booking->update([
+                'amount_paid' => round(max(0, (float) $booking->amount_paid - $amount), 2),
+                'pending_refund_amount' => round(max(0, (float) $booking->pending_refund_amount - $amount), 2),
+            ]);
+        });
+
+        BookingLog::info('booking_refund_confirmed', 'Storno bonifico confermato', $booking->fresh(), [
+            'amount' => $amount,
+        ]);
+
+        return ['executed' => true, 'amount' => $amount, 'message' => null];
     }
 
     /**

@@ -1183,14 +1183,22 @@ class BookingController extends Controller
             'total_price' => 'nullable|numeric|min:0',
             // Scadenza saldo (prenotazioni con acconto): modificabile.
             'balance_due_date' => 'nullable|date',
+            // Variazione di prezzo: come gestire la differenza. Il canale lo
+            // sceglie l'admin e NON dipende dal metodo di pagamento originale.
+            'price_change_action' => 'nullable|in:stripe_link,bank_transfer,none',
         ]);
 
         // Aggiorna il prezzo totale manuale per le prenotazioni su richiesta:
         // il totale è "secco" e viene attribuito al primo posto (gli altri a 0),
         // coerentemente con come è stato creato.
         $booking->loadMissing('tour');
+        $priceMsg = '';
+
         if ($booking->tour?->booking_on_request && $request->filled('total_price')) {
+            $oldTotal = round((float) $booking->total_amount, 2);
             $newTotal = round((float) $validated['total_price'], 2);
+            $diff = round($newTotal - $oldTotal, 2);
+
             DB::transaction(function () use ($booking, $newTotal) {
                 $seats = $booking->seatRecords()->whereNull('cancelled_at')->orderByDesc('is_primary')->orderBy('id')->get();
                 foreach ($seats as $i => $seat) {
@@ -1201,6 +1209,18 @@ class BookingController extends Controller
                     'total_amount' => $newTotal,
                 ]);
             });
+
+            $booking->refresh();
+
+            if (abs($diff) >= 0.01) {
+                $priceMsg = $this->handlePriceChange(
+                    $booking,
+                    $diff,
+                    $validated['price_change_action'] ?? 'none',
+                    $oldTotal,
+                    $newTotal
+                );
+            }
         }
 
         $booking->update([
@@ -1214,7 +1234,109 @@ class BookingController extends Controller
             $booking->update(['balance_due_at' => \Carbon\Carbon::parse($validated['balance_due_date'])]);
         }
 
-        return redirect()->route('admin.bookings.show', $booking)->with('success', 'Prenotazione aggiornata.');
+        return redirect()->route('admin.bookings.show', $booking)
+            ->with('success', trim('Prenotazione aggiornata. ' . $priceMsg));
+    }
+
+    /**
+     * Gestisce la conseguenza economica di una variazione di prezzo.
+     *
+     * Prima il totale cambiava in silenzio: nessuna traccia della differenza da
+     * incassare o da restituire, e il cliente non ne sapeva nulla. Restava tutto
+     * alla memoria dell'operatore.
+     *
+     * Scelte volute da Solarya:
+     *   - NESSUNA email automatica: il sistema prepara il link Stripe, poi è
+     *     l'admin a inviarlo al cliente come preferisce (WhatsApp, telefono...).
+     *     Il link resta salvato sulla prenotazione, così la traccia non si perde.
+     *   - Il canale NON dipende dal pagamento originale: chi ha pagato con carta
+     *     può saldare la differenza a bonifico, e viceversa.
+     *   - Sugli aumenti la prenotazione resta CONFERMATA: è valida, il cliente
+     *     parte comunque, cambia solo il residuo da incassare.
+     */
+    private function handlePriceChange(
+        Booking $booking,
+        float $diff,
+        string $action,
+        float $oldTotal,
+        float $newTotal
+    ): string {
+        $fmt = fn (float $v) => '€ ' . number_format(abs($v), 2, ',', '.');
+
+        BookingLog::info('booking_price_change', 'Prezzo modificato da admin', $booking, [
+            'old_total' => $oldTotal,
+            'new_total' => $newTotal,
+            'difference' => $diff,
+            'action' => $action,
+        ]);
+
+        // --- AUMENTO: differenza da incassare -------------------------------
+        if ($diff > 0) {
+            if ($action === 'stripe_link') {
+                try {
+                    // Link per la SOLA differenza, non per l'intero totale.
+                    $url = $this->paymentService->validCheckoutUrl($booking, 'surcharge', forEmail: true);
+                    $booking->update(['checkout_url' => $url]);
+
+                    return 'Prezzo aumentato di ' . $fmt($diff)
+                        . '. Link di pagamento pronto nel dettaglio: invialo tu al cliente.';
+                } catch (\Throwable $e) {
+                    BookingLog::failure('booking_price_change', 'Generazione link conguaglio fallita', $booking, $e);
+
+                    return 'Prezzo aumentato di ' . $fmt($diff)
+                        . ', ma la generazione del link è fallita: registra l\'incasso a mano quando arriva.';
+                }
+            }
+
+            // Bonifico o nessuna azione: resta come residuo da incassare, che
+            // l'admin confermerà col pulsante "Registra incasso saldo".
+            return 'Prezzo aumentato di ' . $fmt($diff)
+                . '. Differenza da incassare: confermala quando ricevi il bonifico.';
+        }
+
+        // --- RIDUZIONE: storno a favore del cliente -------------------------
+        $amount = abs($diff);
+
+        if ($action === 'none') {
+            return 'Prezzo ridotto di ' . $fmt($amount) . '. Nessuno storno effettuato.';
+        }
+
+        $result = $this->paymentService->applyPriceReduction(
+            $booking,
+            $amount,
+            $action === 'stripe_link' ? 'stripe' : 'bank_transfer',
+            'Riduzione prezzo da ' . $fmt($oldTotal) . ' a ' . $fmt($newTotal)
+        );
+
+        if ($result['channel'] === 'stripe') {
+            return $result['executed']
+                ? 'Prezzo ridotto: storno di ' . $fmt($result['amount']) . ' eseguito su Stripe.'
+                : 'Prezzo ridotto, ma lo storno su Stripe non è riuscito: ' . ($result['message'] ?? 'errore') . '.';
+        }
+
+        return $result['pending']
+            ? 'Prezzo ridotto: ' . $fmt($result['amount'])
+                . ' da restituire via bonifico. Conferma dal dettaglio quando l\'hai eseguito.'
+            : 'Prezzo ridotto. ' . ($result['message'] ?? '');
+    }
+
+    /**
+     * Conferma che lo storno via bonifico è stato eseguito davvero.
+     * Il denaro esce fuori dal sistema: qui se ne registra il movimento, così
+     * la cassa dei report lo vede alla data giusta.
+     */
+    public function confirmRefund(Booking $booking): RedirectResponse
+    {
+        $pending = (float) $booking->pending_refund_amount;
+
+        if ($pending <= 0) {
+            return back()->with('error', 'Non risultano storni in attesa su questa prenotazione.');
+        }
+
+        $result = $this->paymentService->confirmPendingRefund($booking, $pending);
+
+        return back()->with('success', 'Storno di € '
+            . number_format((float) $result['amount'], 2, ',', '.') . ' registrato.');
     }
 
     /**

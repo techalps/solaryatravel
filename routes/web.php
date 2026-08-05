@@ -186,6 +186,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::get('/bookings-api/tours/{tour:id}/catamaran-availability', [AdminBookingController::class, 'catamaranAvailability'])->name('bookings.catamaran-availability');
     Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/{booking}/confirm-transfer', [AdminBookingController::class, 'confirmTransfer'])->name('bookings.confirm-transfer');
+    // Storno via bonifico eseguito fuori dal sistema: l'admin lo conferma qui.
+    Route::post('/bookings/{booking}/confirm-refund', [AdminBookingController::class, 'confirmRefund'])->name('bookings.confirm-refund');
     Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
     Route::post('/bookings/{booking}/refund', [AdminBookingController::class, 'refund'])->name('bookings.refund');
     Route::post('/bookings/{booking}/resend-confirmation', [AdminBookingController::class, 'resendConfirmation'])->name('bookings.resend');

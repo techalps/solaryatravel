@@ -308,8 +308,15 @@
                                 <label for="total_price" class="form-label fw-semibold">Prezzo totale (€)</label>
                                 <input type="number" step="0.01" min="0" name="total_price" id="total_price"
                                        class="form-control"
+                                       data-original="{{ number_format((float) $booking->total_amount, 2, '.', '') }}"
+                                       data-paid="{{ number_format((float) $booking->amount_paid, 2, '.', '') }}"
                                        value="{{ old('total_price', number_format((float) $booking->total_amount, 2, '.', '')) }}">
-                                <small class="text-muted">Tour su richiesta / catamarano riservato: prezzo totale manuale della prenotazione.</small>
+                                <small class="text-muted">
+                                    Tour su richiesta / catamarano riservato: indica il <strong>nuovo totale</strong>
+                                    della prenotazione, non la differenza.
+                                </small>
+                                {{-- Il campo scelto nel modale: nessun valore = nessuna azione sui pagamenti. --}}
+                                <input type="hidden" name="price_change_action" id="price_change_action" value="none">
                             </div>
                         @endif
 
@@ -396,6 +403,82 @@
                 </div>
             </div>
         </div>
+
+        {{-- Modale della variazione di prezzo.
+             Cambiare il totale ha una conseguenza economica: o il cliente deve
+             versare la differenza, o va restituita. Prima il prezzo cambiava in
+             silenzio e restava tutto alla memoria dell'operatore. --}}
+        @if ($booking->tour?->booking_on_request)
+            <div class="modal fade" id="priceChangeModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4">
+                        <div class="modal-header border-0 pb-0">
+                            <h5 class="modal-title fw-bold" id="pcTitle">Conferma modifica prezzo</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex justify-content-between align-items-baseline mb-2 small">
+                                <span class="text-muted">Totale attuale</span>
+                                <span class="fw-semibold" id="pcOld">—</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-baseline mb-2 small">
+                                <span class="text-muted">Nuovo totale</span>
+                                <span class="fw-semibold" id="pcNew">—</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-baseline pt-2 border-top">
+                                <span class="fw-semibold" id="pcDiffLabel">Differenza</span>
+                                <span class="fs-5 fw-bold" id="pcDiff">—</span>
+                            </div>
+
+                            <hr>
+
+                            {{-- Le opzioni cambiano fra aumento e riduzione. --}}
+                            <div id="pcUp" class="d-none">
+                                <p class="small text-muted mb-2">
+                                    Come vuoi incassare la differenza? Nessuna email parte in automatico:
+                                    il link viene salvato sulla prenotazione e lo invii tu al cliente.
+                                </p>
+                                <label class="d-flex align-items-start gap-2 mb-2">
+                                    <input type="radio" name="pc_choice_up" value="stripe_link" class="form-check-input mt-1" checked>
+                                    <span class="small"><strong>Genera link di pagamento</strong> per la sola differenza (carta).</span>
+                                </label>
+                                <label class="d-flex align-items-start gap-2">
+                                    <input type="radio" name="pc_choice_up" value="bank_transfer" class="form-check-input mt-1">
+                                    <span class="small"><strong>Bonifico</strong>: resta come importo da incassare. Confermerai tu la ricezione.</span>
+                                </label>
+                            </div>
+
+                            <div id="pcDown" class="d-none">
+                                <p class="small text-muted mb-2">Come vuoi restituire la differenza al cliente?</p>
+                                <label class="d-flex align-items-start gap-2 mb-2" id="pcStripeRefundRow">
+                                    <input type="radio" name="pc_choice_down" value="stripe_link" class="form-check-input mt-1">
+                                    <span class="small"><strong>Storno su Stripe</strong>: parte subito sulla carta usata dal cliente.</span>
+                                </label>
+                                <label class="d-flex align-items-start gap-2 mb-2">
+                                    <input type="radio" name="pc_choice_down" value="bank_transfer" class="form-check-input mt-1" checked>
+                                    <span class="small"><strong>Bonifico</strong>: eseguirai tu il rimborso e poi lo confermerai a sistema.</span>
+                                </label>
+                                <label class="d-flex align-items-start gap-2">
+                                    <input type="radio" name="pc_choice_down" value="none" class="form-check-input mt-1">
+                                    <span class="small"><strong>Nessuno storno</strong>: abbasso solo il prezzo, senza restituire denaro.</span>
+                                </label>
+                                <div class="alert alert-light border small mt-3 mb-0 d-none" id="pcNotPaidWarn">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Il cliente ha versato <strong id="pcPaid">€ 0,00</strong>: non c'è denaro da restituire
+                                    oltre quell'importo.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0">
+                            <button type="button" class="btn btn-light border rounded-pill px-3" data-bs-dismiss="modal">Annulla</button>
+                            <button type="button" class="btn btn-primary rounded-pill px-3 fw-semibold" id="pcConfirm">
+                                Conferma e salva
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
     </form>
 
     @push('scripts')
@@ -536,6 +619,77 @@
             if (fpEnd) { fpEnd.set('minDate', s); if (endEl.value && endEl.value < s) fpEnd.setDate(s, true); }
         }});
         const fpEnd = flatpickr(endEl, { ...opts, minDate: startEl.value || null });
+    })();
+    </script>
+
+    {{-- Variazione di prezzo: chiede conferma e come gestire la differenza.
+         Il salvataggio prosegue solo dopo la scelta; se il prezzo non cambia
+         il modale non compare e il form si comporta come prima. --}}
+    <script>
+    (function () {
+        const priceEl = document.getElementById('total_price');
+        const modalEl = document.getElementById('priceChangeModal');
+        if (!priceEl || !modalEl) return;
+
+        const form = priceEl.closest('form');
+        const actionEl = document.getElementById('price_change_action');
+        const modal = new bootstrap.Modal(modalEl);
+        const paid = parseFloat(priceEl.dataset.paid || '0') || 0;
+        const money = (v) => '€ ' + Math.abs(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        let confirmed = false;
+
+        form.addEventListener('submit', function (e) {
+            if (confirmed) return;
+
+            const original = parseFloat(priceEl.dataset.original || '0') || 0;
+            const nuovo = parseFloat(priceEl.value || '0') || 0;
+            const diff = Math.round((nuovo - original) * 100) / 100;
+
+            // Prezzo invariato: nessuna conseguenza economica, si salva e basta.
+            if (Math.abs(diff) < 0.01) {
+                actionEl.value = 'none';
+                return;
+            }
+
+            e.preventDefault();
+
+            document.getElementById('pcOld').textContent = money(original);
+            document.getElementById('pcNew').textContent = money(nuovo);
+
+            const up = diff > 0;
+            const diffEl = document.getElementById('pcDiff');
+            diffEl.textContent = (up ? '+ ' : '− ') + money(diff);
+            diffEl.className = 'fs-5 fw-bold ' + (up ? 'text-danger' : 'text-success');
+            document.getElementById('pcDiffLabel').textContent = up ? 'Da incassare' : 'Da restituire';
+            document.getElementById('pcTitle').textContent = up
+                ? 'Aumento di prezzo: come incassare?'
+                : 'Riduzione di prezzo: vuoi stornare?';
+
+            document.getElementById('pcUp').classList.toggle('d-none', !up);
+            document.getElementById('pcDown').classList.toggle('d-none', up);
+
+            // Sulla riduzione avvisa se si sta stornando più di quanto incassato.
+            if (!up) {
+                const warn = document.getElementById('pcNotPaidWarn');
+                const troppo = Math.abs(diff) > paid + 0.005;
+                warn.classList.toggle('d-none', !troppo);
+                document.getElementById('pcPaid').textContent = money(paid);
+            }
+
+            modal.show();
+        });
+
+        document.getElementById('pcConfirm').addEventListener('click', function () {
+            const up = !document.getElementById('pcUp').classList.contains('d-none');
+            const scelta = document.querySelector(
+                'input[name="' + (up ? 'pc_choice_up' : 'pc_choice_down') + '"]:checked'
+            );
+            actionEl.value = scelta ? scelta.value : 'none';
+            confirmed = true;
+            modal.hide();
+            form.submit();
+        });
     })();
     </script>
     @endpush

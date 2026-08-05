@@ -55,6 +55,50 @@
 </ul>
 <p class="text-muted small">I prezzi dei posti vengono ricalcolati in base al periodo della nuova data; vale solo per i partecipanti attivi (non quelli disdetti).</p>
 
+<h2>Cambiare il prezzo (tour su richiesta / catamarano riservato)</h2>
+<p>
+    Sulle prenotazioni a <strong>prezzo manuale</strong> puoi modificare il totale dalla
+    <strong>Modifica</strong>, nel campo <em>"Prezzo totale"</em>. Serve quando il cliente aggiunge
+    servizi in corsa (il prezzo sale) o quando si concorda uno sconto (il prezzo scende).
+</p>
+<div class="guide-tip">
+    <strong>Attenzione:</strong> nel campo va scritto il <strong>nuovo totale</strong> della
+    prenotazione, non la differenza. Se erano €1.000 e aggiungi €200 di extra, scrivi
+    <strong>€1.200</strong>.
+</div>
+<p>
+    Salvando, se il totale è cambiato si apre una finestra che mostra vecchio totale, nuovo totale e
+    differenza, e ti chiede come gestirla. <strong>Nessuna email parte in automatico:</strong> il
+    sistema prepara quello che serve e sei tu a contattare il cliente come preferisci.
+</p>
+<p><strong>Se il prezzo aumenta</strong> — scegli come incassare la differenza:</p>
+<ul>
+    <li><strong>Genera link di pagamento</strong> → viene creato un link Stripe per la <em>sola
+        differenza</em>. Lo trovi nel dettaglio prenotazione, con il pulsante per copiarlo: lo mandi
+        tu al cliente (WhatsApp, email, come vuoi) e resta salvato sulla prenotazione.</li>
+    <li><strong>Bonifico</strong> → la differenza resta come importo da incassare. Quando i soldi
+        arrivano, la confermi dal dettaglio con <em>"Registra incasso saldo"</em>.</li>
+</ul>
+<p class="text-muted">
+    In entrambi i casi la prenotazione <strong>resta confermata</strong>: è valida e il cliente parte
+    comunque, cambia solo l'importo ancora da incassare.
+</p>
+<p><strong>Se il prezzo diminuisce</strong> — scegli se e come restituire la differenza:</p>
+<ul>
+    <li><strong>Storno su Stripe</strong> → il rimborso parte subito sulla carta del cliente
+        (disponibile solo se aveva pagato con carta).</li>
+    <li><strong>Bonifico</strong> → il sistema registra l'importo da restituire e lo tiene in
+        evidenza nel dettaglio. Fai il bonifico e poi premi <em>"Ho eseguito lo storno"</em>: solo
+        allora l'uscita entra nei report di cassa. L'IBAN te lo fai dare tu dal cliente.</li>
+    <li><strong>Nessuno storno</strong> → abbassi solo il prezzo senza restituire denaro (per
+        esempio se lo tieni come credito per una prossima uscita).</li>
+</ul>
+<p class="text-muted small">
+    Lo storno restituisce l'<strong>intero importo</strong> concordato: le penali di cancellazione
+    non si applicano, perché qui non si annulla nulla, si corregge il prezzo. Non puoi comunque
+    stornare più di quanto il cliente ha effettivamente versato.
+</p>
+
 <h2>Cliente con account</h2>
 <p>
     Se inserisci l'<strong>email di un cliente già registrato</strong>, la prenotazione viene
