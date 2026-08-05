@@ -79,9 +79,21 @@ class PaymentService
      *
      * @param  bool  $forEmail  il link viaggia via email (durata estesa)
      */
-    public function validCheckoutUrl(Booking $booking, string $intent = 'full', bool $forEmail = false): string
-    {
-        if ($booking->checkout_url && $this->lastSessionIsOpen($booking)) {
+    /**
+     * @param  bool  $forceNew  ignora il link esistente e ne crea comunque uno
+     *                          nuovo. Serve quando l'IMPORTO è cambiato: il
+     *                          riuso guarda solo se la sessione è aperta, non
+     *                          per quanto è stata creata, quindi su un
+     *                          conguaglio il cliente si sarebbe visto proporre
+     *                          la cifra vecchia.
+     */
+    public function validCheckoutUrl(
+        Booking $booking,
+        string $intent = 'full',
+        bool $forEmail = false,
+        bool $forceNew = false
+    ): string {
+        if (! $forceNew && $booking->checkout_url && $this->lastSessionIsOpen($booking)) {
             return $booking->checkout_url;
         }
 

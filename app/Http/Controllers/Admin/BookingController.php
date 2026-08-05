@@ -520,6 +520,9 @@ class BookingController extends Controller
             'addons' => 'nullable|array',
             'addons.*' => 'integer|exists:addons,id',
             'discount_code' => 'nullable|string|max:50',
+            // Sconto commerciale deciso dall'admin: percentuale o importo fisso.
+            'manual_discount_type' => 'nullable|in:percent,amount',
+            'manual_discount_value' => 'nullable|numeric|min:0',
             // Attribuzione a un'agenzia B2B: se valorizzato, la prenotazione risulta
             // dell'agenzia (come fatta dal portale) e matura la commissione.
             'b2b_user_id' => 'nullable|exists:users,id',
@@ -685,6 +688,14 @@ class BookingController extends Controller
             'children' => $resolvedChildren,
             'addons' => $validated['addons'] ?? [],
             'discount_code' => $validated['discount_code'] ?? null,
+            // Sconto manuale: passato solo se ha un valore, così il pricing
+            // non deve distinguere fra "nessuno sconto" e "sconto da zero".
+            'manual_discount' => ((float) ($validated['manual_discount_value'] ?? 0)) > 0
+                ? [
+                    'type' => $validated['manual_discount_type'] ?? 'amount',
+                    'value' => (float) $validated['manual_discount_value'],
+                ]
+                : null,
             'customer_first_name' => $validated['customer_first_name'],
             'customer_last_name' => $validated['customer_last_name'],
             'customer_email' => $validated['customer_email'],
@@ -1279,7 +1290,11 @@ class BookingController extends Controller
             if ($action === 'stripe_link') {
                 try {
                     // Link per la SOLA differenza, non per l'intero totale.
-                    $url = $this->paymentService->validCheckoutUrl($booking, 'surcharge', forEmail: true);
+                    // forceNew: l'importo è cambiato, quindi un eventuale link
+                    // già aperto proporrebbe la cifra vecchia.
+                    $url = $this->paymentService->validCheckoutUrl(
+                        $booking, 'surcharge', forEmail: true, forceNew: true
+                    );
                     $booking->update(['checkout_url' => $url]);
 
                     return 'Prezzo aumentato di ' . $fmt($diff)

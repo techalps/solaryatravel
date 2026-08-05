@@ -91,7 +91,8 @@ class BookingService
                     count($children),
                     (float) ($data['total_price'] ?? 0),
                     $data['addons'] ?? [],
-                    $data['discount_code'] ?? null
+                    $data['discount_code'] ?? null,
+                    $data['manual_discount'] ?? null
                 );
                 $brackets = collect(); // nessun bracket per i tour su richiesta
             } else {
@@ -127,7 +128,8 @@ class BookingService
                     // Posti omaggio concessi dall'admin: occupano il posto in
                     // barca ma valgono 0€.
                     max(0, (int) ($data['complimentary_seats'] ?? 0)),
-                    ! empty($data['complimentary_includes_addons'])
+                    ! empty($data['complimentary_includes_addons']),
+                    $data['manual_discount'] ?? null
                 );
             }
 

@@ -27,6 +27,11 @@ class PricingService
      *   dei posti omaggio è gratuita; se false gli extra restano addebitati
      *   (il fornitore va pagato comunque).
      */
+    /**
+     * @param  array{type:'percent'|'amount', value:float}|null  $manualDiscount
+     *         Sconto commerciale deciso dall'admin in fase di creazione, in
+     *         percentuale o in euro. Si somma all'eventuale codice sconto.
+     */
     public function calculate(
         Tour $tour,
         TourDeparture $departure,
@@ -34,7 +39,8 @@ class PricingService
         array $addonIds = [],
         ?string $discountCode = null,
         int $complimentarySeats = 0,
-        bool $complimentaryIncludesAddons = false
+        bool $complimentaryIncludesAddons = false,
+        ?array $manualDiscount = null
     ): array {
         $brackets = $this->resolveBrackets($tour, $departure->departure_date)
             ->whereIn('id', array_keys($bracketCounts))
@@ -94,6 +100,13 @@ class PricingService
             }
         }
 
+        // Sconto manuale dell'admin: si applica su quanto resta dopo l'eventuale
+        // codice sconto, così i due non insistono sulla stessa base.
+        $discountAmount += $this->resolveManualDiscount(
+            $manualDiscount ?? null,
+            max(0, $basePrice + $addonsTotal - $discountAmount)
+        );
+
         $subtotal = max(0, $basePrice + $addonsTotal - $discountAmount);
         $taxRate = (float) config('booking.tax_rate', 0) / 100;
         $taxAmount = $subtotal * $taxRate;
@@ -115,6 +128,33 @@ class PricingService
             'complimentary_amount' => $complimentaryAmount,
             'complimentary_includes_addons' => $complimentaryIncludesAddons,
         ];
+    }
+
+    /**
+     * Sconto manuale in percentuale o in euro, tradotto in importo.
+     *
+     * Non può mai superare la base su cui si applica: uno sconto del 150% o di
+     * 500 € su un totale di 300 € produrrebbe un totale negativo, cioè un
+     * credito verso il cliente creato per errore di battitura.
+     *
+     * @param  array{type?:string, value?:mixed}|null  $discount
+     */
+    protected function resolveManualDiscount(?array $discount, float $base): float
+    {
+        if (! $discount || $base <= 0) {
+            return 0.0;
+        }
+
+        $value = (float) ($discount['value'] ?? 0);
+        if ($value <= 0) {
+            return 0.0;
+        }
+
+        $amount = ($discount['type'] ?? 'amount') === 'percent'
+            ? $base * min($value, 100) / 100
+            : $value;
+
+        return round(min($amount, $base), 2);
     }
 
     protected function calculateAddonsTotal(array $addonIds, int $seats, float $hours): float
@@ -164,6 +204,10 @@ class PricingService
      * @param  int  $complimentarySeats  Posti OMAGGIO (vedi calculate()).
      * @param  bool  $complimentaryIncludesAddons  Omaggio anche sugli extra.
      */
+    /**
+     * @param  array{type:'percent'|'amount', value:float}|null  $manualDiscount
+     *         Sconto commerciale deciso dall'admin (percentuale o euro).
+     */
     public function calculateForParticipants(
         Tour $tour,
         TourDeparture $departure,
@@ -172,7 +216,8 @@ class PricingService
         array $addonIds = [],
         ?string $discountCode = null,
         int $complimentarySeats = 0,
-        bool $complimentaryIncludesAddons = false
+        bool $complimentaryIncludesAddons = false,
+        ?array $manualDiscount = null
     ): array {
         $adultsCount = max(0, $adultsCount);
         $period = $this->resolvePeriod($tour, $departure->departure_date);
@@ -264,6 +309,13 @@ class PricingService
             }
         }
 
+        // Sconto manuale dell'admin: si applica su quanto resta dopo l'eventuale
+        // codice sconto, così i due non insistono sulla stessa base.
+        $discountAmount += $this->resolveManualDiscount(
+            $manualDiscount ?? null,
+            max(0, $basePrice + $addonsTotal - $discountAmount)
+        );
+
         $subtotal = max(0, $basePrice + $addonsTotal - $discountAmount);
         $taxRate = (float) config('booking.tax_rate', 0) / 100;
         $taxAmount = $subtotal * $taxRate;
@@ -342,13 +394,18 @@ class PricingService
      * @param  int  $childrenCount  numero di bambini (ognuno = un posto)
      * @param  array<int, int>  $addonIds
      */
+    /**
+     * @param  array{type:'percent'|'amount', value:float}|null  $manualDiscount
+     *         Sconto commerciale deciso dall'admin (percentuale o euro).
+     */
     public function calculateManual(
         Tour $tour,
         int $adultsCount,
         int $childrenCount,
         float $totalPrice,
         array $addonIds = [],
-        ?string $discountCode = null
+        ?string $discountCode = null,
+        ?array $manualDiscount = null
     ): array {
         $adultsCount = max(0, $adultsCount);
         $childrenCount = max(0, $childrenCount);
@@ -372,6 +429,13 @@ class PricingService
                 $discountCodeId = $applied['id'];
             }
         }
+
+        // Sconto manuale dell'admin: si applica su quanto resta dopo l'eventuale
+        // codice sconto, così i due non insistono sulla stessa base.
+        $discountAmount += $this->resolveManualDiscount(
+            $manualDiscount ?? null,
+            max(0, $basePrice + $addonsTotal - $discountAmount)
+        );
 
         $subtotal = max(0, $basePrice + $addonsTotal - $discountAmount);
         $taxRate = (float) config('booking.tax_rate', 0) / 100;

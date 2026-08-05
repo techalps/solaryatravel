@@ -11,6 +11,47 @@
     .ab-child-resolved.ok { color: #059669; }
     .ab-child-resolved.err { color: #dc2626; }
     .flatpickr-day.flatpickr-disabled { text-decoration: line-through; opacity: .35; }
+
+    /* Riduzioni di prezzo (sconto e omaggio) dentro il riepilogo: compatte,
+       allineate, senza rubare spazio al totale che resta il protagonista. */
+    .adj-block {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #f8fafc;
+    }
+    .adj-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .adj-row + .adj-row { margin-top: 8px; }
+    .adj-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: .82rem;
+        font-weight: 600;
+        color: #475569;
+        margin: 0;
+        white-space: nowrap;
+    }
+    .adj-input-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+    }
+    .adj-input-group .form-control { width: 82px; text-align: right; }
+    .adj-input-group .form-select { width: 62px; }
+    .adj-unit { font-size: .78rem; color: #94a3b8; width: 62px; }
+    .adj-details {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed #cbd5e1;
+    }
+    .adj-hint { font-size: .72rem; color: #94a3b8; line-height: 1.35; }
 </style>
 @endpush
 
@@ -164,48 +205,9 @@
                                 </div>
                             </div>
 
-                            {{-- Posti omaggio: N partecipanti a 0€ (ospiti invitati) --}}
-                            <div class="border rounded-3 p-3 mb-3" style="background:rgba(25,135,84,.04);border-color:rgba(25,135,84,.25)!important">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <i class="bi bi-gift text-success"></i>
-                                    <span class="fw-semibold small">Posti omaggio</span>
-                                    <span class="text-muted small">— occupano il posto in barca ma non si pagano</span>
-                                </div>
-                                <div class="row g-2 align-items-center">
-                                    <div class="col-auto">
-                                        <label for="complimentary_seats" class="col-form-label small mb-0">Quanti posti</label>
-                                    </div>
-                                    <div class="col-auto" style="width:110px">
-                                        <input type="number" min="0" step="1" class="form-control form-control-sm"
-                                               name="complimentary_seats" id="complimentary_seats"
-                                               value="{{ old('complimentary_seats', 0) }}">
-                                    </div>
-                                    <div class="col-sm">
-                                        <input type="text" class="form-control form-control-sm"
-                                               name="complimentary_reason" id="complimentary_reason"
-                                               value="{{ old('complimentary_reason') }}"
-                                               placeholder="Motivo (es. ospite dello staff, omaggio partner)" maxlength="200">
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-check form-switch">
-                                            <input type="hidden" name="complimentary_includes_addons" value="0">
-                                            <input class="form-check-input" type="checkbox" role="switch" value="1"
-                                                   name="complimentary_includes_addons" id="complimentary_includes_addons"
-                                                   {{ old('complimentary_includes_addons') ? 'checked' : '' }}>
-                                            <label class="form-check-label small" for="complimentary_includes_addons">
-                                                Omaggio anche sugli extra di quei posti
-                                                <span class="text-muted">(se spento gli extra restano a pagamento)</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-text">
-                                            L'omaggio si applica ai posti di <strong>maggior valore</strong>. I passeggeri
-                                            omaggio hanno comunque biglietto e QR per l'imbarco.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            {{-- I posti omaggio sono ora nel riepilogo, accanto
+                                 allo sconto: sono entrambe riduzioni di prezzo e
+                                 si leggono meglio dove si forma il totale. --}}
 
                             {{-- Adulti (solo conteggio; i dati vanno più in basso) --}}
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -321,6 +323,60 @@
                         <div id="summary-box">
                             <div class="text-muted small text-center py-3">
                                 Compila il form per vedere il riepilogo.
+                            </div>
+                        </div>
+
+                        {{-- Riduzioni di prezzo: sconto e posti omaggio.
+                             Stanno qui, dove si forma il totale, perché è lì che
+                             se ne verifica l'effetto: il riepilogo si aggiorna a
+                             ogni digitazione. --}}
+                        <div class="adj-block mt-3">
+                            <div class="adj-row">
+                                <label for="manual_discount_value" class="adj-label">
+                                    <i class="bi bi-tag text-primary"></i>Sconto
+                                </label>
+                                <div class="adj-input-group">
+                                    <input type="number" min="0" step="0.01" class="form-control form-control-sm"
+                                           name="manual_discount_value" id="manual_discount_value"
+                                           value="{{ old('manual_discount_value') }}" placeholder="0">
+                                    <select name="manual_discount_type" id="manual_discount_type" class="form-select form-select-sm">
+                                        <option value="amount" {{ old('manual_discount_type', 'amount') === 'amount' ? 'selected' : '' }}>€</option>
+                                        <option value="percent" {{ old('manual_discount_type') === 'percent' ? 'selected' : '' }}>%</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="adj-row">
+                                <label for="complimentary_seats" class="adj-label">
+                                    <i class="bi bi-gift text-success"></i>Omaggio
+                                </label>
+                                <div class="adj-input-group">
+                                    <input type="number" min="0" step="1" class="form-control form-control-sm"
+                                           name="complimentary_seats" id="complimentary_seats"
+                                           value="{{ old('complimentary_seats', 0) }}">
+                                    <span class="adj-unit">posti</span>
+                                </div>
+                            </div>
+
+                            {{-- Motivo ed extra compaiono solo se c'è un omaggio:
+                                 a zero posti sarebbero rumore. --}}
+                            <div id="comp-details" class="adj-details" style="display:none">
+                                <input type="text" class="form-control form-control-sm mb-2"
+                                       name="complimentary_reason" id="complimentary_reason"
+                                       value="{{ old('complimentary_reason') }}"
+                                       placeholder="Motivo (es. ospite dello staff)" maxlength="200">
+                                <div class="form-check form-switch mb-1">
+                                    <input type="hidden" name="complimentary_includes_addons" value="0">
+                                    <input class="form-check-input" type="checkbox" role="switch" value="1"
+                                           name="complimentary_includes_addons" id="complimentary_includes_addons"
+                                           {{ old('complimentary_includes_addons') ? 'checked' : '' }}>
+                                    <label class="form-check-label small text-muted" for="complimentary_includes_addons">
+                                        Omaggio anche sugli extra
+                                    </label>
+                                </div>
+                                <div class="adj-hint">
+                                    Si applica ai posti di maggior valore. I passeggeri omaggio hanno comunque biglietto e QR.
+                                </div>
                             </div>
                         </div>
 
@@ -958,14 +1014,43 @@
             lines.push(`<div class="d-flex justify-content-between small mb-1 text-muted"><span><i class="bi bi-gift me-1"></i>${compSeats} posti omaggio</span><span>prezzo manuale</span></div>`);
         }
 
+        // ---- Sconto manuale dell'admin (% o €) ---------------------------
+        // Si applica DOPO l'omaggio, sul residuo: è l'ordine con cui calcola
+        // anche il server (PricingService), così l'anteprima non mente.
+        const discVal = parseFloat(document.getElementById('manual_discount_value')?.value || '0') || 0;
+        const discType = document.getElementById('manual_discount_type')?.value || 'amount';
+        let discAmount = 0;
+        if (discVal > 0 && total > 0) {
+            discAmount = discType === 'percent'
+                ? total * Math.min(discVal, 100) / 100
+                : Math.min(discVal, total);
+            discAmount = Math.round(discAmount * 100) / 100;
+            total = Math.max(0, Math.round((total - discAmount) * 100) / 100);
+            const etichetta = discType === 'percent'
+                ? `Sconto ${discVal.toLocaleString('it-IT')}%`
+                : 'Sconto';
+            lines.push(`<div class="d-flex justify-content-between small mb-1 text-primary"><span><i class="bi bi-tag me-1"></i>${etichetta}</span><span>− ${eur(discAmount)}</span></div>`);
+        }
+
+        // Avvisa se lo sconto è stato limitato: senza questo, digitare 500 su un
+        // totale di 300 sembrerebbe accettato per intero.
+        const scontoTroncato = discVal > 0 && (
+            discType === 'percent' ? discVal > 100 : discVal > (total + discAmount)
+        );
+
         summaryBox.innerHTML = `
             ${lines.join('')}
             <hr class="my-2">
             <div class="d-flex justify-content-between small text-muted"><span>Partecipanti</span><span>${pax}</span></div>
             <div class="d-flex justify-content-between small text-muted"><span>Posti occupati</span><span>${seats}</span></div>
             <div class="d-flex justify-content-between fw-bold fs-5 mt-2 pt-2 border-top"><span>Totale</span><span>${eur(total)}</span></div>
+            ${scontoTroncato ? '<div class="alert alert-warning py-2 px-2 mt-2 mb-0 small"><i class="bi bi-exclamation-triangle me-1"></i>Lo sconto supera il totale: verrà applicato fino ad azzerarlo.</div>' : ''}
             ${currentDeparture.is_past ? '<div class="alert alert-warning py-2 px-2 mt-2 mb-0 small"><i class="bi bi-clock-history me-1"></i>Partenza passata: prenotazione retroattiva.</div>' : ''}
         `;
+
+        // Motivo/extra dell'omaggio: visibili solo quando servono davvero.
+        const compDetails = document.getElementById('comp-details');
+        if (compDetails) compDetails.style.display = compSeats > 0 ? '' : 'none';
 
         lastTotal = total;
         renderBalance();
@@ -1091,6 +1176,9 @@
     // totale mostrato coincide sempre con quello che verrà salvato.
     document.getElementById('complimentary_seats')?.addEventListener('input', renderSummary);
     document.getElementById('complimentary_includes_addons')?.addEventListener('change', renderSummary);
+    // Sconto: il totale si aggiorna a ogni digitazione e al cambio di € / %.
+    document.getElementById('manual_discount_value')?.addEventListener('input', renderSummary);
+    document.getElementById('manual_discount_type')?.addEventListener('change', renderSummary);
     document.addEventListener('click', e => {
         const btn = e.target.closest('[data-remove-child]');
         if (btn) { children.splice(+btn.dataset.removeChild, 1); renderChildren(); renderSummary(); }
