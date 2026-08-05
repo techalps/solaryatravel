@@ -367,11 +367,35 @@ class Booking extends Model
         ]);
     }
 
-    /** Acconto versato con saldo ancora da pagare. */
+    /**
+     * Resta del denaro da incassare su questa prenotazione.
+     *
+     * Prima guardava SOLO lo stato deposit_paid con balance_amount > 0, cioè il
+     * caso "acconto versato". Ma un residuo può nascere anche da un aumento di
+     * prezzo su una prenotazione già confermata e pagata: lì lo stato resta
+     * CONFIRMED e la differenza non compariva da nessuna parte, senza alcun
+     * modo di registrarne l'incasso.
+     *
+     * Ora la domanda è quella vera: manca del denaro? Si guarda il residuo
+     * effettivo, non lo stato.
+     */
     public function hasBalanceDue(): bool
     {
-        return $this->status === BookingStatus::DEPOSIT_PAID
-            && (float) $this->balance_amount > 0;
+        if (in_array($this->status, [
+            BookingStatus::CANCELLED,
+            BookingStatus::REFUNDED,
+            BookingStatus::PENDING,
+        ], true)) {
+            return false;
+        }
+
+        return $this->outstandingAmount() > 0;
+    }
+
+    /** Quanto resta da incassare: totale meno quanto già versato. */
+    public function outstandingAmount(): float
+    {
+        return round((float) $this->total_amount - (float) $this->amount_paid, 2);
     }
 
     public function getCustomerFullNameAttribute(): string

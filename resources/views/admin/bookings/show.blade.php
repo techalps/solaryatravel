@@ -238,16 +238,22 @@
         </div>
     @endif
 
-    {{-- Saldo da incassare (prenotazioni con acconto) --}}
+    {{-- Denaro ancora da incassare: saldo di un acconto oppure differenza
+         nata da un aumento di prezzo (lì lo stato resta "confermata"). --}}
     @if ($booking->hasBalanceDue())
+        @php
+            $daIncassare = $booking->outstandingAmount();
+            $conAcconto = (float) $booking->amount_paid > 0;
+        @endphp
         <div class="card shadow-sm rounded-4 mb-3 border-start border-4 border-warning">
             <div class="card-body p-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div class="min-w-0">
-                        <div class="fw-bold mb-1"><i class="bi bi-wallet2 me-1 text-warning"></i>Saldo da incassare</div>
+                        <div class="fw-bold mb-1"><i class="bi bi-wallet2 me-1 text-warning"></i>Da incassare</div>
                         <div class="d-flex flex-wrap gap-3 small">
-                            <span>Acconto versato: <strong>{{ $fmtMoney($booking->amount_paid) }}</strong></span>
-                            <span>Saldo: <strong class="text-primary">{{ $fmtMoney($booking->balance_amount) }}</strong></span>
+                            <span>Totale: <strong>{{ $fmtMoney($booking->total_amount) }}</strong></span>
+                            <span>{{ $conAcconto ? 'Già versato' : 'Versato' }}: <strong>{{ $fmtMoney($booking->amount_paid) }}</strong></span>
+                            <span>Manca: <strong class="text-primary">{{ $fmtMoney($daIncassare) }}</strong></span>
                             @if ($booking->balance_due_at)
                                 <span>Scadenza: <strong>{{ $booking->balance_due_at->timezone('Europe/Rome')->format('d/m/Y') }}</strong></span>
                             @endif
@@ -263,14 +269,14 @@
                                 <i class="bi bi-envelope-arrow-up me-2"></i>{{ $booking->balance_reminder_sent_at ? 'Reinvia' : 'Invia' }} richiesta di saldo
                             </button>
                         </form>
-                        {{-- Registrazione dell'incasso del saldo: prima mancava del
-                             tutto, quindi l'unica strada era il pulsante del primo
+                        {{-- Registrazione dell'incasso: prima mancava del tutto,
+                             quindi l'unica strada era il pulsante del primo
                              bonifico, che però ricalcolava sempre l'acconto. --}}
                         <form action="{{ route('admin.bookings.confirm-transfer', $booking) }}" method="POST"
-                              onsubmit="return confirm('Confermi di aver incassato il saldo di € {{ number_format((float) $booking->balance_amount, 2, ',', '.') }}?');">
+                              onsubmit="return confirm('Confermi di aver incassato € {{ number_format($daIncassare, 2, ',', '.') }}?');">
                             @csrf
                             <button type="submit" class="btn btn-success rounded-pill px-3 fw-semibold">
-                                <i class="bi bi-bank me-2"></i>Registra incasso saldo
+                                <i class="bi bi-bank me-2"></i>Registra incasso
                             </button>
                         </form>
                     </div>

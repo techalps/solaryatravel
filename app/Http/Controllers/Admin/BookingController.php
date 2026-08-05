@@ -1207,6 +1207,10 @@ class BookingController extends Controller
                 $booking->update([
                     'base_price' => $newTotal,
                     'total_amount' => $newTotal,
+                    // Il residuo va riallineato al nuovo totale: lasciandolo al
+                    // valore precedente, la differenza da incassare non
+                    // compariva da nessuna parte.
+                    'balance_amount' => max(0, round($newTotal - (float) $booking->amount_paid, 2)),
                 ]);
             });
 
@@ -1568,9 +1572,16 @@ class BookingController extends Controller
      */
     public function confirmTransfer(Booking $booking): RedirectResponse
     {
-        $ammessi = [BookingStatus::AWAITING_TRANSFER, BookingStatus::DEPOSIT_PAID];
+        // CONFIRMED è ammesso perché un residuo può nascere anche da un aumento
+        // di prezzo su una prenotazione già confermata e pagata: in quel caso lo
+        // stato resta "confermata" ma la differenza va comunque incassata.
+        $ammessi = [
+            BookingStatus::AWAITING_TRANSFER,
+            BookingStatus::DEPOSIT_PAID,
+            BookingStatus::CONFIRMED,
+        ];
         if (! in_array($booking->status, $ammessi, true)) {
-            return back()->with('error', 'Questa prenotazione non è in attesa di bonifico.');
+            return back()->with('error', 'Su questa prenotazione non è possibile registrare incassi.');
         }
 
         // Il residuo REALE, non l'acconto: è la cifra che manca alla cassa.

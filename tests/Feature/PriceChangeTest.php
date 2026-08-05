@@ -104,6 +104,50 @@ class PriceChangeTest extends TestCase
         $this->assertSame(300.0, round((float) $booking->total_amount - (float) $booking->amount_paid, 2));
     }
 
+    /**
+     * Caso SLY-2026-00025: prenotazione da 6.000 € pagata a bonifico, poi
+     * portata a 6.600 €. La differenza di 600 € deve essere visibile nella
+     * scheda con il pulsante per registrarne l'incasso.
+     *
+     * Prima non compariva nulla: hasBalanceDue() richiedeva lo stato
+     * deposit_paid, mentre sugli aumenti la prenotazione resta confirmed, e
+     * balance_amount non veniva riallineato al nuovo totale.
+     */
+    public function test_dopo_un_aumento_la_scheda_mostra_il_residuo_e_il_pulsante(): void
+    {
+        $booking = $this->makeOnRequestBooking([
+            'total_amount' => 6000, 'base_price' => 6000, 'amount_paid' => 6000,
+            'payment_type' => 'bank_transfer',
+        ]);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->put(route('admin.bookings.update', $booking), [
+            'status' => $booking->status->value,
+            'total_price' => 6600,
+            'price_change_action' => 'bank_transfer',
+        ])->assertRedirect();
+
+        $booking->refresh();
+        $this->assertSame(600.0, $booking->outstandingAmount());
+        $this->assertTrue($booking->hasBalanceDue(), 'Il residuo deve risultare da incassare.');
+        $this->assertSame(600.0, (float) $booking->balance_amount, 'balance_amount va riallineato.');
+
+        $html = $this->actingAs($admin)->get(route('admin.bookings.show', $booking))
+            ->assertOk()->getContent();
+        $this->assertStringContainsString('Da incassare', $html);
+        $this->assertStringContainsString('Registra incasso', $html);
+
+        // E il pulsante deve funzionare: incassa i 600, non altro.
+        $this->actingAs($admin)
+            ->post(route('admin.bookings.confirm-transfer', $booking))
+            ->assertSessionHas('success');
+
+        $booking->refresh();
+        $this->assertSame(6600.0, (float) $booking->amount_paid);
+        $this->assertSame(0.0, $booking->outstandingAmount());
+        $this->assertFalse($booking->hasBalanceDue());
+    }
+
     public function test_riduzione_con_storno_bonifico_registra_il_dovuto_senza_muovere_denaro(): void
     {
         $booking = $this->makeOnRequestBooking();
