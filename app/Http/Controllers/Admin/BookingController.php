@@ -1238,11 +1238,59 @@ class BookingController extends Controller
             }
         }
 
+        $statoPrecedente = $booking->status;
+        // Dal form arriva una stringa: va normalizzata a enum, altrimenti i
+        // confronti stretti più sotto falliscono sempre e la barca non viene
+        // mai liberata.
+        $nuovoStato = isset($validated['status'])
+            ? BookingStatus::from($validated['status'])
+            : $booking->status;
+
         $booking->update([
-            'status' => $validated['status'] ?? $booking->status,
+            'status' => $nuovoStato,
             'special_requests' => $validated['special_requests'] ?? $booking->special_requests,
             'customer_phone' => $validated['customer_phone'] ?? $booking->customer_phone,
         ]);
+
+        // Portare a mano lo stato ad "Annullata"/"Rimborsata" da questa pagina
+        // deve liberare la barca come fanno i pulsanti Annulla e Rimborsa.
+        //
+        // Caso reale SLY-2026-00216: prenotazione a uso esclusivo su 3
+        // catamarani, stornata cambiando lo stato da qui. La riserva è
+        // sopravvissuta e quei catamarani sono rimasti invendibili per il
+        // 17/09, pur risultando "liberi" nella lista: un blocco orfano.
+        $liberati = '';
+        $chiudeLaPrenotazione = in_array($nuovoStato, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true);
+
+        if ($chiudeLaPrenotazione && ! in_array($statoPrecedente, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true)) {
+            $booking->update(['cancelled_at' => $booking->cancelled_at ?? now()]);
+
+            // I posti restano per lo storico, ma vanno marcati disdetti:
+            // altrimenti continuano a occupare la capienza della partenza.
+            $postiLiberati = $booking->seatRecords()->whereNull('cancelled_at')->update([
+                'cancelled_at' => now(),
+                'cancellation_reason' => 'Prenotazione ' . $nuovoStato->label(),
+            ]);
+
+            $blocchiLiberati = $this->bookingService->releaseExclusiveBlocks($booking);
+
+            BookingLog::info('booking_status_closed', 'Stato portato a ' . $nuovoStato->value . ' dalla modifica', $booking, [
+                'from' => $statoPrecedente->value,
+                'seats_released' => $postiLiberati,
+                'blocks_released' => $blocchiLiberati,
+            ]);
+
+            if ($postiLiberati > 0 || $blocchiLiberati > 0) {
+                $liberati = sprintf(
+                    ' Liberati %d post%s%s.',
+                    $postiLiberati,
+                    $postiLiberati === 1 ? 'o' : 'i',
+                    $blocchiLiberati > 0
+                        ? ' e ' . $blocchiLiberati . ' riserv' . ($blocchiLiberati === 1 ? 'a' : 'e') . ' catamarano'
+                        : ''
+                );
+            }
+        }
 
         // Scadenza saldo modificabile (solo se c'è un saldo da incassare).
         if ($request->filled('balance_due_date') && (float) $booking->balance_amount > 0) {
@@ -1250,7 +1298,7 @@ class BookingController extends Controller
         }
 
         return redirect()->route('admin.bookings.show', $booking)
-            ->with('success', trim('Prenotazione aggiornata. ' . $priceMsg));
+            ->with('success', trim('Prenotazione aggiornata. ' . $priceMsg . $liberati));
     }
 
     /**
