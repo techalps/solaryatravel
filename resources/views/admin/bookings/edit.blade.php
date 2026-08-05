@@ -633,9 +633,17 @@
 
         const form = priceEl.closest('form');
         const actionEl = document.getElementById('price_change_action');
-        const modal = new bootstrap.Modal(modalEl);
         const paid = parseFloat(priceEl.dataset.paid || '0') || 0;
         const money = (v) => '€ ' + Math.abs(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // `window.bootstrap` arriva da un modulo Vite, quindi NON esiste ancora
+        // quando questo script inline viene eseguito: istanziare il modale qui
+        // lanciava un ReferenceError che uccideva l'intero blocco, e il submit
+        // partiva senza mai mostrare la finestra. Si istanzia alla prima
+        // apertura, come fanno gli altri modali della pagina (che infatti
+        // chiamano bootstrap.Modal dentro un handler di click).
+        let modal = null;
+        const getModal = () => (modal ??= new bootstrap.Modal(modalEl));
 
         let confirmed = false;
 
@@ -677,7 +685,7 @@
                 document.getElementById('pcPaid').textContent = money(paid);
             }
 
-            modal.show();
+            getModal().show();
         });
 
         document.getElementById('pcConfirm').addEventListener('click', function () {
@@ -687,7 +695,7 @@
             );
             actionEl.value = scelta ? scelta.value : 'none';
             confirmed = true;
-            modal.hide();
+            getModal().hide();
             form.submit();
         });
     })();

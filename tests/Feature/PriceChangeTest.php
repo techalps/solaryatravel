@@ -211,6 +211,24 @@ class PriceChangeTest extends TestCase
             'Non deve essere registrata alcuna penale.');
     }
 
+    /**
+     * Se il cliente ha versato più del nuovo totale e non si sceglie lo storno,
+     * il messaggio deve dirlo. Nasce da un caso reale: un errore JavaScript
+     * impediva al modale di aprirsi, il form partiva con "nessuno storno" e
+     * l'admin non aveva modo di accorgersene.
+     */
+    public function test_avvisa_se_resta_un_eccedenza_versata_senza_storno(): void
+    {
+        $booking = $this->makeOnRequestBooking();
+
+        $this->update($booking, [
+            'total_price' => 800,
+            'price_change_action' => 'none',
+        ])->assertSessionHas('success', function (string $msg) {
+            return str_contains($msg, 'in più del dovuto');
+        });
+    }
+
     public function test_il_prezzo_non_cambia_sui_tour_non_su_richiesta(): void
     {
         $booking = $this->makeOnRequestBooking();

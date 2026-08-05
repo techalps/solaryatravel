@@ -1298,6 +1298,18 @@ class BookingController extends Controller
         $amount = abs($diff);
 
         if ($action === 'none') {
+            // Se il cliente aveva versato più del nuovo totale, "nessuno storno"
+            // è quasi sempre una svista: lo si dice a chiare lettere invece di
+            // lasciar passare la cosa in silenzio. (Successe davvero: un errore
+            // JS impediva al modale di aprirsi e la scelta non veniva mai posta.)
+            $eccedenza = round((float) $booking->amount_paid - (float) $booking->total_amount, 2);
+
+            if ($eccedenza > 0) {
+                return 'Prezzo ridotto di ' . $fmt($amount) . ', nessuno storno effettuato: '
+                    . 'il cliente risulta aver versato ' . $fmt($eccedenza) . ' in più del dovuto. '
+                    . 'Se devi restituirglieli, rifai la modifica scegliendo come stornare.';
+            }
+
             return 'Prezzo ridotto di ' . $fmt($amount) . '. Nessuno storno effettuato.';
         }
 
