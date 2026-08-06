@@ -34,7 +34,8 @@
         "files": [
             "app/Helpers/translation.php",
             "app/Helpers/locale.php",
-            "app/Helpers/season.php"
+            "app/Helpers/season.php",
+            "app/Helpers/public_url.php"
         ]
     },
     "autoload-dev": {

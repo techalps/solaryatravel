@@ -34,7 +34,7 @@
                         </div>
 
                         <div style="text-align:center;">
-                            <a href="{{ route('booking.balance', $booking->uuid) }}"
+                            <a href="{{ public_site_route('booking.balance', $booking->uuid) }}"
                                style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;">
                                 {{ __('emails.balance_reminder.cta') }}
                             </a>

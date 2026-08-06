@@ -40,9 +40,11 @@ class BookingPaymentLink extends Mailable
      */
     public function payUrl(): string
     {
+        // public_site_route e non route(): inviata dal portale agenzie, la mail
+        // conteneva un link su b2b.… dove queste rotte non esistono (404).
         return $this->booking->hasBalanceDue()
-            ? route('booking.balance', $this->booking->uuid)
-            : route('payment.show', $this->booking->uuid);
+            ? public_site_route('booking.balance', $this->booking->uuid)
+            : public_site_route('payment.show', $this->booking->uuid);
     }
 
     public function envelope(): Envelope

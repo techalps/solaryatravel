@@ -72,7 +72,7 @@
                         </div>
 
                         <div style="text-align:center;margin:24px 0;">
-                            <a href="{{ route('booking.tickets', $booking->uuid) }}" style="display:inline-block;background:#0066cc;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
+                            <a href="{{ public_site_route('booking.tickets', $booking->uuid) }}" style="display:inline-block;background:#0066cc;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
                                 Apri i biglietti QR
                             </a>
                         </div>

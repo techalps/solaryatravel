@@ -38,8 +38,11 @@ class PaymentService
             'payment_method_types' => ['card'],
             'line_items' => $lineItems,
             'mode' => 'payment',
-            'success_url' => route('payment.success', $booking->uuid) . '?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => route('payment.cancel', $booking->uuid),
+            // Host pubblico forzato: se la sessione nasce da una richiesta sul
+            // portale agenzie, Stripe rimanderebbe il cliente su b2b.… dove
+            // queste rotte non esistono — 404 DOPO aver pagato.
+            'success_url' => public_site_route('payment.success', $booking->uuid) . '?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => public_site_route('payment.cancel', $booking->uuid),
             'customer_email' => $booking->customer_email,
             'metadata' => [
                 'booking_number' => $booking->booking_number,
