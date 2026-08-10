@@ -54,6 +54,14 @@
     <li><strong>Stesso prezzo</strong> → la prenotazione viene semplicemente spostata.</li>
 </ul>
 <p class="text-muted small">I prezzi dei posti vengono ricalcolati in base al periodo della nuova data; vale solo per i partecipanti attivi (non quelli disdetti).</p>
+<div class="guide-tip">
+    <strong>Assegnazione dei catamarani:</strong> spostando la prenotazione i passeggeri vengono
+    <strong>ricollocati sulle barche libere della nuova data</strong>, tenendosi uniti quando possibile.
+    Se sulla nuova data la barca di prima è <strong>riservata in uso esclusivo</strong>, in manutenzione
+    o piena, i passeggeri passano a un'altra barca; se non c'è posto per tutti lo spostamento viene
+    <strong>rifiutato e segnalato</strong> (te ne accorgi già premendo <em>"Verifica"</em>).
+    Controlla l'assegnazione nel dettaglio dopo lo spostamento.
+</div>
 
 <h2>Cambiare il prezzo (tour su richiesta / catamarano riservato)</h2>
 <p>

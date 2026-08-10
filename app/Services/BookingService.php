@@ -439,7 +439,14 @@ class BookingService
      * Per i tour "su richiesta" (prezzo manuale) NON riprezza: il totale resta
      * quello inserito a mano e la differenza è 0 (salvo modifica esplicita del prezzo).
      *
+     * I posti vengono RIASSEGNATI ai catamarani liberi sulla nuova data: portarsi
+     * dietro il catamarano di partenza scavalcava le riserve per uso esclusivo e
+     * la capienza (vedi reassignSeatsForDeparture()).
+     *
      * @return array{old_total:float, new_total:float, difference:float}
+     *
+     * @throws \Exception se sulla nuova partenza non c'è posto (barche riservate,
+     *                    in manutenzione o piene).
      */
     public function reschedule(Booking $booking, TourDeparture $newDeparture): array
     {
@@ -453,6 +460,8 @@ class BookingService
                     'tour_departure_id' => $newDeparture->id,
                     'booking_date' => $newDeparture->departure_date,
                 ]);
+                $this->reassignSeatsForDeparture($booking, $newDeparture);
+
                 return ['old_total' => round($oldTotal, 2), 'new_total' => round($oldTotal, 2), 'difference' => 0.0];
             }
 
@@ -495,6 +504,11 @@ class BookingService
                 'tour_departure_id' => $newDeparture->id,
                 'booking_date' => $newDeparture->departure_date,
             ]);
+
+            // Ricolloca i posti sulle barche libere nella NUOVA data (solleva
+            // eccezione se non c'entrano: la transazione annulla lo spostamento).
+            $this->reassignSeatsForDeparture($booking, $newDeparture);
+
             $newTotal = $booking->fresh()->recalculateTotals();
 
             \App\Support\BookingLog::info('booking_reschedule', 'Prenotazione riprogrammata', $booking, [
@@ -511,6 +525,121 @@ class BookingService
                 'difference' => round($newTotal - $oldTotal, 2),
             ];
         });
+    }
+
+    /**
+     * Ricolloca i posti ATTIVI di una prenotazione sui catamarani effettivamente
+     * liberi nella partenza indicata.
+     *
+     * Serve al cambio data. Prima i posti si portavano dietro il catamaran_id
+     * della vecchia partenza: spostare una prenotazione su una data in cui quella
+     * barca era riservata in USO ESCLUSIVO (o in manutenzione, o già piena) la
+     * infilava sopra la riserva, senza un avviso. Il cambio data era l'unica via
+     * di prenotazione che non passava da distributeSeats() e quindi non vedeva né
+     * i blocchi né la capienza.
+     *
+     * La prenotazione è già stata spostata sulla nuova partenza quando arriviamo
+     * qui, quindi i suoi stessi posti risultano "occupati": vanno esclusi dal
+     * conteggio, altrimenti una barca si troverebbe a competere con sé stessa.
+     *
+     * @throws \Exception se i posti non entrano sulle barche disponibili
+     */
+    protected function reassignSeatsForDeparture(Booking $booking, TourDeparture $departure): void
+    {
+        $seats = $booking->seatRecords()->whereNull('cancelled_at')->orderBy('seat_number')->get();
+        if ($seats->isEmpty()) {
+            return;
+        }
+
+        $tour = $departure->tour ?? $booking->tour;
+        if (! $tour) {
+            throw new \Exception('Tour non trovato: impossibile ricollocare i posti.');
+        }
+
+        $day = $departure->departure_date instanceof \DateTimeInterface
+            ? $departure->departure_date->format('Y-m-d')
+            : (string) $departure->departure_date;
+
+        [$winStart, $winEnd] = $this->departureTimeWindow($departure);
+        $blockedIds = array_map('intval', TourCatamaranBlock::blockedCatamaranIdsOn($day, $winStart, $winEnd));
+
+        // Una riserva creata da QUESTA prenotazione non è un ostacolo a sé stessa
+        // (uso esclusivo spostato di data: i blocchi seguono la prenotazione).
+        $ownBlockCatIds = $booking->booking_number
+            ? TourCatamaranBlock::where('reason', 'like', '%#'.$booking->booking_number.'%')
+                ->pluck('catamaran_id')->map(fn ($id) => (int) $id)->all()
+            : [];
+        $blockedIds = array_values(array_diff($blockedIds, $ownBlockCatIds));
+
+        // Posti liberi per catamarano, esclusi quelli di questa prenotazione.
+        $ownSeatIds = $seats->pluck('id')->all();
+        $capacityLeft = [];
+        foreach ($tour->operatingCatamarans() as $cat) {
+            if (in_array((int) $cat->id, $blockedIds, true)) {
+                continue;
+            }
+            if (! $cat->isAvailableOn($departure->departure_date)) {
+                continue;
+            }
+            $booked = $cat->bookingSeats()
+                ->whereNull('cancelled_at')
+                ->whereNotIn('booking_seats.id', $ownSeatIds)
+                ->whereHas('booking', fn ($q) => $q
+                    ->where('tour_departure_id', $departure->id)
+                    ->whereNotIn('status', ['cancelled', 'refunded', 'no_show']))
+                ->count();
+
+            $free = max(0, (int) $cat->capacity - $booked);
+            if ($free > 0) {
+                $capacityLeft[(int) $cat->id] = $free;
+            }
+        }
+
+        if (array_sum($capacityLeft) < $seats->count()) {
+            throw new \Exception(sprintf(
+                'Sulla partenza del %s non ci sono posti per %d passeggeri: %s. '
+                . 'Libera un catamarano (o scegli un\'altra data) prima di spostare la prenotazione.',
+                \Carbon\Carbon::parse($day)->format('d/m/Y'),
+                $seats->count(),
+                array_sum($capacityLeft) === 0
+                    ? 'le barche sono riservate, in manutenzione o piene'
+                    : 'ne risultano liberi solo '.array_sum($capacityLeft)
+            ));
+        }
+
+        // Mantieni il gruppo unito se possibile: prima il best-fit su una sola
+        // barca, altrimenti riempi dalla più capiente (stessa logica di
+        // distributeSeats(), così il risultato non sorprende l'operatore).
+        $needed = $seats->count();
+        $queue = [];
+
+        $singleFit = collect($capacityLeft)
+            ->filter(fn ($free) => $free >= $needed)
+            ->sort()
+            ->keys()
+            ->first();
+
+        if ($singleFit !== null) {
+            $queue = array_fill(0, $needed, (int) $singleFit);
+        } else {
+            arsort($capacityLeft);
+            foreach ($capacityLeft as $catId => $free) {
+                $take = min($needed - count($queue), $free);
+                for ($i = 0; $i < $take; $i++) {
+                    $queue[] = (int) $catId;
+                }
+                if (count($queue) >= $needed) {
+                    break;
+                }
+            }
+        }
+
+        foreach ($seats as $idx => $seat) {
+            $target = $queue[$idx] ?? null;
+            if ($target !== null && (int) $seat->catamaran_id !== $target) {
+                $seat->update(['catamaran_id' => $target]);
+            }
+        }
     }
 
     /**
@@ -765,6 +894,14 @@ class BookingService
      * partenza (esclusi quelli bloccati). Serve a mostrare in UI quanti posti ci
      * sono su ogni barca, così l'utente sa in anticipo se il gruppo verrà diviso.
      *
+     * Il conteggio è GLOBALE per data + fascia oraria, come in
+     * remainingCapacity() e distributeSeats(): la barca è fisica, se è già
+     * impegnata da un ALTRO tour in orario sovrapposto quei posti non sono
+     * vendibili nemmeno qui. Contando solo la propria riga tour_departures il
+     * badge diceva "12/12" mentre la frase sopra diceva 11 (caso reale del
+     * 12/08/2026: 1 posto sul Cor Caroli venduto su Private Cruise 09:00-17:00,
+     * invisibile al Daily Escape nella stessa fascia).
+     *
      * @return array<int, array{name: string, capacity: int, free: int}>
      */
     public function catamaranAvailabilityList(TourDeparture $departure): array
@@ -790,7 +927,8 @@ class BookingService
             if (!$cat->isAvailableOn($departure->departure_date)) {
                 continue;
             }
-            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            // Vedi remainingCapacity(): conteggio globale per fascia oraria.
+            $booked = $cat->seatsBookedOnDate($departureDate, $winStart, $winEnd);
             $free = max(0, $cat->capacity - $booked);
             $list[] = [
                 'id' => (int) $cat->id,
@@ -1000,7 +1138,14 @@ class BookingService
             if (!$cat->isAvailableOn($departure->departure_date)) {
                 continue;
             }
-            $booked = $cat->seatsBookedOnDeparture($departure->id);
+            // Conteggio GLOBALE per data + fascia oraria, come remainingCapacity():
+            // la barca è fisica, i posti già venduti da un ALTRO tour in orario
+            // sovrapposto non sono disponibili nemmeno qui. Contando solo la
+            // propria riga tour_departures si poteva assegnare l'intera capienza
+            // a una barca già occupata (overbooking reale, verificato sul
+            // 12/08/2026: Benetnash con 2 posti venduti sul Sunset 18:30-22:00
+            // riceveva comunque 12 posti sulla Private Cruise 18:30-22:30).
+            $booked = $cat->seatsBookedOnDate($departureDate, $winStart, $winEnd);
             $free = max(0, $cat->capacity - $booked);
             // In modalità overflow (uso esclusivo) i catamarani scelti sono "vuoti" per
             // questa prenotazione: usiamo la capienza piena come riferimento.

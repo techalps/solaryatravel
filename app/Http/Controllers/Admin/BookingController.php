@@ -1438,13 +1438,22 @@ class BookingController extends Controller
         $newDeparture = \App\Models\TourDeparture::findOrFail($departureId);
 
         // Simula in una transazione annullata per non toccare i dati.
+        // Se la nuova partenza non ha posti (riserve per uso esclusivo, barche
+        // piene) l'anteprima lo dice subito, prima che l'admin confermi.
         DB::beginTransaction();
         try {
             $result = $this->bookingService->reschedule($booking, $newDeparture);
+            $error = null;
+        } catch (\Exception $e) {
+            $error = $e->getMessage();
         } finally {
             DB::rollBack();
         }
         $booking->refresh(); // scarta eventuali modifiche in memoria
+
+        if ($error !== null) {
+            return response()->json(['error' => $error], 422);
+        }
 
         $paid = (float) $this->paymentService->amountPaid($booking);
         return response()->json([
@@ -1513,7 +1522,11 @@ class BookingController extends Controller
             }
             $newDeparture = \App\Models\TourDeparture::findOrFail($departureId);
 
-            $this->bookingService->reschedule($booking, $newDeparture);
+            try {
+                $this->bookingService->reschedule($booking, $newDeparture);
+            } catch (\Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
 
             // Sposta i blocchi sul nuovo periodo (con i nuovi orari).
             foreach ($blocks as $blk) {
@@ -1548,7 +1561,15 @@ class BookingController extends Controller
         $newDeparture = \App\Models\TourDeparture::findOrFail($departureId);
         $method = $this->paymentService->primaryPaymentMethod($booking);
 
-        $result = $this->bookingService->reschedule($booking, $newDeparture);
+        // Il cambio data ricolloca i posti sulle barche libere della nuova
+        // partenza: se non c'è spazio (riserve per uso esclusivo, manutenzioni,
+        // barche piene) lo spostamento va rifiutato, non forzato.
+        try {
+            $result = $this->bookingService->reschedule($booking, $newDeparture);
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $booking->refresh();
         $diff = (float) $result['difference'];
 

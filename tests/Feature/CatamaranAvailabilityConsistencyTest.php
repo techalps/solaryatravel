@@ -390,4 +390,90 @@ class CatamaranAvailabilityConsistencyTest extends TestCase
             .'ma la prenotazione normale la conta come libera.'
         );
     }
+
+    /**
+     * Il BADGE per catamarano (frontend e B2B) deve concordare con la frase
+     * "Posti disponibili per questa data" che gli sta sopra.
+     *
+     * Caso reale del 12/08/2026 segnalato dall'agenzia: il badge diceva
+     * "Cor Caroli 12/12" mentre la frase diceva 11. Il badge contava solo la
+     * propria riga tour_departures (seatsBookedOnDeparture) e non vedeva il
+     * posto già venduto sulla Private Cruise nella stessa fascia oraria.
+     */
+    public function test_il_badge_per_catamarano_concorda_con_i_posti_disponibili_totali(): void
+    {
+        $s = $this->scenario();
+
+        // UN solo posto venduto sul TOUR B, stessa barca e stessa fascia oraria.
+        $this->fillBoat($s['tourB'], $s['depB'], $s['cat'], 1);
+
+        $service = app(BookingService::class);
+
+        $badge = collect($service->catamaranAvailabilityList($s['depA']))
+            ->firstWhere('id', $s['cat']->id);
+
+        $this->assertNotNull($badge, 'La barca deve comparire nel badge.');
+        $this->assertSame(9, $badge['free'],
+            'Il badge deve mostrare 9/10: un posto è già venduto su un altro tour nella stessa fascia.');
+
+        // La somma del badge deve coincidere con la frase sopra.
+        $this->assertSame(
+            $service->remainingCapacity($s['depA']),
+            (int) collect($service->catamaranAvailabilityList($s['depA']))->sum('free'),
+            'Badge e frase "Posti disponibili per questa data" devono dire la stessa cosa.'
+        );
+    }
+
+    /**
+     * OVERBOOKING vero: distributeSeats() è ciò che assegna davvero i posti.
+     * Contando solo la propria riga tour_departures assegnava l'intera capienza
+     * a una barca già occupata da un altro tour in orario sovrapposto.
+     */
+    public function test_la_distribuzione_non_assegna_posti_gia_venduti_su_un_altro_tour(): void
+    {
+        $s = $this->scenario();
+
+        // 4 posti già venduti sul TOUR B: sulla barca da 10 ne restano 6.
+        $this->fillBoat($s['tourB'], $s['depB'], $s['cat'], 4);
+
+        $service = app(BookingService::class);
+
+        $this->assertNull(
+            $service->distributeSeats($s['tourA'], $s['depA'], 10),
+            'OVERBOOKING: 10 posti assegnati a una barca che ne ha solo 6 liberi in quella fascia.'
+        );
+
+        // I 6 posti realmente liberi devono invece essere assegnabili.
+        $ok = $service->distributeSeats($s['tourA'], $s['depA'], 6);
+        $this->assertIsArray($ok);
+        $this->assertSame(6, array_sum(array_column($ok, 'seats')));
+    }
+
+    /**
+     * La richiesta di Solarya: un catamarano riservato in USO ESCLUSIVO deve
+     * risultare come se avesse tutti i posti occupati, e non deve essere
+     * prenotabile né da frontend né da B2B (che condividono lo stesso form).
+     */
+    public function test_un_catamarano_in_uso_esclusivo_non_e_prenotabile_dal_pubblico(): void
+    {
+        $s = $this->scenario();
+
+        TourCatamaranBlock::create([
+            'tour_id' => $s['tourB']->id,          // riservato su un ALTRO tour
+            'catamaran_id' => $s['cat']->id,
+            'start_date' => $s['date'],
+            'end_date' => $s['date'],
+            'start_time' => '10:00:00', 'end_time' => '13:00:00',
+            'reason' => 'Riservato da prenotazione admin #SLY-9999-00001',
+        ]);
+
+        $service = app(BookingService::class);
+
+        $this->assertSame(0, $service->remainingCapacity($s['depA']),
+            'La barca riservata non deve offrire posti.');
+        $this->assertSame([], $service->catamaranAvailabilityList($s['depA']),
+            'La barca riservata non deve comparire fra quelle disponibili.');
+        $this->assertNull($service->distributeSeats($s['tourA'], $s['depA'], 1),
+            'Nemmeno un posto può essere assegnato su una barca in uso esclusivo.');
+    }
 }
