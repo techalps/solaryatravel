@@ -381,6 +381,10 @@ class BookingController extends Controller
                 'iso_date' => $isoDate,
                 'date' => \Carbon\Carbon::parse($isoDate)->format('d/m/Y'),
                 'time' => $time,
+                // Fine dello slot (dall'orario della partenza o dalla durata del tour):
+                // serve all'uso esclusivo su un tour normale, dove la riserva segue la
+                // fascia della partenza invece di orari scelti a mano.
+                'end_time' => $winEnd,
                 'available' => $availSeats,
                 'capacity' => $availCapacity,
                 'price_modifier' => $modifier,
@@ -582,17 +586,56 @@ class BookingController extends Controller
             return back()->withInput()->with('error', 'Per un tour su richiesta devi indicare il prezzo totale.');
         }
 
-        // Uso esclusivo (blocco catamarano): la data di partenza è LIBERA, quindi la
-        // partenza virtuale non deve essere validata contro i periodi del tour.
-        $exclusive = $request->boolean('block_catamaran_day');
+        // Uso esclusivo (blocco catamarano). Due regole distinte:
+        //
+        // 1) TOUR PRIVATO (su richiesta) = SEMPRE barca intera. La riserva non è una
+        //    scelta dell'operatore ma una conseguenza del tipo di tour, e partenza e
+        //    ritorno (date + orari) sono il contratto col cliente: obbligatori.
+        //    Finché dipendeva dall'interruttore, dimenticarlo lasciava la barca in
+        //    vendita: 26 charter su 106 sono nati senza riserva, e la barca risultava
+        //    prenotabile da frontend e B2B per 11 dei suoi 12 posti (il charter pesa
+        //    1 solo posto a database, quindi i soli seats non la proteggono).
+        //    Caso reale: SLY-2026-00293, Cor Caroli 12/08/2026 09:00-17:00, 2.055 €.
+        //
+        // 2) TOUR NORMALE + uso esclusivo = riserva della barca per la partenza a
+        //    CALENDARIO. Date e orari non si scelgono: valgono quelli del tour, come
+        //    in una prenotazione normale. Altrimenti la riserva coprirebbe una fascia
+        //    diversa da quella che il cliente naviga davvero.
+        $exclusive = $request->boolean('block_catamaran_day') || $isOnRequest;
+
+        // Il periodo libero (partenza/ritorno a scelta) esiste solo sui tour privati.
+        $periodoLibero = $isOnRequest;
+
+        // Tour privato: partenza e ritorno sono obbligatori.
+        if ($isOnRequest) {
+            foreach ([
+                'block_start_date' => 'la data di partenza',
+                'block_start_time' => "l'ora di partenza",
+                'block_end_date' => 'la data di ritorno',
+                'block_end_time' => "l'ora di ritorno",
+            ] as $campo => $etichetta) {
+                if (empty($validated[$campo])) {
+                    return back()->withInput()->with('error',
+                        'Una crociera privata occupa la barca intera: indica '.$etichetta.'.');
+                }
+            }
+        }
 
         // Catamarani da riservare in uso esclusivo (uno o più).
         $exclusiveCatamaranIds = $exclusive
             ? array_values(array_unique(array_map('intval', $validated['catamaran_ids'] ?? [])))
             : [];
 
+        // Su richiesta senza scelta esplicita: ricadi sul catamarano indicato nel
+        // form normale, così la riserva si crea comunque.
+        if ($exclusive && empty($exclusiveCatamaranIds) && !empty($validated['catamaran_id'])) {
+            $exclusiveCatamaranIds = [(int) $validated['catamaran_id']];
+        }
+
         if ($exclusive && empty($exclusiveCatamaranIds)) {
-            return back()->withInput()->with('error', 'Seleziona almeno un catamarano da riservare.');
+            return back()->withInput()->with('error', $isOnRequest
+                ? 'Indica il catamarano da riservare: una crociera privata occupa la barca intera.'
+                : 'Seleziona almeno un catamarano da riservare.');
         }
 
         // Controllo conflitti: non si possono bloccare catamarani con prenotazioni
@@ -602,6 +645,19 @@ class BookingController extends Controller
             $blockEnd = $validated['block_end_date'] ?? $blockStart;
             $blockStartTime = $validated['block_start_time'] ?? null;
             $blockEndTime = $validated['block_end_time'] ?? null;
+
+            // Tour NORMALE in uso esclusivo (e riserva automatica in genere): i campi
+            // del periodo non esistono, fa fede la partenza scelta a calendario.
+            // Il controllo conflitti deve valere comunque, altrimenti la riserva
+            // nascerebbe sopra prenotazioni già presenti sulla barca.
+            if (! $periodoLibero) {
+                [$blockStart, $blockStartTime, $blockEndTime] = $this->departureWindowFromInput(
+                    (int) $validated['tour_id'],
+                    (string) $validated['tour_departure_id']
+                );
+                $blockEnd = $blockStart;
+            }
+
             if ($blockStart) {
                 $conflicts = $this->bookingService->conflictingBookingsForBlock(
                     (int) $validated['tour_id'],
@@ -628,13 +684,16 @@ class BookingController extends Controller
         // Risolvi l'id partenza: reale (numerico) o virtuale ("virt:Y-m-d:H:i").
         // La virtuale viene materializzata ora con firstOrCreate (stessa logica
         // del flusso pubblico), così la prenotazione referenzia una riga vera.
+        // Data libera e durata dalla fascia indicata SOLO sui tour privati: lì
+        // partenza e ritorno li decide l'operatore. Un tour normale (anche in uso
+        // esclusivo) resta agganciato al calendario e va validato come sempre.
         try {
             $departureId = $this->resolveDepartureId(
                 (int) $validated['tour_id'],
                 (string) $validated['tour_departure_id'],
-                $exclusive,
-                // In uso esclusivo la partenza dura quanto la fascia indicata (ritorno).
-                $exclusive ? ($validated['block_end_time'] ?? null) : null
+                $periodoLibero,
+                // Tour privato: la partenza dura quanto la fascia indicata (ritorno).
+                $periodoLibero ? ($validated['block_end_time'] ?? null) : null
             );
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -748,13 +807,38 @@ class BookingController extends Controller
             // blocca i catamarani esplicitamente scelti dall'admin.
             if ($exclusive && !empty($exclusiveCatamaranIds)) {
                 $depDate = $booking->booking_date->toDateString();
-                $startDate = $validated['block_start_date'] ?? $depDate;
-                $endDate = $validated['block_end_date'] ?? $startDate;
+
+                if ($periodoLibero) {
+                    // Tour privato: partenza e ritorno indicati dall'operatore.
+                    $startDate = $validated['block_start_date'] ?? $depDate;
+                    $endDate = $validated['block_end_date'] ?? $startDate;
+                    $startTime = $validated['block_start_time'] ?? null;
+                    $endTime = $validated['block_end_time'] ?? null;
+                } else {
+                    // Tour NORMALE in uso esclusivo: date e orari NON si scelgono, la
+                    // riserva segue la partenza a calendario (giorno + fascia del tour).
+                    // Eventuali block_* inviati dal client vengono ignorati: sono i dati
+                    // del tour a fare fede, come in una prenotazione normale. Fuori da
+                    // quella fascia il catamarano resta prenotabile.
+                    $startDate = $depDate;
+                    $endDate = $depDate;
+                    $startTime = null;
+                    $endTime = null;
+
+                    if ($booking->departure?->start_time) {
+                        $dep = $booking->departure;
+                        $startTime = \Carbon\Carbon::parse($dep->start_time)->format('H:i');
+                        $endTime = $dep->end_time
+                            ? \Carbon\Carbon::parse($dep->end_time)->format('H:i')
+                            : \Carbon\Carbon::parse($dep->start_time)
+                                ->addMinutes((int) round(((float) ($booking->tour->duration_hours ?? 1)) * 60))
+                                ->format('H:i');
+                    }
+                }
+
                 if ($endDate < $startDate) {
                     $endDate = $startDate;
                 }
-                $startTime = $validated['block_start_time'] ?? null;
-                $endTime = $validated['block_end_time'] ?? null;
 
                 foreach ($exclusiveCatamaranIds as $catId) {
                     \App\Models\TourCatamaranBlock::firstOrCreate(
@@ -866,6 +950,42 @@ class BookingController extends Controller
             'doc_type' => $p['doc_type'] ?? null,
             'doc_number' => isset($p['doc_number']) ? strtoupper(trim((string) $p['doc_number'])) : null,
         ];
+    }
+
+    /**
+     * Data e fascia oraria di una partenza indicata nel form, SENZA materializzarla.
+     *
+     * Serve al controllo conflitti della riserva automatica, che gira prima della
+     * creazione: qui non si deve creare nessuna riga tour_departures. La fascia è
+     * quella della partenza, così la riserva di un charter non invade il resto del
+     * giorno (fuori dalla fascia la barca resta prenotabile).
+     *
+     * @return array{0:?string,1:?string,2:?string} [data Y-m-d, ora inizio H:i, ora fine H:i]
+     */
+    protected function departureWindowFromInput(int $tourId, string $rawId): array
+    {
+        $tour = Tour::find($tourId);
+        $durationMin = (int) round(((float) ($tour->duration_hours ?? 1)) * 60);
+
+        if (ctype_digit($rawId)) {
+            $dep = \App\Models\TourDeparture::where('tour_id', $tourId)->find((int) $rawId);
+            if (! $dep) {
+                return [null, null, null];
+            }
+
+            $start = $dep->start_time ? \Carbon\Carbon::parse($dep->start_time)->format('H:i') : null;
+            $end = $dep->end_time
+                ? \Carbon\Carbon::parse($dep->end_time)->format('H:i')
+                : ($start ? \Carbon\Carbon::parse($dep->start_time)->addMinutes($durationMin)->format('H:i') : null);
+
+            return [\Carbon\Carbon::parse($dep->departure_date)->format('Y-m-d'), $start, $end];
+        }
+
+        if (preg_match('/^virt:(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2})$/', $rawId, $m)) {
+            return [$m[1], $m[2], \Carbon\Carbon::parse($m[2])->addMinutes($durationMin)->format('H:i')];
+        }
+
+        return [null, null, null];
     }
 
     protected function resolveDepartureId(int $tourId, string $rawId, bool $allowFreeDate = false, ?string $endTimeOverride = null): int

@@ -116,7 +116,14 @@
                                     <label class="form-check-label fw-semibold" for="block_catamaran_day">
                                         Riserva il catamarano (uso esclusivo)
                                     </label>
-                                    <div class="form-text">Blocca uno o più catamarani per un periodo. Le date e gli orari sotto definiscono partenza e ritorno; puoi superare la capienza scegliendo più catamarani.</div>
+                                    <div class="form-text" id="exclusive-normal-note">Riserva uno o più catamarani per questa partenza. <strong>Date e orari sono quelli del tour</strong> e non si modificano: scegli solo quali catamarani riservare.</div>
+                                    <div class="form-text text-success d-none" id="charter-auto-note">
+                                        <i class="fa-solid fa-circle-info me-1"></i>
+                                        Questo tour è <strong>a barca intera</strong>: il catamarano viene riservato
+                                        <strong>automaticamente</strong>, non serve attivare l'interruttore.
+                                        <strong>Data e ora di partenza e di ritorno sono obbligatorie</strong> (anche su
+                                        più giorni); fuori da quell'intervallo la barca resta prenotabile.
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -576,6 +583,10 @@
                 depStatus.innerHTML = '';
                 // Mostra l'opzione "uso esclusivo" appena il tour è caricato.
                 exclusiveToggleArea.style.display = '';
+                // Tour a barca intera: la riserva è automatica, lo diciamo all'operatore
+                // così non pensa che dimenticare l'interruttore lasci la barca in vendita.
+                document.getElementById('charter-auto-note')?.classList.toggle('d-none', !onRequest);
+                document.getElementById('exclusive-normal-note')?.classList.toggle('d-none', onRequest);
                 buildDatePickers();   // costruisce i picker in base alla modalità
                 renderCatamarans();
             })
@@ -600,8 +611,9 @@
             locale: (flatpickr.l10ns && flatpickr.l10ns.it) ? 'it' : 'default',
         };
 
-        if (exclusive) {
-            // Uso esclusivo: date LIBERE per partenza e ritorno.
+        // Date libere SOLO sui tour privati: vedi setExclusiveMode(). Un tour normale
+        // in uso esclusivo resta agganciato al calendario delle partenze.
+        if (exclusive && onRequest) {
             dateInput.disabled = false;
             dateInput.placeholder = 'Data di partenza…';
             fp = flatpickr(dateInput, { ...fpBase, onChange: (sel, s) => pickExclusiveStart(s) });
@@ -707,8 +719,14 @@
     // ===== Catamarani disponibili nel periodo (uso esclusivo) =====
     function fetchCatamaranAvailability() {
         if (!exclusive || !tourMeta) return;
-        const start = blockStartInput.value;
-        const end = blockEndInput.value || start;
+
+        // Tour NORMALE in uso esclusivo: non ci sono i campi periodo, fa fede la
+        // partenza scelta a calendario (data + fascia oraria del tour).
+        const daCalendario = !onRequest;
+        const start = daCalendario
+            ? (currentDeparture ? currentDeparture.iso_date : '')
+            : blockStartInput.value;
+        const end = daCalendario ? start : (blockEndInput.value || start);
         if (!start) {
             exclusiveCats = [];
             renderMultiCatamarans();
@@ -717,8 +735,12 @@
         const seq = ++availReqSeq;
         multiCatStatus.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifica disponibilità…';
         // Includi la fascia oraria: due slot disgiunti nello stesso giorno non collidono.
-        const st = blockStartTime && blockStartTime.value ? blockStartTime.value : '';
-        const et = blockEndTime && blockEndTime.value ? blockEndTime.value : '';
+        const st = daCalendario
+            ? (currentDeparture ? currentDeparture.time : '')
+            : (blockStartTime && blockStartTime.value ? blockStartTime.value : '');
+        const et = daCalendario
+            ? (currentDeparture && currentDeparture.end_time ? currentDeparture.end_time : '')
+            : (blockEndTime && blockEndTime.value ? blockEndTime.value : '');
         const url = catAvailUrlTpl.replace('__TOUR__', tourMeta.id)
             + '?start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end)
             + (st ? '&start_time=' + encodeURIComponent(st) : '')
@@ -742,9 +764,14 @@
 
     function renderMultiCatamarans() {
         if (!exclusiveCats.length) {
-            multiCatStatus.textContent = blockStartInput.value
+            // Il messaggio d'attesa dipende da COSA manca: su un tour normale non ci
+            // sono le date di partenza/ritorno da compilare, si sceglie la partenza.
+            const periodoIndicato = onRequest ? !!blockStartInput.value : !!currentDeparture;
+            multiCatStatus.textContent = periodoIndicato
                 ? 'Nessun catamarano per questo tour.'
-                : 'Seleziona data di partenza e ritorno per vedere i catamarani disponibili.';
+                : (onRequest
+                    ? 'Seleziona data di partenza e ritorno per vedere i catamarani disponibili.'
+                    : 'Seleziona la data e l\'orario della partenza per vedere i catamarani disponibili.');
             multiCatList.innerHTML = '';
             return;
         }
@@ -803,6 +830,14 @@
         renderAdults();
         renderChildren();
         renderSummary();
+
+        // Tour NORMALE in uso esclusivo: la lista dei catamarani da riservare si
+        // popola dalla partenza appena scelta (non ci sono i campi periodo, che
+        // altrove innescano la verifica). Senza questa chiamata la selezione dei
+        // catamarani non compariva mai dopo aver scelto la data.
+        if (exclusive && !onRequest) {
+            fetchCatamaranAvailability();
+        }
 
         // Modalità normale: avvisa se la data non ha catamarani disponibili
         // (es. tutti riservati/bloccati). Il backend rifiuterebbe comunque.
@@ -1100,11 +1135,16 @@
     function setExclusiveMode(on) {
         exclusive = on;
         resetDeparture();
-        // Colonne: normale = orario; esclusivo = ora partenza + data/ora ritorno.
-        timeCol.style.display = exclusive ? 'none' : '';
-        startTimeCol.style.display = exclusive ? '' : 'none';
-        returnCol.style.display = exclusive ? '' : 'none';
-        endTimeCol.style.display = exclusive ? '' : 'none';
+        // Date e orari LIBERI solo sui tour privati (barca intera): lì partenza e
+        // ritorno sono il contratto col cliente e vanno indicati sempre.
+        // Su un tour NORMALE l'uso esclusivo riserva la barca per la partenza a
+        // calendario: gli orari sono quelli del tour e non si toccano, altrimenti
+        // la riserva coprirebbe una fascia diversa da quella che il cliente naviga.
+        const dateLibere = exclusive && onRequest;
+        timeCol.style.display = dateLibere ? 'none' : '';
+        startTimeCol.style.display = dateLibere ? '' : 'none';
+        returnCol.style.display = dateLibere ? '' : 'none';
+        endTimeCol.style.display = dateLibere ? '' : 'none';
         // Reset periodo e selezioni.
         blockStartInput.value = '';
         blockEndInput.value = '';

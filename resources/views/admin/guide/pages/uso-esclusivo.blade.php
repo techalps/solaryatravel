@@ -9,6 +9,22 @@
     Per questo gli orari che inserisci sono quelli che fanno fede per tutto il sistema.
 </p>
 
+<div class="guide-tip">
+    <strong>Due casi diversi, non confonderli.</strong>
+    <br><br>
+    <strong>1. Crociera privata</strong> (<em>Private Cruise</em>, tour "su richiesta") — è
+    <strong>sempre a barca intera</strong>. Il catamarano viene riservato <strong>automaticamente</strong>:
+    non c'è modo di dimenticarlo. <strong>Data e ora di partenza e di ritorno sono obbligatorie</strong>
+    (anche su più giorni): sono il contratto col cliente e fanno fede per tutto il sistema.
+    Fuori da quell'intervallo la barca <strong>resta prenotabile</strong> — una private del mattino
+    non brucia la serata.
+    <br><br>
+    <strong>2. Tour normale + uso esclusivo</strong> — riservi la barca per una partenza già a
+    calendario (es. tutto il Daily Escape del 20/07). Qui <strong>date e orari non si scelgono</strong>:
+    valgono quelli del tour, esattamente come in una prenotazione normale. Ti resta da scegliere
+    <strong>quali catamarani</strong> riservare.
+</div>
+
 <h2>Cosa cambia con l'uso esclusivo</h2>
 <div class="guide-step"><span class="guide-step-num">1</span><div>I campi diventano <strong>Data e ora di partenza</strong> e <strong>Data e ora di ritorno</strong>. Le date sono libere (non vincolate al calendario delle partenze).</div></div>
 <div class="guide-step"><span class="guide-step-num">2</span><div>Compare l'elenco dei <strong>catamarani disponibili</strong> nel periodo scelto: selezionane uno o più.</div></div>
