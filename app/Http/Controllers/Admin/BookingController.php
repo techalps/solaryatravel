@@ -447,11 +447,11 @@ class BookingController extends Controller
         // la barca risultava LIBERA qui, mentre la prenotazione normale la
         // escludeva — le due schermate si contraddicevano. Il blocco è la stessa
         // fonte usata dal calendario della prenotazione normale.
-        $blockedIds = \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn(
-            $start,
-            $startTime,
-            $endTime
-        );
+        //
+        // Il controllo copre TUTTO il periodo, non solo il primo giorno: un periodo
+        // che ingloba una riserva esistente partendo da un giorno libero (es. 09→14/08
+        // su una riserva 11→12/08) la dava per disponibile, perché il 09/08 è libero.
+        $blockedIds = $this->blockedCatamaranIdsInRange($start, $end, $startTime, $endTime);
 
         $catamarans = $tour->operatingCatamarans()->map(function ($cat) use ($tour, $start, $end, $startTime, $endTime, $blockedIds) {
             $conflicts = $this->bookingService->conflictingBookingsForBlock(
@@ -840,18 +840,30 @@ class BookingController extends Controller
                     $endDate = $startDate;
                 }
 
+                // Una riserva per catamarano, SEMPRE legata a QUESTA prenotazione.
+                //
+                // Prima era un firstOrCreate su (tour, catamarano, date): se esisteva
+                // già un blocco con quelle quattro colonne — tipicamente di un'ALTRA
+                // prenotazione sullo stesso giorno e sulla stessa barca — il nuovo non
+                // veniva creato e orari e reason restavano quelli vecchi. Conseguenze:
+                // la seconda prenotazione non aveva una riserva propria, e alla sua
+                // cancellazione releaseExclusiveBlocks() (che cerca per #numero) non
+                // trovava nulla, oppure liberava il blocco dell'altra.
+                //
+                // La chiave giusta include il numero prenotazione: così ogni riserva è
+                // la propria, e ripetere il salvataggio non ne crea due.
                 foreach ($exclusiveCatamaranIds as $catId) {
-                    \App\Models\TourCatamaranBlock::firstOrCreate(
+                    \App\Models\TourCatamaranBlock::updateOrCreate(
                         [
-                            'tour_id' => $booking->tour_id,
                             'catamaran_id' => $catId,
-                            'start_date' => $startDate,
-                            'end_date' => $endDate,
+                            'reason' => 'Riservato da prenotazione admin #' . $booking->booking_number,
                         ],
                         [
+                            'tour_id' => $booking->tour_id,
+                            'start_date' => $startDate,
+                            'end_date' => $endDate,
                             'start_time' => $startTime,
                             'end_time' => $endTime,
-                            'reason' => 'Riservato da prenotazione admin #' . $booking->booking_number,
                         ]
                     );
                 }
@@ -950,6 +962,66 @@ class BookingController extends Controller
             'doc_type' => $p['doc_type'] ?? null,
             'doc_number' => isset($p['doc_number']) ? strtoupper(trim((string) $p['doc_number'])) : null,
         ];
+    }
+
+    /**
+     * Id dei catamarani riservati in QUALSIASI giorno del periodo [start..end].
+     *
+     * blockedCatamaranIdsOn() ragiona su una data sola: usarla sul solo giorno di
+     * inizio lasciava passare i periodi che INGLOBANO una riserva esistente
+     * partendo da un giorno libero (09→14/08 su una riserva 11→12/08: il 09/08 è
+     * libero, quindi la barca risultava disponibile).
+     *
+     * La fascia oraria vale solo agli ESTREMI del periodo richiesto: i giorni
+     * interni sono occupati per intero, quindi lì basta la sovrapposizione di date.
+     * Così "09:00-12:30 del 20/07" non collide con una riserva pomeridiana dello
+     * stesso giorno, ma un periodo di più giorni non può scavalcarne un altro.
+     *
+     * @return array<int,int>
+     */
+    protected function blockedCatamaranIdsInRange(
+        string $start,
+        string $end,
+        ?string $startTime = null,
+        ?string $endTime = null
+    ): array {
+        $primo = \Carbon\Carbon::parse($start)->startOfDay();
+        $ultimo = \Carbon\Carbon::parse($end)->startOfDay();
+        if ($ultimo->lt($primo)) {
+            $ultimo = $primo->copy();
+        }
+
+        // Periodo di un solo giorno: la fascia oraria vale per intero.
+        if ($primo->equalTo($ultimo)) {
+            return array_map('intval', \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn(
+                $primo->format('Y-m-d'),
+                $startTime,
+                $endTime
+            ));
+        }
+
+        $ids = [];
+        for ($g = $primo->copy(); $g->lte($ultimo); $g->addDay()) {
+            // Primo giorno: occupato dall'ora di partenza in poi. Ultimo giorno: fino
+            // all'ora di ritorno. Giorni in mezzo: interi (nessuna fascia).
+            $da = $g->equalTo($primo) ? $startTime : null;
+            $a = $g->equalTo($ultimo) ? $endTime : null;
+
+            // Con un solo estremo noto la fascia è ambigua: meglio considerare il
+            // giorno intero che rischiare di dichiarare libera una barca occupata.
+            if ($da === null xor $a === null) {
+                $da = null;
+                $a = null;
+            }
+
+            $ids = array_merge($ids, \App\Models\TourCatamaranBlock::blockedCatamaranIdsOn(
+                $g->format('Y-m-d'),
+                $da,
+                $a
+            ));
+        }
+
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 
     /**
