@@ -56,6 +56,23 @@
                                 <strong>{{ __('emails.tickets.tip_label') }}</strong> {{ __('emails.tickets.tip') }}
                             </p>
                         </div>
+
+                        {{-- Assistenza WhatsApp: link wa.me col messaggio già precompilato.
+                             Compare solo se il numero aziendale è configurato. --}}
+                        @php
+                            $waLink = \App\Support\WhatsApp::customerLink($booking);
+                        @endphp
+                        @if($waLink)
+                            <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:16px;border-radius:6px;margin-top:18px;text-align:center;">
+                                <p style="margin:0 0 12px;font-size:13px;color:#14532d;line-height:1.6;">
+                                    {{ __('whatsapp.help_text') }}
+                                </p>
+                                <a href="{{ $waLink }}"
+                                   style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 24px;border-radius:999px;">
+                                    {{ __('whatsapp.contact_us') }}
+                                </a>
+                            </div>
+                        @endif
                     </td>
                 </tr>
 

@@ -111,6 +111,16 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-semibold text-secondary mb-1">
+                                            <i class="bi bi-whatsapp me-1"></i>Numero WhatsApp
+                                        </label>
+                                        <input type="text" name="whatsapp_number" value="{{ old('whatsapp_number', $settings['whatsapp_number'] ?? '') }}"
+                                               class="form-control @error('whatsapp_number') is-invalid @enderror"
+                                               placeholder="+39 345 088 4743">
+                                        <div class="small text-muted mt-1">Usato dal pulsante "Scrivici su WhatsApp" nelle email e nella pagina di conferma. Lascia vuoto per nasconderlo.</div>
+                                        @error('whatsapp_number') <div class="small text-danger mt-1">{{ $message }}</div> @enderror
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">
                                             <i class="bi bi-geo-alt me-1"></i>Indirizzo
                                         </label>
                                         <input type="text" name="site_address" value="{{ old('site_address', $settings['site_address'] ?? '') }}"

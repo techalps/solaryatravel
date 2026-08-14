@@ -17,6 +17,17 @@
     <li>La prenotazione resta in "Attesa bonifico" finché non confermi l'incasso.</li>
 </ul>
 
+<h2>Numero WhatsApp</h2>
+<ul>
+    <li>Nel gruppo <strong>Contatti</strong> imposti il numero su cui i clienti vi scrivono.</li>
+    <li>Scrivilo con il prefisso internazionale, ad esempio <code>+39 345 088 4743</code>.</li>
+    <li>
+        Alimenta il pulsante <strong>"Scrivici su WhatsApp"</strong> nell'email dei biglietti e nella
+        pagina di conferma del pagamento. Se lasci il campo vuoto, il pulsante semplicemente non compare.
+    </li>
+    <li>Non serve nessun abbonamento: è un normale link che apre WhatsApp con il messaggio già scritto.</li>
+</ul>
+
 <h2>Altre opzioni</h2>
 <ul>
     <li>Dati bancari per il bonifico, mittente email, e parametri generali del sito.</li>

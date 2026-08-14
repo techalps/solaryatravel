@@ -122,6 +122,35 @@
     registrerà con quella stessa email — comparirà automaticamente nel suo storico.
 </p>
 
+<h2>Scrivere al cliente su WhatsApp</h2>
+<p>
+    Nella scheda della prenotazione, sotto i dati del cliente, trovi il pulsante
+    <strong>"Scrivi su WhatsApp"</strong>. Apre la chat col cliente e prepara già il messaggio con
+    numero di prenotazione, tour e data: ti basta completarlo e inviare.
+</p>
+<ul>
+    <li>Si apre WhatsApp Web o l'app del computer: il messaggio <strong>non parte da solo</strong>, lo invii tu.</li>
+    <li>
+        Se al posto del pulsante vedi la scritta <em>"Nessun numero di telefono in prenotazione"</em>,
+        il cliente non ha lasciato il numero. Se invece leggi <em>"Numero non valido per WhatsApp"</em>,
+        il numero c'è ma è incompleto o scritto male: correggilo dalla Modifica prenotazione.
+    </li>
+    <li>
+        Per i numeri stranieri conviene che il campo <strong>Paese</strong> sia corretto: serve a
+        ricostruire il prefisso internazionale quando il cliente non l'ha scritto.
+    </li>
+    <li>
+        Se il cliente prenota da <strong>account registrato</strong>, il telefono del suo profilo
+        viene proposto già compilato nel form. Resta comunque modificabile: il numero salvato
+        sulla prenotazione è quello che si vede nella scheda.
+    </li>
+</ul>
+<p>
+    Anche il cliente può scrivervi: nell'email dei biglietti e nella pagina di conferma del pagamento
+    c'è il pulsante <strong>"Scrivici su WhatsApp"</strong>, che cita già la sua prenotazione. Il numero
+    che riceve i messaggi si imposta in <strong>Impostazioni → Contatti</strong>.
+</p>
+
 <h2>Creare una prenotazione manuale</h2>
 <p>
     Da <strong>Prenotazioni → Nuova prenotazione</strong> puoi registrare una prenotazione per telefono,

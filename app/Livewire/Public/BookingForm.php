@@ -215,6 +215,10 @@ class BookingForm extends Component
             $this->customer_first_name = $parts[0] ?? '';
             $this->customer_last_name = $parts[1] ?? '';
             $this->customer_email = $u->email ?? '';
+            // Il telefono del profilo va precompilato come gli altri dati: senza
+            // di esso la prenotazione resta senza numero anche per chi l'ha già
+            // dato in fase di registrazione (e il contatto WhatsApp non compare).
+            $this->customer_phone = $u->phone ?? '';
         }
 
         $this->adults = [[

@@ -354,7 +354,29 @@
                             <div class="fw-semibold">
                                 @if ($booking->customer_phone)
                                     <a href="tel:{{ $booking->customer_phone }}">{{ $booking->customer_phone }}</a>
-                                @else — @endif
+                                @else
+                                    —
+                                @endif
+                            </div>
+                            {{-- Chat WhatsApp col cliente: link wa.me con messaggio già
+                                 precompilato (prenotazione, tour, data). Nessuna API. --}}
+                            @php
+                                $waLink = \App\Support\WhatsApp::adminLink($booking);
+                            @endphp
+                            <div class="mt-2">
+                                @if ($waLink)
+                                    <a href="{{ $waLink }}" target="_blank" rel="noopener"
+                                       class="btn btn-sm rounded-pill px-3 text-white"
+                                       style="background:#25D366"
+                                       title="Apre WhatsApp con il messaggio già pronto">
+                                        <i class="bi bi-whatsapp me-1"></i>{{ __('whatsapp.contact_customer') }}
+                                    </a>
+                                @else
+                                    <span class="badge bg-light text-muted border rounded-pill px-3 py-2 text-wrap">
+                                        <i class="bi bi-whatsapp me-1"></i>
+                                        {{ $booking->customer_phone ? __('whatsapp.invalid_phone') : __('whatsapp.no_phone') }}
+                                    </span>
+                                @endif
                             </div>
                         </div>
                         <div class="col-md-6">

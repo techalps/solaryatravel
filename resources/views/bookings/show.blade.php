@@ -263,6 +263,19 @@
                                 <i class="fa-solid fa-building-columns me-2"></i>Dati per il bonifico
                             </a>
                         @endif
+                        {{-- Assistenza via WhatsApp: apre la chat con Solarya e cita già
+                             la prenotazione, così lo staff sa subito di cosa si tratta.
+                             Compare solo se il numero aziendale è configurato. --}}
+                        @php
+                            $waLink = \App\Support\WhatsApp::customerLink($booking);
+                        @endphp
+                        @if($waLink)
+                            <a href="{{ $waLink }}" target="_blank" rel="noopener"
+                               class="btn rounded-pill fw-semibold text-white"
+                               style="background:#25D366">
+                                <i class="fa-brands fa-whatsapp me-2"></i>{{ __('whatsapp.contact_us') }}
+                            </a>
+                        @endif
                         @if($booking->canBeCancelled() && $booking->booking_date && $booking->booking_date->isFuture())
                             <form method="POST" action="{{ route('booking.cancel', $booking->uuid) }}"
                                   onsubmit="return confirm('Sei sicuro di voler annullare questa prenotazione?');">

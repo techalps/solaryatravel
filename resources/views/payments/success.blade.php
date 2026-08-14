@@ -148,6 +148,20 @@
                                 </div>
                             </div>
 
+                            {{-- Assistenza via WhatsApp: il messaggio parte già con il
+                                 numero di prenotazione, così lo staff sa di cosa si tratta. --}}
+                            @php
+                                $waLink = \App\Support\WhatsApp::customerLink($booking);
+                            @endphp
+                            @if($waLink)
+                                <div class="bk-wa-help mt-4">
+                                    <div class="mb-2">{{ __('whatsapp.help_text') }}</div>
+                                    <a href="{{ $waLink }}" target="_blank" rel="noopener" class="bk-wa-btn">
+                                        <i class="fa-brands fa-whatsapp me-2"></i>{{ __('whatsapp.contact_us') }}
+                                    </a>
+                                </div>
+                            @endif
+
                             <div class="text-center mt-4">
                                 <a href="{{ route('home') }}" class="tg-btn tg-btn-switch-animation me-2"><i class="fa-solid fa-house me-2"></i>Torna alla home</a>
                                 <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-transparent"><i class="fa-solid fa-compass me-2"></i>Esplora altri tour</a>
@@ -172,5 +186,9 @@
     .tg-btn-switch-animation:hover { filter: brightness(.88); color: #fff; }
     .tg-btn-transparent { padding: 14px 26px; font-weight: 600; border: 1.5px solid var(--tg-theme-primary); color: var(--tg-theme-primary); }
     .tg-btn-transparent:hover { background: var(--tg-theme-primary); color: #fff; }
+
+    .bk-wa-help { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1rem; text-align: center; font-size: .92rem; color: #14532d; }
+    .bk-wa-btn { display: inline-block; background: #25D366; color: #fff; border-radius: 999px; padding: 10px 22px; font-weight: 600; text-decoration: none; }
+    .bk-wa-btn:hover { filter: brightness(.92); color: #fff; }
 </style>
 @endpush
