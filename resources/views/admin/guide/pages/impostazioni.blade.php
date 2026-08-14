@@ -22,8 +22,13 @@
     <li>Nel gruppo <strong>Contatti</strong> imposti il numero su cui i clienti vi scrivono.</li>
     <li>Scrivilo con il prefisso internazionale, ad esempio <code>+39 345 088 4743</code>.</li>
     <li>
-        Alimenta il pulsante <strong>"Scrivici su WhatsApp"</strong> nell'email dei biglietti e nella
-        pagina di conferma del pagamento. Se lasci il campo vuoto, il pulsante semplicemente non compare.
+        Alimenta il pulsante <strong>"Scrivici su WhatsApp"</strong> nella pagina della prenotazione,
+        nella conferma di pagamento e nell'email dei biglietti.
+    </li>
+    <li>
+        Se lasci il campo vuoto viene usato il <strong>numero già presente sul sito</strong> (quello
+        del pulsante verde in basso e del footer): compila questo campo solo se l'assistenza sulle
+        prenotazioni deve arrivare su un numero <em>diverso</em>.
     </li>
     <li>Non serve nessun abbonamento: è un normale link che apre WhatsApp con il messaggio già scritto.</li>
 </ul>

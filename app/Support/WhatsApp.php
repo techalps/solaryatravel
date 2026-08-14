@@ -34,6 +34,16 @@ class WhatsApp
     private const DEFAULT_DIALING_CODE = '39';
 
     /**
+     * Numero WhatsApp storico del sito, usato quando l'impostazione è vuota.
+     *
+     * È lo stesso numero cablato nelle viste pubbliche (header, footer, bottone
+     * flottante, pagine tour): il pulsante sulle prenotazioni deve funzionare
+     * come quelli, senza richiedere una configurazione aggiuntiva. Impostando
+     * `whatsapp_number` dall'admin si sovrascrive questo valore.
+     */
+    private const FALLBACK_BUSINESS_NUMBER = '+39 345 088 4743';
+
+    /**
      * Normalizza un numero di telefono in formato wa.me (solo cifre, con
      * prefisso internazionale e senza "+").
      *
@@ -113,12 +123,17 @@ class WhatsApp
     }
 
     /**
-     * Numero WhatsApp di Solarya, dalle impostazioni.
-     * Serve per i link in cui è il cliente a scrivere a noi.
+     * Numero WhatsApp di Solarya, dalle impostazioni con fallback sul numero
+     * storico del sito. Serve per i link in cui è il cliente a scrivere a noi.
      */
     public static function businessNumber(): ?string
     {
-        return self::normalizeNumber(Settings::get('whatsapp_number'), 'IT');
+        $configured = trim((string) Settings::get('whatsapp_number', ''));
+
+        return self::normalizeNumber(
+            $configured !== '' ? $configured : self::FALLBACK_BUSINESS_NUMBER,
+            'IT'
+        );
     }
 
     /** Link wa.me generico verso un numero, con testo precompilato. */

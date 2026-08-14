@@ -108,13 +108,29 @@ class WhatsAppBookingLinkTest extends TestCase
         $this->assertStringContainsString($booking->booking_number, $text);
     }
 
-    public function test_senza_numero_aziendale_il_link_cliente_non_esiste(): void
+    public function test_senza_impostazione_si_usa_il_numero_storico_del_sito(): void
     {
-        // Numero non configurato: meglio nessun pulsante che un wa.me rotto.
+        // Il numero è cablato in header, footer e pagine tour da prima di questa
+        // funzione: il pulsante sulle prenotazioni deve comportarsi come quelli
+        // invece di sparire, quindi l'impostazione vuota ricade sul fallback.
         $this->setBusinessNumber('');
         $booking = $this->makeBooking();
 
-        $this->assertNull(\App\Support\WhatsApp::customerLink($booking));
+        $this->assertStringStartsWith(
+            'https://wa.me/393450884743?text=',
+            \App\Support\WhatsApp::customerLink($booking)
+        );
+    }
+
+    public function test_l_impostazione_sovrascrive_il_numero_storico(): void
+    {
+        $this->setBusinessNumber('+39 320 1234567');
+        $booking = $this->makeBooking();
+
+        $link = \App\Support\WhatsApp::customerLink($booking);
+
+        $this->assertStringStartsWith('https://wa.me/393201234567?text=', $link);
+        $this->assertStringNotContainsString('393450884743', $link);
     }
 
     public function test_senza_telefono_del_cliente_il_link_admin_non_esiste(): void
@@ -150,17 +166,18 @@ class WhatsAppBookingLinkTest extends TestCase
             ->assertSee($booking->booking_number);
     }
 
-    public function test_la_pagina_pubblica_non_mostra_il_pulsante_senza_numero_aziendale(): void
+    public function test_la_pagina_pubblica_mostra_il_pulsante_anche_senza_impostazione(): void
     {
+        // Con l'impostazione vuota si usa il numero storico del sito, quindi il
+        // pulsante c'è comunque: si riconosce dal "?text=" col messaggio
+        // precompilato, che i link fissi di header e footer non hanno.
         $this->setBusinessNumber('');
         $booking = $this->makeBooking();
 
-        // Header e footer del sito hanno un loro link WhatsApp fisso (stesso
-        // numero e stessa etichetta), che non dipende dalle impostazioni. Il
-        // nostro pulsante si distingue per il "?text=" col messaggio precompilato.
         $this->get(route('booking.show', $booking->uuid))
             ->assertOk()
-            ->assertDontSee('?text=', false);
+            ->assertSee('wa.me/393450884743?text=', false)
+            ->assertSee($booking->booking_number);
     }
 
     public function test_la_scheda_admin_segnala_il_telefono_mancante_senza_link(): void
