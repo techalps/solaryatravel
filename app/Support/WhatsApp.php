@@ -136,6 +136,34 @@ class WhatsApp
         );
     }
 
+    /**
+     * Link WhatsApp verso Solarya per le viste pubbliche (header, footer,
+     * bottone flottante, pagine tour). Unico punto da cui tutte prendono il
+     * numero: cambiarlo in Impostazioni lo aggiorna in tutto il sito.
+     *
+     * Restituisce null se il numero configurato è inutilizzabile, così le viste
+     * possono nascondere il link invece di puntare a una chat inesistente.
+     */
+    public static function businessLink(string $message = ''): ?string
+    {
+        return self::link(self::businessNumber(), $message);
+    }
+
+    /**
+     * Numero aziendale in formato leggibile, per quando va mostrato come testo
+     * (pagine legali) e non solo come link. Restituisce il valore impostato
+     * dall'admin così com'è scritto, senza normalizzarlo.
+     */
+    public static function businessNumberForDisplay(): ?string
+    {
+        $configured = trim((string) Settings::get('whatsapp_number', ''));
+        $display = $configured !== '' ? $configured : self::FALLBACK_BUSINESS_NUMBER;
+
+        // Se il numero non è utilizzabile non lo si mostra: sarebbe un recapito
+        // sbagliato su una pagina legale.
+        return self::businessNumber() ? $display : null;
+    }
+
     /** Link wa.me generico verso un numero, con testo precompilato. */
     public static function link(?string $number, string $message = ''): ?string
     {

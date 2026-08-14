@@ -258,7 +258,7 @@
                                     <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:var(--tg-theme-primary)">
                                         <i class="fa-solid fa-calendar-check me-2"></i> Prenota ora
                                     </a>
-                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="https://wa.me/393450884743?text={{ rawurlencode('Ciao Solarya Travel, vorrei informazioni sulle vostre escursioni.') }}" target="_blank" rel="noopener">
+                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="{{ \App\Support\WhatsApp::businessLink('Ciao Solarya Travel, vorrei informazioni sulle vostre escursioni.') }}" target="_blank" rel="noopener">
                                         <i class="fa-brands fa-whatsapp me-2"></i> Contattaci su WhatsApp
                                     </a>
                                 </div>
@@ -508,7 +508,7 @@
                                     <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold" href="{{ route('booking.start') }}" style="background:#7C37FF">
                                         <i class="fa-solid fa-calendar-check me-2"></i> Prenota ora
                                     </a>
-                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="https://wa.me/393450884743?text={{ rawurlencode('Ciao Solarya Travel, vorrei informazioni sulle vostre escursioni.') }}" target="_blank" rel="noopener">
+                                    <a class="mb-20 d-inline-flex align-items-center px-4 py-3 rounded-3 text-white text-decoration-none fw-semibold border border-white" href="{{ \App\Support\WhatsApp::businessLink('Ciao Solarya Travel, vorrei informazioni sulle vostre escursioni.') }}" target="_blank" rel="noopener">
                                         <i class="fa-brands fa-whatsapp me-2"></i> Contattaci su WhatsApp
                                     </a>
                                 </div>

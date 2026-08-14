@@ -127,7 +127,9 @@
                     <h6 class="text-warning fw-semibold mb-3">Contatti</h6>
                     <ul class="list-unstyled d-flex flex-column gap-2 text-white-50">
                         <li><i class="bi bi-geo-alt-fill text-warning me-2"></i>Via Toscanini 9/C<br><span class="ms-4">07026 Olbia (SS)</span></li>
-                        <li><i class="bi bi-whatsapp text-warning me-2"></i><a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="text-white-50 text-decoration-none">WhatsApp</a></li>
+                        @if ($waContactLink = \App\Support\WhatsApp::businessLink())
+                            <li><i class="bi bi-whatsapp text-warning me-2"></i><a href="{{ $waContactLink }}" target="_blank" rel="noopener" class="text-white-50 text-decoration-none">WhatsApp</a></li>
+                        @endif
                         <li><i class="bi bi-envelope-fill text-warning me-2"></i><a href="mailto:info@solaryatravel.com" class="text-white-50 text-decoration-none">info@solaryatravel.com</a></li>
                     </ul>
                 </div>
@@ -161,9 +163,11 @@
     </footer>
 
     {{-- WhatsApp float --}}
-    <a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Contattaci su WhatsApp">
-        <i class="bi bi-whatsapp fs-3"></i>
-    </a>
+    @if ($waFloatLink = \App\Support\WhatsApp::businessLink())
+        <a href="{{ $waFloatLink }}" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Contattaci su WhatsApp">
+            <i class="bi bi-whatsapp fs-3"></i>
+        </a>
+    @endif
 
     @livewireScripts
     @stack('scripts')

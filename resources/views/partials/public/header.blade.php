@@ -34,7 +34,8 @@
                 <div class="col-xxl-3 col-xl-4 col-lg-4 col-7">
                     <div class="tg-menu-right-action d-flex align-items-center justify-content-end">
                         <div class="tg-header-contact-info d-flex align-items-center">
-                            <a href="https://wa.me/393450884743" target="_blank" rel="noopener"
+                            @if ($waBusinessLink = \App\Support\WhatsApp::businessLink())
+                            <a href="{{ $waBusinessLink }}" target="_blank" rel="noopener"
                                class="tg-header-contact-number d-none d-xl-flex align-items-center text-decoration-none"
                                aria-label="{{ __('common.nav.whatsapp') }}">
                                 <i class="fa-brands fa-whatsapp me-2" style="font-size:1.4rem;color:{{ $isHome ? '#fff' : '#25D366' }}"></i>
@@ -45,6 +46,7 @@
                                     <strong>WhatsApp</strong>
                                 </span>
                             </a>
+                            @endif
                         </div>
 
                         <div class="tg-header-btn ml-20 d-none d-sm-block">
@@ -162,7 +164,9 @@
 
         <hr class="border-secondary border-opacity-25 my-4">
         <div class="small text-white-50">
-            <div class="mb-2"><i class="fa-brands fa-whatsapp me-2"></i><a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="text-white-50 text-decoration-none">{{ __('common.nav.whatsapp') }}</a></div>
+            @if ($waMobileLink = \App\Support\WhatsApp::businessLink())
+                <div class="mb-2"><i class="fa-brands fa-whatsapp me-2"></i><a href="{{ $waMobileLink }}" target="_blank" rel="noopener" class="text-white-50 text-decoration-none">{{ __('common.nav.whatsapp') }}</a></div>
+            @endif
             <div><i class="fa-solid fa-envelope me-2"></i><a href="mailto:{{ config('mail.from.address') }}" class="text-white-50 text-decoration-none">{{ config('mail.from.address') }}</a></div>
         </div>
     </div>

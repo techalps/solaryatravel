@@ -33,7 +33,9 @@
                 <p class="legal-p mb-0">P. IVA 03071410900</p>
                 <p class="legal-p mb-0">Email: <a href="mailto:info@solaryatravel.com">info@solaryatravel.com</a></p>
                 <p class="legal-p mb-0">PEC: <a href="mailto:solaryatravel@pec.it">solaryatravel@pec.it</a></p>
-                <p class="legal-p">WhatsApp: <a href="https://wa.me/393450884743" target="_blank" rel="noopener">+39 345 088 4743</a></p>
+                @if ($waLegalLink = \App\Support\WhatsApp::businessLink())
+                    <p class="legal-p">WhatsApp: <a href="{{ $waLegalLink }}" target="_blank" rel="noopener">{{ \App\Support\WhatsApp::businessNumberForDisplay() }}</a></p>
+                @endif
 
                 <h2 class="legal-h2">2. Tipologia di Dati Raccolti</h2>
                 <p class="legal-p">Possono essere raccolti:</p>

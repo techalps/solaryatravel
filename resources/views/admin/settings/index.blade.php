@@ -116,7 +116,7 @@
                                         <input type="text" name="whatsapp_number" value="{{ old('whatsapp_number', $settings['whatsapp_number'] ?? '') }}"
                                                class="form-control @error('whatsapp_number') is-invalid @enderror"
                                                placeholder="+39 345 088 4743">
-                                        <div class="small text-muted mt-1">Usato dal pulsante "Scrivici su WhatsApp" sulle prenotazioni. Se vuoto si usa il numero già presente sul sito: compilalo solo per usarne uno diverso.</div>
+                                        <div class="small text-muted mt-1">Numero WhatsApp di tutto il sito: pulsante verde, header, footer, pagine tour, privacy/termini e prenotazioni. Cambiandolo qui si aggiorna ovunque.</div>
                                         @error('whatsapp_number') <div class="small text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-md-6">

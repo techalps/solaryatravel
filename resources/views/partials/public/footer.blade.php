@@ -18,7 +18,9 @@
                                 <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
                                 <a href="#" aria-label="X"><i class="fa-brands fa-twitter"></i></a>
                                 <a href="#" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
-                                <a href="https://wa.me/393450884743" aria-label="WhatsApp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i></a>
+                                @if ($waFooterLink = \App\Support\WhatsApp::businessLink())
+                                    <a href="{{ $waFooterLink }}" aria-label="WhatsApp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i></a>
+                                @endif
                             </div>
                         </div>
                     </div>

@@ -277,7 +277,7 @@
                     <strong style="font-size:.95rem;color:#0E1B33">{{ __('tours.detail.on_request_text') }}</strong>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    <a href="https://wa.me/393450884743?text={{ rawurlencode(__('tours.detail.whatsapp_message', ['tour' => tdb($tour, 'name')])) }}" target="_blank" rel="noopener"
+                    <a href="{{ \App\Support\WhatsApp::businessLink(__('tours.detail.whatsapp_message', ['tour' => tdb($tour, 'name')])) }}" target="_blank" rel="noopener"
                        style="background:#25D366;color:#fff;border:none;border-radius:50px;padding:10px 18px;font-weight:700;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
                         <i class="fa-brands fa-whatsapp"></i><span class="d-none d-sm-inline">{{ __('tours.detail.whatsapp') }}</span>
                     </a>

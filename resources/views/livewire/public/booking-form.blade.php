@@ -75,7 +75,7 @@
                         <div class="alert alert-danger small py-2 mb-10">
                             <i class="fa-solid fa-circle-exclamation me-1"></i>
                             {!! __('tours.booking.sold_out', [
-                                'whatsapp' => '<a href="https://wa.me/393450884743" target="_blank" rel="noopener">'.__('tours.detail.whatsapp').'</a>',
+                                'whatsapp' => '<a href="'.e(\App\Support\WhatsApp::businessLink()).'" target="_blank" rel="noopener">'.__('tours.detail.whatsapp').'</a>',
                                 'email' => '<a href="mailto:'.e(config('mail.from.address')).'">'.__('tours.detail.email').'</a>',
                             ]) !!}
                         </div>
@@ -505,9 +505,11 @@
                             <button type="button" class="bk-modal-btn-outline w-100" wire:click="closeSplitModal">
                                 <i class="fa-solid fa-calendar-day me-2"></i>{{ __('tours.booking.split_modal_change_date') }}
                             </button>
-                            <a href="https://wa.me/393450884743" target="_blank" rel="noopener" class="bk-modal-btn-wa w-100">
-                                <i class="fa-brands fa-whatsapp me-2"></i>{{ __('tours.booking.split_modal_whatsapp') }}
-                            </a>
+                            @if ($waSplitLink = \App\Support\WhatsApp::businessLink())
+                                <a href="{{ $waSplitLink }}" target="_blank" rel="noopener" class="bk-modal-btn-wa w-100">
+                                    <i class="fa-brands fa-whatsapp me-2"></i>{{ __('tours.booking.split_modal_whatsapp') }}
+                                </a>
+                            @endif
                         </div>
                     </div>
                 </div>

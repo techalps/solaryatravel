@@ -180,6 +180,55 @@ class WhatsAppBookingLinkTest extends TestCase
             ->assertSee($booking->booking_number);
     }
 
+    public function test_cambiare_il_numero_lo_aggiorna_su_tutto_il_sito(): void
+    {
+        // Il numero era cablato in header, footer, bottone flottante, home,
+        // pagine tour e pagine legali: ora tutte leggono l'impostazione, quindi
+        // un cambio si propaga senza toccare il codice.
+        $this->setBusinessNumber('+39 320 9998877');
+        [$tour] = $this->makeTourForPublicPages();
+
+        // Header lingua: senza di esso "/" redirige alla versione localizzata.
+        $itHeaders = ['Accept-Language' => 'it-IT,it;q=0.9'];
+
+        foreach (['/', route('tours.show', $tour->slug), route('privacy'), route('terms')] as $url) {
+            $this->withHeaders($itHeaders)
+                ->get($url)
+                ->assertOk()
+                ->assertSee('wa.me/393209998877', false)
+                ->assertDontSee('wa.me/393450884743', false);
+        }
+    }
+
+    public function test_le_pagine_legali_mostrano_il_numero_impostato_come_testo(): void
+    {
+        // Sulle pagine legali il recapito è anche testo visibile, non solo link:
+        // mostrare un numero diverso da quello reale sarebbe un errore legale.
+        $this->setBusinessNumber('+39 320 9998877');
+
+        $this->withHeaders(['Accept-Language' => 'it-IT,it;q=0.9'])
+            ->get(route('privacy'))
+            ->assertOk()
+            ->assertSee('+39 320 9998877')
+            ->assertDontSee('+39 345 088 4743');
+    }
+
+    /** Tour minimo pubblicabile, per le viste pubbliche che lo richiedono. */
+    private function makeTourForPublicPages(): array
+    {
+        $cat = Catamaran::create([
+            'name' => 'Cat'.uniqid(), 'slug' => 'cat-'.uniqid(),
+            'capacity' => 10, 'is_active' => true,
+        ]);
+        $tour = Tour::create([
+            'name' => 'Giro', 'slug' => 'giro-'.uniqid(),
+            'is_active' => true, 'booking_on_request' => false,
+        ]);
+        $tour->catamarans()->attach($cat->id);
+
+        return [$tour];
+    }
+
     public function test_la_scheda_admin_segnala_il_telefono_mancante_senza_link(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

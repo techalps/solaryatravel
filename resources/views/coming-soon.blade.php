@@ -123,7 +123,9 @@
 
             <div class="cs-contacts">
                 <a class="cs-contact" href="mailto:info@solaryatravel.com"><i class="fa-solid fa-envelope"></i> info@solaryatravel.com</a>
-                <a class="cs-contact" href="https://wa.me/393450884743" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Scrivici su WhatsApp</a>
+                @if ($waComingSoonLink = \App\Support\WhatsApp::businessLink())
+                    <a class="cs-contact" href="{{ $waComingSoonLink }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Scrivici su WhatsApp</a>
+                @endif
             </div>
 
             <div class="cs-social">
