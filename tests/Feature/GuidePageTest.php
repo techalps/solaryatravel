@@ -86,4 +86,30 @@ class GuidePageTest extends TestCase
             ->assertSee('per data di incasso', false)
             ->assertSee('Come si sistema', false);
     }
+
+    public function test_la_guida_copre_completamento_e_contatto_whatsapp(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'prenotazioni'))
+            ->assertOk()
+            // Completamento dall'elenco: le due modalità e i due vincoli che
+            // spiegano perché l'icona a volte non compare.
+            ->assertSee('Segnare le prenotazioni come completate', false)
+            ->assertSee('Non serve il check-in', false)
+            ->assertSee('partenza già', false)
+            // Contatto WhatsApp: cosa fare quando il pulsante non c'è.
+            ->assertSee('Scrivere al cliente su WhatsApp', false)
+            ->assertSee('Nessun numero di telefono in prenotazione', false)
+            ->assertSee('Numero non valido per WhatsApp', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'impostazioni'))
+            ->assertOk()
+            // Il numero è unico per tutto il sito: è il punto che evita di
+            // cercarlo nel codice al prossimo cambio.
+            ->assertSee('Numero WhatsApp', false)
+            ->assertSee('si aggiorna da solo', false);
+    }
 }

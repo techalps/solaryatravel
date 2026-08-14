@@ -24,7 +24,7 @@ class GuideController extends Controller
         'prenotazioni' => [
             'title' => 'Creare una prenotazione',
             'icon' => 'bi-journal-plus',
-            'desc' => 'Prenotazioni manuali, walk-in, telefoniche e retroattive.',
+            'desc' => 'Prenotazioni manuali, modifiche, completamento e contatto WhatsApp.',
         ],
         'uso-esclusivo' => [
             'title' => 'Riservare un catamarano',
@@ -69,7 +69,7 @@ class GuideController extends Controller
         'impostazioni' => [
             'title' => 'Impostazioni',
             'icon' => 'bi-gear',
-            'desc' => 'Acconto, bonifico e opzioni che cambiano il comportamento.',
+            'desc' => 'Acconto, bonifico, contatti WhatsApp e opzioni del sito.',
         ],
     ];
 

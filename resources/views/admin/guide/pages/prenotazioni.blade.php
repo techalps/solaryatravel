@@ -190,10 +190,22 @@
     </li>
 </ul>
 <p>
-    Anche il cliente può scrivervi: nell'email dei biglietti e nella pagina di conferma del pagamento
-    c'è il pulsante <strong>"Scrivici su WhatsApp"</strong>, che cita già la sua prenotazione. Il numero
-    che riceve i messaggi si imposta in <strong>Impostazioni → Contatti</strong>.
+    <strong>Anche il cliente può scrivervi.</strong> Il pulsante "Scrivici su WhatsApp" compare in tre
+    punti: nella <strong>pagina della sua prenotazione</strong> (il link che riceve), nella
+    <strong>conferma del pagamento</strong> e nell'<strong>email dei biglietti</strong>. Il messaggio
+    parte già con numero di prenotazione, tour e data, così quando vi scrive sapete subito di cosa
+    si tratta senza doverglielo chiedere.
 </p>
+<p>
+    Il numero che riceve questi messaggi è quello in <strong>Impostazioni → Contatti → Numero
+    WhatsApp</strong>, lo stesso usato da tutto il sito. Il messaggio è nella
+    <strong>lingua in cui il cliente ha prenotato</strong> (italiano, inglese, francese o spagnolo).
+</p>
+<div class="guide-tip">
+    Sono normali link WhatsApp: <strong>nessun costo per messaggio</strong> e nessun abbonamento.
+    Il sistema non invia niente da solo — apre la chat con il testo già pronto, poi si scrive
+    come sempre dal telefono o da WhatsApp Web.
+</div>
 
 <h2>Creare una prenotazione manuale</h2>
 <p>
