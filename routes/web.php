@@ -184,6 +184,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::get('/bookings-api/tours/{tour:id}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');
     // Disponibilità catamarani per uso esclusivo su un periodo (date libere).
     Route::get('/bookings-api/tours/{tour:id}/catamaran-availability', [AdminBookingController::class, 'catamaranAvailability'])->name('bookings.catamaran-availability');
+    // Completamento in blocco dall'elenco (deve stare prima di /bookings/{booking}).
+    Route::post('/bookings/completa-in-blocco', [AdminBookingController::class, 'bulkComplete'])->name('bookings.bulk-complete');
+    Route::post('/bookings/{booking}/completa', [AdminBookingController::class, 'complete'])->name('bookings.complete');
     Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/{booking}/confirm-transfer', [AdminBookingController::class, 'confirmTransfer'])->name('bookings.confirm-transfer');
     // Storno via bonifico eseguito fuori dal sistema: l'admin lo conferma qui.

@@ -173,6 +173,14 @@
     </div>
 
     {{-- Bookings table --}}
+    {{-- Il form del completamento in blocco resta FUORI dalla tabella: le righe
+         hanno i loro form (completa, conferma) e l'HTML non ammette form
+         annidati — il browser li spezzerebbe, perdendo sia le checkbox sia le
+         azioni di riga. Le checkbox si agganciano con l'attributo form=. --}}
+    <form method="POST" action="{{ route('admin.bookings.bulk-complete') }}" id="bulkStatusForm" class="d-none">
+        @csrf
+    </form>
+
     <div class="dash-card">
         <div class="dash-card-header">
             <h3>
@@ -186,10 +194,36 @@
             </div>
         </div>
 
+        {{-- Barra azioni: compare solo a selezione non vuota. L'unico cambio di
+             stato disponibile in blocco è "Completata", e vale per le confermate
+             la cui partenza è già avvenuta; le altre vengono saltate e segnalate. --}}
+        @if($bookings->isNotEmpty())
+            <div class="dash-card-body border-bottom py-3 d-none" id="bulkBar">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="badge rounded-pill bg-primary-subtle text-primary">
+                        <span id="bulkCount">0</span> selezionate
+                    </span>
+                    <button type="submit" form="bulkStatusForm" class="btn btn-primary btn-sm rounded-pill px-3" id="bulkApplyBtn" disabled>
+                        <i class="bi bi-flag-fill me-1"></i>Segna come completate
+                    </button>
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3 border" id="bulkClearBtn">
+                        Annulla selezione
+                    </button>
+                    <span class="small text-muted">
+                        Vale per le prenotazioni <strong>confermate</strong> con partenza già avvenuta.
+                    </span>
+                </div>
+            </div>
+        @endif
+
         <div class="table-responsive">
             <table class="dash-table">
                 <thead>
                     <tr>
+                        <th style="width:38px">
+                            <input type="checkbox" class="form-check-input" id="bulkSelectAll"
+                                   title="Seleziona tutte le prenotazioni in questa pagina">
+                        </th>
                         {!! $sortLink('number', 'Prenotazione') !!}
                         {!! $sortLink('customer', 'Cliente') !!}
                         {!! $sortLink('tour', 'Tour') !!}
@@ -207,6 +241,12 @@
                             $m = $statusMeta[$sv] ?? ['label' => ucfirst($sv), 'icon' => 'bi-circle', 'color' => 'secondary'];
                         @endphp
                         <tr>
+                            <td>
+                                <input type="checkbox" name="booking_ids[]" value="{{ $booking->id }}"
+                                       form="bulkStatusForm"
+                                       class="form-check-input bulk-cb"
+                                       aria-label="Seleziona {{ $booking->booking_number }}">
+                            </td>
                             <td>
                                 <a href="{{ route('admin.bookings.show', $booking) }}" class="font-monospace fw-semibold text-primary text-decoration-none">
                                     #{{ $booking->booking_number }}
@@ -316,6 +356,18 @@
                                        class="dash-icon-btn is-primary" title="Visualizza" data-bs-toggle="tooltip">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    {{-- Completa: solo sulle confermate la cui partenza è già
+                                         avvenuta. L'orario di fine, quando c'è, evita di
+                                         proporre il pulsante su un tour ancora in corso. --}}
+                                    @if($booking->canBeCompleted())
+                                        <form action="{{ route('admin.bookings.complete', $booking) }}" method="POST" class="d-inline"
+                                              onsubmit="return confirm('Segnare come completata la prenotazione #{{ $booking->booking_number }}?');">
+                                            @csrf
+                                            <button type="submit" class="dash-icon-btn is-secondary" title="Segna come completata" data-bs-toggle="tooltip">
+                                                <i class="bi bi-flag-fill"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                     @if($sv === 'pending')
                                         <form action="{{ route('admin.bookings.confirm', $booking) }}" method="POST" class="d-inline">
                                             @csrf
@@ -348,7 +400,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8">
+                            <td colspan="9">
                                 <div class="text-center py-5 text-muted">
                                     <i class="bi bi-journal-x display-4 opacity-50 d-block mb-3"></i>
                                     <p class="fw-semibold mb-1">Nessuna prenotazione trovata</p>
@@ -477,6 +529,55 @@
                 rAmount.max = total.toFixed(2);
                 rForm.querySelector('textarea[name="note"]').value = '';
             });
+        }
+
+        // ===== Selezione multipla + cambio stato in blocco =====
+        var bulkBar = document.getElementById('bulkBar');
+        if (bulkBar) {
+            var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.bulk-cb'));
+            var selectAll = document.getElementById('bulkSelectAll');
+            var counter = document.getElementById('bulkCount');
+            var applyBtn = document.getElementById('bulkApplyBtn');
+            var clearBtn = document.getElementById('bulkClearBtn');
+            var form = document.getElementById('bulkStatusForm');
+
+            function selected() {
+                return checkboxes.filter(function (cb) { return cb.checked; });
+            }
+
+            function refresh() {
+                var n = selected().length;
+                counter.textContent = n;
+                bulkBar.classList.toggle('d-none', n === 0);
+                applyBtn.disabled = n === 0;
+                // Indeterminato quando la selezione è parziale.
+                selectAll.checked = n > 0 && n === checkboxes.length;
+                selectAll.indeterminate = n > 0 && n < checkboxes.length;
+            }
+
+            selectAll.addEventListener('change', function () {
+                checkboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+                refresh();
+            });
+
+            checkboxes.forEach(function (cb) { cb.addEventListener('change', refresh); });
+
+            clearBtn.addEventListener('click', function () {
+                checkboxes.forEach(function (cb) { cb.checked = false; });
+                selectAll.checked = false;
+                refresh();
+            });
+
+            // Il passaggio non è reversibile dall'elenco: meglio una conferma.
+            form.addEventListener('submit', function (e) {
+                var n = selected().length;
+                var msg = 'Segnare come completat' + (n === 1 ? 'a 1 prenotazione' : 'e ' + n + ' prenotazioni') + '?';
+                if (!confirm(msg)) {
+                    e.preventDefault();
+                }
+            });
+
+            refresh();
         }
     });
 </script>

@@ -357,6 +357,42 @@ class Booking extends Model
             && $this->booking_date->isToday();
     }
 
+    /**
+     * La partenza è già avvenuta.
+     *
+     * Si guarda l'orario di fine della partenza quando c'è (un tour del mattino
+     * è concluso nel pomeriggio dello stesso giorno); altrimenti si ricade sulla
+     * data della prenotazione, considerata passata a giorno concluso.
+     */
+    public function departureIsPast(): bool
+    {
+        $departure = $this->departure;
+
+        if ($departure?->departure_date) {
+            $end = \Carbon\Carbon::parse($departure->departure_date);
+            $end = $departure->end_time
+                ? $end->setTimeFrom(\Carbon\Carbon::parse($departure->end_time))
+                : $end->endOfDay();
+
+            return $end->isPast();
+        }
+
+        return (bool) $this->booking_date?->copy()->endOfDay()->isPast();
+    }
+
+    /**
+     * Può essere portata a "Completata": confermata e con la partenza passata.
+     *
+     * Non passa da BookingStatus::canTransitionTo() — quel grafo impone
+     * confirmed -> checked_in -> completed — perché a bordo il check-in spesso
+     * non viene registrato e le prenotazioni resterebbero "confermate" per
+     * sempre. Qui "completata" significa "il tour si è svolto".
+     */
+    public function canBeCompleted(): bool
+    {
+        return $this->status === BookingStatus::CONFIRMED && $this->departureIsPast();
+    }
+
     public function canBeCancelled(): bool
     {
         return in_array($this->status, [

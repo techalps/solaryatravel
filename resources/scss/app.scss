@@ -673,6 +673,8 @@ body.admin-body { letter-spacing: -.01em; }
     &.is-success:hover { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
     &.is-danger:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
     &.is-primary:hover { background: #e0f2fe; color: $primary; border-color: #bae6fd; }
+    // Usata dall'azione "Completa": grigio come lo stato Completata.
+    &.is-secondary:hover { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
 }
 
 // Status pill colored variants

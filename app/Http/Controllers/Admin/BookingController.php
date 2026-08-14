@@ -1444,45 +1444,7 @@ class BookingController extends Controller
             'customer_phone' => $validated['customer_phone'] ?? $booking->customer_phone,
         ]);
 
-        // Portare a mano lo stato ad "Annullata"/"Rimborsata" da questa pagina
-        // deve liberare la barca come fanno i pulsanti Annulla e Rimborsa.
-        //
-        // Caso reale SLY-2026-00216: prenotazione a uso esclusivo su 3
-        // catamarani, stornata cambiando lo stato da qui. La riserva è
-        // sopravvissuta e quei catamarani sono rimasti invendibili per il
-        // 17/09, pur risultando "liberi" nella lista: un blocco orfano.
-        $liberati = '';
-        $chiudeLaPrenotazione = in_array($nuovoStato, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true);
-
-        if ($chiudeLaPrenotazione && ! in_array($statoPrecedente, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true)) {
-            $booking->update(['cancelled_at' => $booking->cancelled_at ?? now()]);
-
-            // I posti restano per lo storico, ma vanno marcati disdetti:
-            // altrimenti continuano a occupare la capienza della partenza.
-            $postiLiberati = $booking->seatRecords()->whereNull('cancelled_at')->update([
-                'cancelled_at' => now(),
-                'cancellation_reason' => 'Prenotazione ' . $nuovoStato->label(),
-            ]);
-
-            $blocchiLiberati = $this->bookingService->releaseExclusiveBlocks($booking);
-
-            BookingLog::info('booking_status_closed', 'Stato portato a ' . $nuovoStato->value . ' dalla modifica', $booking, [
-                'from' => $statoPrecedente->value,
-                'seats_released' => $postiLiberati,
-                'blocks_released' => $blocchiLiberati,
-            ]);
-
-            if ($postiLiberati > 0 || $blocchiLiberati > 0) {
-                $liberati = sprintf(
-                    ' Liberati %d post%s%s.',
-                    $postiLiberati,
-                    $postiLiberati === 1 ? 'o' : 'i',
-                    $blocchiLiberati > 0
-                        ? ' e ' . $blocchiLiberati . ' riserv' . ($blocchiLiberati === 1 ? 'a' : 'e') . ' catamarano'
-                        : ''
-                );
-            }
-        }
+        $liberati = $this->releaseIfStatusCloses($booking, $statoPrecedente, $nuovoStato, 'dalla modifica');
 
         // Scadenza saldo modificabile (solo se c'è un saldo da incassare).
         if ($request->filled('balance_due_date') && (float) $booking->balance_amount > 0) {
@@ -1491,6 +1453,204 @@ class BookingController extends Controller
 
         return redirect()->route('admin.bookings.show', $booking)
             ->with('success', trim('Prenotazione aggiornata. ' . $priceMsg . $liberati));
+    }
+
+    /**
+     * Libera posti e riserve quando lo stato passa ad "Annullata"/"Rimborsata".
+     *
+     * Portare a mano lo stato da qui deve liberare la barca come fanno i
+     * pulsanti Annulla e Rimborsa.
+     *
+     * Caso reale SLY-2026-00216: prenotazione a uso esclusivo su 3 catamarani,
+     * stornata cambiando lo stato. La riserva è sopravvissuta e quei catamarani
+     * sono rimasti invendibili per il 17/09, pur risultando "liberi" nella
+     * lista: un blocco orfano.
+     *
+     * @param  string  $origine Contesto per il log ("dalla modifica", "in blocco").
+     * @return string Frammento di messaggio con quanto liberato ('' se nulla).
+     */
+    private function releaseIfStatusCloses(
+        Booking $booking,
+        BookingStatus $statoPrecedente,
+        BookingStatus $nuovoStato,
+        string $origine
+    ): string {
+        $chiude = in_array($nuovoStato, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true);
+        $eraGiaChiusa = in_array($statoPrecedente, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true);
+
+        if (! $chiude || $eraGiaChiusa) {
+            return '';
+        }
+
+        $booking->update(['cancelled_at' => $booking->cancelled_at ?? now()]);
+
+        // I posti restano per lo storico, ma vanno marcati disdetti:
+        // altrimenti continuano a occupare la capienza della partenza.
+        $postiLiberati = $booking->seatRecords()->whereNull('cancelled_at')->update([
+            'cancelled_at' => now(),
+            'cancellation_reason' => 'Prenotazione ' . $nuovoStato->label(),
+        ]);
+
+        $blocchiLiberati = $this->bookingService->releaseExclusiveBlocks($booking);
+
+        BookingLog::info('booking_status_closed', 'Stato portato a ' . $nuovoStato->value . ' ' . $origine, $booking, [
+            'from' => $statoPrecedente->value,
+            'seats_released' => $postiLiberati,
+            'blocks_released' => $blocchiLiberati,
+        ]);
+
+        if ($postiLiberati === 0 && $blocchiLiberati === 0) {
+            return '';
+        }
+
+        return sprintf(
+            ' Liberati %d post%s%s.',
+            $postiLiberati,
+            $postiLiberati === 1 ? 'o' : 'i',
+            $blocchiLiberati > 0
+                ? ' e ' . $blocchiLiberati . ' riserv' . ($blocchiLiberati === 1 ? 'a' : 'e') . ' catamarano'
+                : ''
+        );
+    }
+
+    /**
+     * Porta in blocco a "Completata" le prenotazioni confermate già passate.
+     *
+     * È l'unico cambio di stato disponibile in blocco, per scelta operativa: da
+     * qui non si annulla e non si rimborsa, azioni che restano sul dettaglio
+     * della prenotazione dove hanno le loro conferme e i loro effetti economici.
+     *
+     * NON passa da BookingStatus::canTransitionTo(): quel grafo impone
+     * confirmed -> checked_in -> completed, mentre a bordo il check-in spesso non
+     * viene registrato e le prenotazioni restano "confermate" a tempo
+     * indeterminato. Qui "completata" significa "il tour si è svolto", quindi il
+     * salto diretto è voluto e il check-in non è un requisito.
+     *
+     * L'unica condizione è che la data sia passata: chiudere una prenotazione
+     * futura non avrebbe senso e nasconderebbe un errore di selezione.
+     */
+    public function bulkComplete(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'booking_ids' => ['required', 'array', 'min:1'],
+            'booking_ids.*' => ['integer'],
+        ]);
+
+        $bookings = Booking::whereIn('id', $data['booking_ids'])->get();
+
+        $aggiornate = 0;
+        $nonConfermate = [];
+        $future = [];
+
+        foreach ($bookings as $booking) {
+            if ($booking->status === BookingStatus::COMPLETED) {
+                continue; // Già completata: non è un errore.
+            }
+
+            if ($booking->status !== BookingStatus::CONFIRMED) {
+                $nonConfermate[] = $booking->booking_number . ' (' . $booking->status->label() . ')';
+                continue;
+            }
+
+            if (! $booking->departureIsPast()) {
+                $future[] = $booking->booking_number;
+                continue;
+            }
+
+            // Timestamp coerenti col cambio singolo: per le retroattive vale la
+            // data della partenza, non "adesso", così i report restano corretti.
+            $eventTime = $booking->booking_date && $booking->booking_date->isPast()
+                ? $booking->booking_date
+                : now();
+
+            $booking->update([
+                'status' => BookingStatus::COMPLETED,
+                'confirmed_at' => $booking->confirmed_at ?? $eventTime,
+                'completed_at' => $eventTime,
+            ]);
+
+            BookingLog::info('booking_completed_bulk', 'Prenotazione completata in blocco', $booking, [
+                'from' => BookingStatus::CONFIRMED->value,
+            ]);
+
+            $aggiornate++;
+        }
+
+        $avvisi = [];
+        if ($nonConfermate !== []) {
+            $avvisi[] = 'saltate perché non confermate: ' . $this->elencoBreve($nonConfermate);
+        }
+        if ($future !== []) {
+            $avvisi[] = 'saltate perché la partenza non è ancora passata: ' . $this->elencoBreve($future);
+        }
+        $avviso = $avvisi === [] ? '' : ucfirst(implode('; ', $avvisi)) . '.';
+
+        if ($aggiornate === 0) {
+            return back()->with(
+                'warning',
+                $avviso !== '' ? $avviso : 'Nessuna prenotazione da completare tra quelle selezionate.'
+            );
+        }
+
+        $messaggio = sprintf(
+            '%d prenotazion%s portat%s a "Completata".',
+            $aggiornate,
+            $aggiornate === 1 ? 'e' : 'i',
+            $aggiornate === 1 ? 'a' : 'e'
+        );
+
+        return $avviso !== ''
+            ? back()->with('success', $messaggio)->with('warning', $avviso)
+            : back()->with('success', $messaggio);
+    }
+
+    /**
+     * Porta a "Completata" una singola prenotazione dall'elenco (icona di riga).
+     *
+     * Stessa regola della versione in blocco: solo da "Confermata" e solo a
+     * partenza avvenuta. Il pulsante compare appunto solo in quel caso, ma la
+     * condizione va riverificata qui: una richiesta può arrivare da una pagina
+     * rimasta aperta mentre lo stato è cambiato.
+     */
+    public function complete(Booking $booking): RedirectResponse
+    {
+        if ($booking->status === BookingStatus::COMPLETED) {
+            return back()->with('warning', 'La prenotazione è già completata.');
+        }
+
+        if ($booking->status !== BookingStatus::CONFIRMED) {
+            return back()->with('warning', 'Si può completare solo una prenotazione confermata (questa è "' . $booking->status->label() . '").');
+        }
+
+        if (! $booking->departureIsPast()) {
+            return back()->with('warning', 'La partenza non è ancora avvenuta: non si può completare.');
+        }
+
+        $eventTime = $booking->booking_date && $booking->booking_date->isPast()
+            ? $booking->booking_date
+            : now();
+
+        $booking->update([
+            'status' => BookingStatus::COMPLETED,
+            'confirmed_at' => $booking->confirmed_at ?? $eventTime,
+            'completed_at' => $eventTime,
+        ]);
+
+        BookingLog::info('booking_completed', 'Prenotazione completata dall\'elenco', $booking, [
+            'from' => BookingStatus::CONFIRMED->value,
+        ]);
+
+        return back()->with('success', 'Prenotazione ' . $booking->booking_number . ' completata.');
+    }
+
+    /** Elenco troncato di numeri prenotazione, per i messaggi all'operatore. */
+    private function elencoBreve(array $numeri, int $max = 8): string
+    {
+        $mostrati = implode(', ', array_slice($numeri, 0, $max));
+
+        return count($numeri) > $max
+            ? $mostrati . ' e altre ' . (count($numeri) - $max)
+            : $mostrati;
     }
 
     /**

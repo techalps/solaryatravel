@@ -19,6 +19,50 @@
     <em>filtrarle</em> per completarle (vedi il capitolo Documenti d'identità).
 </p>
 
+<h2>Segnare le prenotazioni come completate</h2>
+<p>
+    Dopo che un tour si è svolto, la prenotazione va portata a <strong>Completata</strong>. Dall'elenco
+    puoi farlo in due modi, senza aprire il dettaglio.
+</p>
+<p>
+    <strong>Una alla volta:</strong> sulle prenotazioni confermate la cui partenza è già avvenuta
+    compare l'icona <i class="bi bi-flag-fill"></i> <strong>bandierina</strong> accanto all'occhio.
+    Un click (con conferma) e la prenotazione è completata. Sulle altre l'icona non compare.
+</p>
+<p>
+    <strong>In blocco:</strong> seleziona le prenotazioni con la casella a inizio riga (quella
+    nell'intestazione le seleziona tutte nella pagina), poi premi
+    <strong>"Segna come completate"</strong> nella barra che appare in alto.
+</p>
+<ul>
+    <li>
+        Vale solo per le prenotazioni <strong>Confermate</strong> con la <strong>partenza già
+        avvenuta</strong>. Se nella selezione ce ne sono altre, vengono saltate e ti vengono
+        segnalate per numero: le restanti procedono comunque.
+    </li>
+    <li>
+        <strong>Non serve il check-in.</strong> Il passaggio va direttamente da Confermata a
+        Completata, anche se a bordo non è stato scansionato nessun QR.
+    </li>
+    <li>
+        Un tour del mattino è completabile <strong>già nel pomeriggio dello stesso giorno</strong>:
+        conta l'orario di fine della partenza, non la mezzanotte.
+    </li>
+    <li>
+        La data registrata come completamento è quella della <strong>partenza</strong>, non il
+        giorno in cui premi il pulsante: così i report restano corretti anche a distanza di tempo.
+    </li>
+    <li>
+        La selezione riguarda <strong>solo la pagina che stai vedendo</strong>: per gruppi ampi
+        restringi prima con i filtri (per esempio stato "Confermata" e un periodo passato).
+    </li>
+</ul>
+<div class="guide-tip">
+    Completare <strong>non invia nessuna email</strong> al cliente e non tocca posti, riserve o
+    incassi: cambia solo lo stato. Annullamenti e rimborsi restano sul dettaglio della
+    prenotazione, dove hanno le loro conferme e i loro effetti economici.
+</div>
+
 <h2>Modificare una prenotazione (disdette)</h2>
 <p>
     Dal dettaglio prenotazione, con <strong>Modifica</strong>, puoi <strong>disdire singoli
