@@ -226,6 +226,126 @@ class BookingController extends Controller
         return back()->with('success', "Richiesta di {$label} inviata. Sarà valutata da Solarya, che ti ricontatterà.");
     }
 
+    /**
+     * Correzione dell'email del cliente da parte dell'agenzia.
+     *
+     * È l'unico dato che l'agenzia può correggere da sé, e per un motivo
+     * pratico: un'email sbagliata al momento della prenotazione rende il
+     * cliente irraggiungibile — non riceve link di pagamento, biglietti né
+     * promemoria — e far passare la correzione da una richiesta ad admin
+     * significherebbe tenerlo irraggiungibile nel frattempo.
+     *
+     * Tutto il resto (date, passeggeri, importi) resta soggetto ad approvazione:
+     * lì cambiano disponibilità e prezzi, qui no.
+     *
+     * L'email precedente resta tracciata nel log e in metadata: se il cliente
+     * contesta di non aver ricevuto nulla, si ricostruisce dove era stato
+     * spedito.
+     */
+    public function updateEmail(Request $request, Booking $booking): RedirectResponse
+    {
+        $this->authorizeAgency($booking);
+
+        // Su una prenotazione chiusa non c'è più nulla da comunicare.
+        if (in_array($booking->status, [BookingStatus::CANCELLED, BookingStatus::REFUNDED], true)) {
+            return back()->with('warning', 'La prenotazione è chiusa: l\'email non è più modificabile.');
+        }
+
+        $data = $request->validate([
+            // 'email' semplice come nel resto del progetto (form pubblico
+            // compreso): la variante con check DNS respinge indirizzi validi
+            // quando il DNS e' lento o irraggiungibile, e qui bloccherebbe
+            // proprio la correzione di un contatto rotto.
+            'customer_email' => ['required', 'email', 'max:255'],
+        ], [], ['customer_email' => 'email del cliente']);
+
+        $vecchia = $booking->customer_email;
+        $nuova = trim($data['customer_email']);
+
+        if (strcasecmp($vecchia, $nuova) === 0) {
+            return back()->with('warning', 'L\'email indicata è già quella della prenotazione.');
+        }
+
+        $agency = B2bContext::actingAgency();
+
+        $booking->update([
+            'customer_email' => $nuova,
+            'metadata' => array_merge($booking->metadata ?? [], [
+                'email_changes' => array_merge($booking->metadata['email_changes'] ?? [], [[
+                    'from' => $vecchia,
+                    'to' => $nuova,
+                    'by' => 'b2b',
+                    'agency_id' => $agency?->getKey(),
+                    'user_id' => auth()->id(),
+                    'at' => now()->toIso8601String(),
+                ]]),
+            ]),
+        ]);
+
+        BookingLog::info('b2b_email_updated', 'Email cliente corretta dall\'agenzia', $booking, [
+            'agency_id' => $agency?->getKey(),
+            'from' => $vecchia,
+            'to' => $nuova,
+        ]);
+
+        return back()->with('success', 'Email aggiornata a '.$nuova.'. Ora puoi reinviare le comunicazioni.');
+    }
+
+    /**
+     * Reinvia al cliente la comunicazione pertinente allo stato attuale.
+     *
+     * Serve dopo una correzione dell'email, quando la comunicazione originale
+     * è finita a un indirizzo sbagliato. Cosa spedire non lo decide l'agenzia
+     * ma lo stato della prenotazione:
+     *   - da pagare  -> link di pagamento o istruzioni di bonifico;
+     *   - confermata -> biglietti con i QR.
+     *
+     * Non è un invio generico: l'agenzia non può spedire email arbitrarie.
+     */
+    public function resendCommunications(Booking $booking): RedirectResponse
+    {
+        $this->authorizeAgency($booking);
+
+        $daPagare = [BookingStatus::PENDING, BookingStatus::AWAITING_TRANSFER, BookingStatus::DEPOSIT_PAID];
+        $conBiglietti = [BookingStatus::CONFIRMED, BookingStatus::CHECKED_IN, BookingStatus::COMPLETED];
+
+        $agency = B2bContext::actingAgency();
+
+        try {
+            if (in_array($booking->status, $daPagare, true)) {
+                $this->paymentService->sendPaymentInstructions($booking);
+                $cosa = 'Estremi di pagamento';
+            } elseif (in_array($booking->status, $conBiglietti, true)) {
+                // Reinvio esplicito: a differenza del primo invio automatico
+                // NON si esce se tickets_sent_at è già valorizzato, altrimenti
+                // dopo una correzione dell'email i biglietti non ripartirebbero.
+                \Illuminate\Support\Facades\Mail::to($booking->customer_email)
+                    ->send(new \App\Mail\BookingTickets($booking));
+                $booking->update(['tickets_sent_at' => now()]);
+                $cosa = 'Biglietti';
+            } else {
+                return back()->with('warning', 'Per questa prenotazione non ci sono comunicazioni da reinviare.');
+            }
+
+            BookingLog::info('b2b_communications_resend', 'Comunicazioni reinviate al cliente (portale agenzie)', $booking, [
+                'agency_id' => $agency?->getKey(),
+                'to' => $booking->customer_email,
+                'kind' => $cosa,
+            ]);
+
+            return back()->with('success', $cosa.' reinviati a '.$booking->customer_email.'.');
+        } catch (\Throwable $e) {
+            // L'errore reale (es. auth SMTP 535) va tracciato per diagnosi;
+            // all'agenzia mostriamo un messaggio generico.
+            BookingLog::failure('b2b_communications_resend', 'Reinvio comunicazioni fallito (portale agenzie)', $booking, $e, [
+                'agency_id' => $agency?->getKey(),
+                'to' => $booking->customer_email,
+            ]);
+
+            return back()->with('error', 'Invio non riuscito. Riprova tra poco o contatta Solarya.');
+        }
+    }
+
     /** Verifica che la prenotazione appartenga all'agenzia effettiva della sessione. */
     private function authorizeAgency(Booking $booking): void
     {

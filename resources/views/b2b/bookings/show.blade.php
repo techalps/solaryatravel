@@ -8,6 +8,13 @@
     $hasPendingRequest = $req && ($req['status'] ?? null) === 'pending';
     $canResend = in_array($booking->status, [\App\Enums\BookingStatus::PENDING, \App\Enums\BookingStatus::AWAITING_TRANSFER, \App\Enums\BookingStatus::DEPOSIT_PAID], true);
     $canRequest = $booking->canBeCancelled();
+
+    // Email correggibile finche' la prenotazione e' viva: su una chiusa non c'e'
+    // piu' nulla da comunicare. Il reinvio riguarda la comunicazione pertinente
+    // allo stato: estremi di pagamento se c'e' da pagare, biglietti se confermata.
+    $chiusa = in_array($booking->status, [\App\Enums\BookingStatus::CANCELLED, \App\Enums\BookingStatus::REFUNDED], true);
+    $canEditEmail = ! $chiusa;
+    $canResendTickets = in_array($booking->status, [\App\Enums\BookingStatus::CONFIRMED, \App\Enums\BookingStatus::CHECKED_IN, \App\Enums\BookingStatus::COMPLETED], true);
 @endphp
 
 @section('content')
@@ -40,9 +47,48 @@
                 <div class="card-body pt-0">
                     <div class="row g-2 small">
                         <div class="col-sm-6"><span class="text-muted">Nome</span><div class="fw-semibold">{{ $booking->customer_full_name }}</div></div>
-                        <div class="col-sm-6"><span class="text-muted">Email</span><div class="fw-semibold">{{ $booking->customer_email }}</div></div>
+                        <div class="col-sm-6">
+                            <span class="text-muted">Email</span>
+                            <div class="fw-semibold d-flex align-items-center gap-2">
+                                <span>{{ $booking->customer_email }}</span>
+                                @if($canEditEmail)
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
+                                            data-bs-toggle="collapse" data-bs-target="#editEmailForm"
+                                            title="Correggi l'email del cliente">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
                         <div class="col-sm-6"><span class="text-muted">Telefono</span><div class="fw-semibold">{{ $booking->customer_phone ?: '—' }}</div></div>
                     </div>
+
+                    {{-- Correzione email: l'unico dato modificabile dall'agenzia senza
+                         approvazione. Un indirizzo sbagliato rende il cliente
+                         irraggiungibile, e aspettare un'approvazione lo terrebbe tale. --}}
+                    @if($canEditEmail)
+                        <div class="collapse mt-3" id="editEmailForm">
+                            <form method="POST" action="{{ route('b2b.bookings.update-email', $booking->uuid) }}" class="bg-light rounded-3 p-3">
+                                @csrf
+                                <label for="customer_email" class="form-label small fw-semibold mb-1">
+                                    Correggi l'email del cliente
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <input type="email" name="customer_email" id="customer_email"
+                                           value="{{ old('customer_email', $booking->customer_email) }}"
+                                           class="form-control @error('customer_email') is-invalid @enderror" required>
+                                    <button type="submit" class="btn btn-primary">Salva</button>
+                                </div>
+                                @error('customer_email')
+                                    <div class="small text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                                <div class="text-muted mt-2" style="font-size:.76rem">
+                                    Dopo il salvataggio ricordati di <strong>reinviare le comunicazioni</strong>:
+                                    quelle già spedite sono andate all'indirizzo precedente.
+                                </div>
+                            </form>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -130,6 +176,21 @@
                         <p class="text-muted mt-2 mb-0" style="font-size:.76rem">
                             Invia a <strong>{{ $booking->customer_email }}</strong> il link di pagamento (carta) o le istruzioni di bonifico.
                             @if($booking->payment_link_sent_at)<br>Ultimo invio: {{ $booking->payment_link_sent_at->format('d/m/Y H:i') }}.@endif
+                        </p>
+                    @endif
+
+                    {{-- Prenotazione gia' confermata: la comunicazione da reinviare
+                         sono i biglietti, tipicamente dopo aver corretto l'email. --}}
+                    @if($canResendTickets)
+                        <form method="POST" action="{{ route('b2b.bookings.resend-communications', $booking->uuid) }}" class="mt-3">
+                            @csrf
+                            <button type="submit" class="btn btn-primary w-100 btn-sm">
+                                <i class="bi bi-ticket-perforated me-1"></i>Reinvia i biglietti al cliente
+                            </button>
+                        </form>
+                        <p class="text-muted mt-2 mb-0" style="font-size:.76rem">
+                            Invia di nuovo a <strong>{{ $booking->customer_email }}</strong> i biglietti con i QR.
+                            @if($booking->tickets_sent_at)<br>Ultimo invio: {{ $booking->tickets_sent_at->format('d/m/Y H:i') }}.@endif
                         </p>
                     @endif
                 </div>

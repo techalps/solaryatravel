@@ -112,4 +112,19 @@ class GuidePageTest extends TestCase
             ->assertSee('Numero WhatsApp', false)
             ->assertSee('si aggiorna da solo', false);
     }
+
+    public function test_la_guida_spiega_la_correzione_email_dell_agenzia(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.guide.show', 'agenzie-b2b'))
+            ->assertOk()
+            // È l'unica modifica che l'agenzia fa senza approvazione: va detto
+            // chiaramente, altrimenti sembra un'incoerenza con le richieste.
+            ->assertSee('corregge l\'email del cliente', false)
+            ->assertSee('una sola eccezione', false)
+            // E che il reinvio segue lo stato, non la scelta dell'agenzia.
+            ->assertSee('reinviare le comunicazioni', false);
+    }
 }

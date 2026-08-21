@@ -50,6 +50,10 @@ Route::middleware('b2b')->group(function () {
     Route::get('/prenotazioni/{booking:uuid}', [BookingController::class, 'show'])->name('b2b.bookings.show');
     // Azioni sul dettaglio: reinvio estremi pagamento al cliente, richieste ad admin.
     Route::post('/prenotazioni/{booking:uuid}/reinvia-pagamento', [BookingController::class, 'resendPayment'])->name('b2b.bookings.resend-payment');
+    // Correzione dell'email del cliente e reinvio delle comunicazioni: le due
+    // cose vanno insieme, un'email sbagliata rende il cliente irraggiungibile.
+    Route::post('/prenotazioni/{booking:uuid}/email', [BookingController::class, 'updateEmail'])->name('b2b.bookings.update-email');
+    Route::post('/prenotazioni/{booking:uuid}/reinvia-comunicazioni', [BookingController::class, 'resendCommunications'])->name('b2b.bookings.resend-communications');
     Route::post('/prenotazioni/{booking:uuid}/richiedi-annullamento', [BookingController::class, 'requestCancellation'])->name('b2b.bookings.request-cancellation');
     Route::post('/prenotazioni/{booking:uuid}/richiedi-modifica', [BookingController::class, 'requestModification'])->name('b2b.bookings.request-modification');
 

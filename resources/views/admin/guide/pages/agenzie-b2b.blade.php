@@ -75,6 +75,38 @@
     valuti e la confermi o rifiuti applicando l'eventuale penale.
 </p>
 
+<h2>L'agenzia corregge l'email del cliente</h2>
+<p>
+    C'è <strong>una sola eccezione</strong> alla regola sopra: l'<strong>email del cliente</strong>.
+    L'agenzia la può correggere da sé, senza chiederti nulla.
+</p>
+<p>
+    Il motivo è pratico: se l'email è sbagliata il cliente <strong>non riceve niente</strong> — né link
+    di pagamento, né biglietti, né promemoria — e farla passare da un'approvazione lo terrebbe
+    irraggiungibile nel frattempo. Tutto il resto (date, passeggeri, importi) resta soggetto ad
+    approvazione, perché lì cambiano disponibilità e prezzi.
+</p>
+<ul>
+    <li>
+        Dopo la correzione l'agenzia può <strong>reinviare le comunicazioni</strong> con un pulsante:
+        il sistema manda quella giusta per lo stato — <em>estremi di pagamento</em> se c'è da pagare,
+        <em>biglietti</em> se è confermata. L'agenzia non può spedire email arbitrarie.
+    </li>
+    <li>
+        I biglietti ripartono <strong>anche se erano già stati inviati</strong>: era proprio il caso da
+        risolvere, visto che la prima volta erano finiti all'indirizzo sbagliato.
+    </li>
+    <li>
+        Su una prenotazione <strong>annullata o rimborsata</strong> l'email non è più modificabile:
+        non c'è più nulla da comunicare.
+    </li>
+    <li>
+        <strong>Ogni correzione resta tracciata</strong> (indirizzo precedente, agenzia, data e ora):
+        se un cliente sostiene di non aver ricevuto nulla, si ricostruisce dove era stato spedito.
+        Lo trovi nel log della prenotazione.
+    </li>
+</ul>
+
 <h2>Riconoscere le prenotazioni B2B</h2>
 <p>
     Nelle prenotazioni admin, quelle di un'agenzia hanno il badge <strong>B2B</strong> accanto al numero;
