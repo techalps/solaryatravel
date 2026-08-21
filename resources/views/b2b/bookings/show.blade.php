@@ -135,10 +135,14 @@
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white border-0 py-3"><h3 class="h6 fw-bold mb-0"><i class="bi bi-qr-code me-2 text-primary"></i>Biglietti</h3></div>
                     <div class="card-body pt-0 d-flex align-items-center gap-3 flex-wrap">
-                        <img src="{{ route('booking.qr', $booking->uuid) }}" alt="QR prenotazione" width="120" height="120" style="border:1px solid #eef0f3;border-radius:12px">
+                        {{-- QR e biglietti sono rotte del SITO PUBBLICO (routes/web.php):
+                             route() li costruirebbe sull'host corrente, cioe' il
+                             sottodominio b2b, dove non esistono -> 404 e immagine rotta.
+                             public_site_route() li forza sull'host principale. --}}
+                        <img src="{{ public_site_route('booking.qr', $booking->uuid) }}" alt="QR prenotazione" width="120" height="120" style="border:1px solid #eef0f3;border-radius:12px">
                         <div>
                             <p class="small text-muted mb-2">QR della prenotazione, valido per l'imbarco.</p>
-                            <a href="{{ route('booking.tickets', $booking->uuid) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <a href="{{ public_site_route('booking.tickets', $booking->uuid) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-ticket-perforated me-1"></i>Apri biglietti
                             </a>
                         </div>

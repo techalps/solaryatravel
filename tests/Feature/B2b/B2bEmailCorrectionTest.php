@@ -244,6 +244,35 @@ class B2bEmailCorrectionTest extends TestCase
 
     // ===== Interfaccia =====
 
+    public function test_i_link_di_biglietti_e_qr_puntano_al_sito_pubblico(): void
+    {
+        // Biglietti e QR sono rotte di routes/web.php, non registrate sull'host
+        // b2b: costruirle con route() dalla pagina del portale produce
+        // https://b2b.../prenotazione/... -> 404 e immagine del QR rotta.
+        // Vanno generate con public_site_route(), sull'host principale.
+        $agency = $this->agency();
+        $booking = $this->makeBooking($agency, BookingStatus::CONFIRMED);
+
+        $html = $this->actingAs($agency)
+            ->get($this->b2bHost('/prenotazioni/'.$booking->uuid))
+            ->assertOk()
+            ->getContent();
+
+        $b2bDomain = config('b2b.domain');
+
+        // Nessun link alle rotte pubbliche deve passare per l'host b2b.
+        $this->assertStringNotContainsString(
+            'http://'.$b2bDomain.'/prenotazione/',
+            $html,
+            'Biglietti/QR generati sull\'host b2b: sarebbero 404.'
+        );
+        $this->assertStringNotContainsString('https://'.$b2bDomain.'/prenotazione/', $html);
+
+        // E devono esserci, sull'host principale.
+        $this->assertStringContainsString(public_site_route('booking.tickets', $booking->uuid), $html);
+        $this->assertStringContainsString(public_site_route('booking.qr', $booking->uuid), $html);
+    }
+
     public function test_il_dettaglio_mostra_correzione_email_e_reinvio(): void
     {
         $agency = $this->agency();
