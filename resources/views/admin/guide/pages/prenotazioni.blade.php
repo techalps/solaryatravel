@@ -166,6 +166,29 @@
     registrerà con quella stessa email — comparirà automaticamente nel suo storico.
 </p>
 
+<h2>Correggere l'email del cliente</h2>
+<p>
+    Da <strong>Modifica prenotazione</strong> puoi correggere l'<strong>email del cliente</strong>.
+    Serve quando è stata sbagliata in fase di inserimento: con un indirizzo errato il cliente non
+    riceve <strong>niente</strong> — né link di pagamento, né biglietti, né promemoria.
+</p>
+<ul>
+    <li>
+        Dopo la correzione, <strong>reinvia la comunicazione</strong> dal dettaglio: "Reinvia
+        biglietti" se è confermata, "Invia link di pagamento" se c'è ancora da pagare. La modifica
+        dell'email da sola non rimanda nulla.
+    </li>
+    <li>
+        Ogni correzione resta <strong>tracciata</strong> (indirizzo precedente, chi l'ha cambiata,
+        data e ora): se un cliente sostiene di non aver ricevuto nulla, si ricostruisce dove era
+        stato spedito.
+    </li>
+    <li>
+        Lo stesso può fare l'<strong>agenzia</strong> dal portale, sulle proprie prenotazioni
+        (vedi il capitolo Canale agenzie).
+    </li>
+</ul>
+
 <h2>Scrivere al cliente su WhatsApp</h2>
 <p>
     Nella scheda della prenotazione, sotto i dati del cliente, trovi il pulsante
@@ -220,6 +243,24 @@
 <div class="guide-step"><span class="guide-step-num">5</span><div><strong>Compila i dati dell'intestatario</strong> (con il suo documento), un eventuale codice sconto e, se la prenotazione è per un'agenzia, associala in <em>Agenzia B2B</em> (vedi sotto).</div></div>
 <div class="guide-step"><span class="guide-step-num">6</span><div><strong>Compila i Dati passeggeri.</strong> Nome, cognome e <strong>documento d'identità obbligatorio</strong> per ogni passeggero (vedi il capitolo Documenti d'identità).</div></div>
 <div class="guide-step"><span class="guide-step-num">7</span><div><strong>Scegli lo stato</strong> della prenotazione e conferma.</div></div>
+
+<h3 class="h6 fw-bold mt-4">Il metodo di pagamento decide cosa riceve il cliente</h3>
+<ul>
+    <li>
+        <strong>Già incassato</strong> (contanti / POS) → l'incasso viene registrato subito. Se scegli
+        lo stato "Confermata", al cliente arrivano i <strong>biglietti</strong>.
+    </li>
+    <li>
+        <strong>Link di pagamento (Stripe)</strong> → la prenotazione resta "in attesa" e al cliente
+        arriva l'<strong>email col link per pagare</strong>. Se preferisci mandarlo tu (WhatsApp,
+        telefono), togli la spunta <em>"Invia subito l'email al cliente col link"</em>: il link resta
+        salvato nel dettaglio, da copiare quando vuoi.
+    </li>
+    <li>
+        <strong>Bonifico bancario</strong> → al cliente arrivano le <strong>coordinate</strong> e la
+        prenotazione resta in attesa del tuo riscontro dell'incasso.
+    </li>
+</ul>
 
 <h2>Associare la prenotazione a un'agenzia</h2>
 <p>

@@ -891,12 +891,21 @@ class BookingController extends Controller
 
             // Gestione pagamento in base al metodo scelto dall'admin.
             if ($paymentMethod === 'stripe') {
-                // Genera il link di pagamento e SALVALO (senza inviare email):
-                // l'admin lo vede nel dettaglio e decide se inviarlo al cliente.
-                $linkOk = $this->generatePaymentLink($booking);
-                $message = $linkOk
-                    ? 'Prenotazione creata. Link di pagamento pronto: invialo al cliente dal dettaglio.'
-                    : 'Prenotazione creata, ma la generazione del link di pagamento è fallita (controlla il log).';
+                // Storicamente il link veniva solo generato e salvato, mai
+                // inviato: l'admin doveva accorgersene e mandarlo dal dettaglio,
+                // e nel frattempo il cliente non riceveva nulla (il portale
+                // agenzie invece l'email la manda). Ora l'invio e' il default e
+                // la scelta e' esplicita nel form.
+                if ($request->boolean('send_payment_link', true)) {
+                    $message = $this->sendPaymentLinkEmail($booking)
+                        ? 'Prenotazione creata. Email con il link di pagamento inviata a '.$booking->customer_email.'.'
+                        : 'Prenotazione creata, ma l\'invio dell\'email col link non è riuscito: riprova dal dettaglio.';
+                } else {
+                    $linkOk = $this->generatePaymentLink($booking);
+                    $message = $linkOk
+                        ? 'Prenotazione creata. Link di pagamento pronto: invialo al cliente dal dettaglio.'
+                        : 'Prenotazione creata, ma la generazione del link di pagamento è fallita (controlla il log).';
+                }
             } elseif ($paymentMethod === 'manual') {
                 // Pagamento già incassato (contanti/POS/altro): registra l'incasso
                 // così amount_paid è valorizzato (necessario per penali/rimborsi).
@@ -1381,6 +1390,11 @@ class BookingController extends Controller
         $validated = $request->validate([
             'status' => 'sometimes|in:' . implode(',', array_column(BookingStatus::cases(), 'value')),
             'special_requests' => 'nullable|string|max:1000',
+            // Email correggibile anche da admin: prima si poteva solo dal
+            // portale agenzie, un'asimmetria senza motivo. 'email' semplice
+            // come nel resto del progetto (il check DNS respinge indirizzi
+            // validi quando il DNS e' lento).
+            'customer_email' => 'sometimes|required|email|max:255',
             'customer_phone' => 'nullable|string|max:30',
             // Prezzo totale manuale (solo tour "su richiesta" / catamarano riservato).
             'total_price' => 'nullable|numeric|min:0',
@@ -1438,11 +1452,41 @@ class BookingController extends Controller
             ? BookingStatus::from($validated['status'])
             : $booking->status;
 
+        // Correzione dell'email: tracciata come nel portale agenzie, cosi' se un
+        // cliente contesta di non aver ricevuto nulla si ricostruisce dove era
+        // stato spedito. Stesso formato di metadata usato dal canale b2b.
+        $emailPrecedente = $booking->customer_email;
+        $nuovaEmail = isset($validated['customer_email']) ? trim($validated['customer_email']) : $emailPrecedente;
+        $emailCambiata = strcasecmp($emailPrecedente, $nuovaEmail) !== 0;
+
         $booking->update([
             'status' => $nuovoStato,
             'special_requests' => $validated['special_requests'] ?? $booking->special_requests,
+            'customer_email' => $nuovaEmail,
             'customer_phone' => $validated['customer_phone'] ?? $booking->customer_phone,
         ]);
+
+        $emailMsg = '';
+        if ($emailCambiata) {
+            $booking->update([
+                'metadata' => array_merge($booking->metadata ?? [], [
+                    'email_changes' => array_merge($booking->metadata['email_changes'] ?? [], [[
+                        'from' => $emailPrecedente,
+                        'to' => $nuovaEmail,
+                        'by' => 'admin',
+                        'user_id' => auth()->id(),
+                        'at' => now()->toIso8601String(),
+                    ]]),
+                ]),
+            ]);
+
+            BookingLog::info('admin_email_updated', 'Email cliente corretta da admin', $booking, [
+                'from' => $emailPrecedente,
+                'to' => $nuovaEmail,
+            ]);
+
+            $emailMsg = ' Email aggiornata a '.$nuovaEmail.': reinvia le comunicazioni se necessario.';
+        }
 
         $liberati = $this->releaseIfStatusCloses($booking, $statoPrecedente, $nuovoStato, 'dalla modifica');
 
@@ -1452,7 +1496,7 @@ class BookingController extends Controller
         }
 
         return redirect()->route('admin.bookings.show', $booking)
-            ->with('success', trim('Prenotazione aggiornata. ' . $priceMsg . $liberati));
+            ->with('success', trim('Prenotazione aggiornata. ' . $priceMsg . $emailMsg . $liberati));
     }
 
     /**

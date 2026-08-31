@@ -401,8 +401,20 @@
                                 <label class="d-flex align-items-start gap-2">
                                     <input type="radio" name="payment_method" value="stripe" class="form-check-input mt-1" {{ old('payment_method') === 'stripe' ? 'checked' : '' }}>
                                     <span class="small">Link di pagamento (Stripe)
-                                        <span class="text-muted d-block">Genera un link da inviare al cliente; resta "in attesa".</span></span>
+                                        <span class="text-muted d-block">La prenotazione resta "in attesa" finché il cliente non paga.</span></span>
                                 </label>
+                                {{-- Scelta esplicita sull'invio: il comportamento storico era
+                                     "genera e non inviare", e l'admin si aspettava invece che
+                                     l'email partisse (come fa il portale agenzie). Ora si decide
+                                     qui, con l'invio come default. --}}
+                                <div class="ms-4 ps-2" id="stripe-send-block" style="display:none">
+                                    <label class="d-flex align-items-start gap-2">
+                                        <input type="checkbox" name="send_payment_link" value="1" class="form-check-input mt-1"
+                                               {{ old('send_payment_link', '1') ? 'checked' : '' }}>
+                                        <span class="small">Invia subito l'email al cliente col link
+                                            <span class="text-muted d-block">Se la togli, il link resta salvato nel dettaglio e lo mandi tu.</span></span>
+                                    </label>
+                                </div>
                                 @if($bankTransferEnabled)
                                     <label class="d-flex align-items-start gap-2">
                                         <input type="radio" name="payment_method" value="bank_transfer" class="form-check-input mt-1" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }}>
@@ -472,6 +484,18 @@
 <script src="https://npmcdn.com/flatpickr@4/dist/l10n/it.js"></script>
 <script>
 (function () {
+    // La scelta "invia subito l'email col link" riguarda solo il metodo Stripe.
+    const stripeSendBlock = document.getElementById('stripe-send-block');
+    if (stripeSendBlock) {
+        const methodRadios = document.querySelectorAll('input[name="payment_method"]');
+        const syncStripeSend = function () {
+            const scelto = document.querySelector('input[name="payment_method"]:checked');
+            stripeSendBlock.style.display = (scelto && scelto.value === 'stripe') ? '' : 'none';
+        };
+        methodRadios.forEach(function (r) { r.addEventListener('change', syncStripeSend); });
+        syncStripeSend();
+    }
+
     const departuresUrlTpl = @json(route('admin.bookings.departures.json', ['tour' => '__TOUR__'], false));
     const catAvailUrlTpl = @json(route('admin.bookings.catamaran-availability', ['tour' => '__TOUR__'], false));
 

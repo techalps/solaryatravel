@@ -341,6 +341,21 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="customer_email" class="form-label fw-semibold">Email cliente</label>
+                            <input type="email" name="customer_email" id="customer_email"
+                                   class="form-control @error('customer_email') is-invalid @enderror"
+                                   value="{{ old('customer_email', $booking->customer_email) }}"
+                                   maxlength="255" required>
+                            @error('customer_email')
+                                <div class="small text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">
+                                È l'indirizzo a cui vanno biglietti, link di pagamento e promemoria.
+                                Se lo correggi, ricordati di reinviare le comunicazioni dal dettaglio.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="customer_phone" class="form-label fw-semibold">Telefono cliente</label>
                             <input type="text" name="customer_phone" id="customer_phone"
                                    class="form-control"
@@ -368,10 +383,6 @@
                         <div class="mb-2">
                             <div class="text-muted small">Cliente</div>
                             <div class="fw-semibold">{{ $booking->customer_first_name }} {{ $booking->customer_last_name }}</div>
-                        </div>
-                        <div class="mb-2">
-                            <div class="text-muted small">Email</div>
-                            <div class="fw-semibold">{{ $booking->customer_email }}</div>
                         </div>
                         <div class="mb-2">
                             <div class="text-muted small">Tour</div>
