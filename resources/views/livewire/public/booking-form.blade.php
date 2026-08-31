@@ -445,22 +445,17 @@
             @endif
 
             {{-- Terms --}}
-            @php
-                // I link legali devono puntare SEMPRE al dominio principale: le
-                // rotte /termini-condizioni e /privacy-policy vivono solo lì.
-                // Sul portale b2b (o nel widget) route() userebbe l'host corrente
-                // (b2b.solaryatravel.com), dove quelle rotte danno 404. Costruiamo
-                // quindi l'URL assoluto sul dominio principale (config app.url).
-                $mainBase = rtrim(config('app.url'), '/');
-                $termsUrl = $mainBase.route('terms', [], false);
-                $privacyUrl = $mainBase.route('privacy', [], false);
-            @endphp
+            {{-- I documenti si aprono in un modale invece che in una pagina nuova.
+                 Erano <a href> dentro la <label> della checkbox: cliccandoli il
+                 browser attivava la checkbox (comportamento standard della label)
+                 e il link non si apriva mai. Il modale evita anche di far uscire
+                 il cliente dal form a metà compilazione. --}}
             <div class="form-check mb-15">
                 <input class="form-check-input" type="checkbox" wire:model="terms" id="bk-terms">
                 <label class="form-check-label small" for="bk-terms">
                     {!! __('tours.booking.accept_terms', [
-                        'terms' => '<a href="'.e($termsUrl).'" target="_blank" rel="noopener">'.__('tours.booking.accept_terms_terms').'</a>',
-                        'privacy' => '<a href="'.e($privacyUrl).'" target="_blank" rel="noopener">'.__('tours.booking.accept_terms_privacy').'</a>',
+                        'terms' => '<button type="button" class="bk-legal-link" data-legal="terms">'.__('tours.booking.accept_terms_terms').'</button>',
+                        'privacy' => '<button type="button" class="bk-legal-link" data-legal="privacy">'.__('tours.booking.accept_terms_privacy').'</button>',
                     ]) !!}
                 </label>
                 @error('terms') <small class="d-block text-danger">{{ $message }}</small> @enderror
@@ -515,6 +510,34 @@
                 </div>
             @endif
 
+            {{-- Modali documenti legali. Il contenuto arriva dagli stessi partial
+                 delle pagine /termini-condizioni e /privacy-policy: un solo testo
+                 da aggiornare, nessuna copia che diverge. Restano in italiano
+                 anche nelle altre lingue (sono testi contrattuali). --}}
+            <div class="bk-legal-overlay" id="bk-legal-terms" hidden>
+                <div class="bk-legal-modal" role="dialog" aria-modal="true" aria-labelledby="bk-legal-terms-title">
+                    <div class="bk-legal-head">
+                        <h5 id="bk-legal-terms-title">Termini e Condizioni</h5>
+                        <button type="button" class="bk-legal-close" data-legal-close aria-label="{{ __('common.a11y.close') }}">&times;</button>
+                    </div>
+                    <div class="bk-legal-body legal-page">
+                        @include('pages.partials._terms-body')
+                    </div>
+                </div>
+            </div>
+
+            <div class="bk-legal-overlay" id="bk-legal-privacy" hidden>
+                <div class="bk-legal-modal" role="dialog" aria-modal="true" aria-labelledby="bk-legal-privacy-title">
+                    <div class="bk-legal-head">
+                        <h5 id="bk-legal-privacy-title">Privacy Policy</h5>
+                        <button type="button" class="bk-legal-close" data-legal-close aria-label="{{ __('common.a11y.close') }}">&times;</button>
+                    </div>
+                    <div class="bk-legal-body legal-page">
+                        @include('pages.partials._privacy-body')
+                    </div>
+                </div>
+            </div>
+
             <small class="d-block text-muted text-center mt-2" style="font-size:.78rem">
                 <i class="fa-solid fa-shield-alt me-1"></i>{{ __('tours.booking.secure_payment') }}
             </small>
@@ -543,6 +566,32 @@
         .booking-widget .bk-stepper button:disabled { opacity: .3; cursor: not-allowed; }
         .booking-widget .bk-stepper button.plus { background: var(--tg-theme-secondary); color: #fff; }
         .booking-widget .bk-stepper .qty { min-width: 22px; text-align: center; font-weight: 700; font-size: .9rem; color: #0E1B33; }
+
+        /* Link ai documenti legali dentro la label della checkbox.
+           Sono <button> e non <a>: dentro una <label for=...> il click su un
+           link attiva la checkbox invece di seguirlo. L'arancione e' il
+           secondario del tema, con fallback se la variabile non c'e'. */
+        .bk-legal-link {
+            background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+            color: var(--tg-theme-secondary, #ff7d2c);
+            text-decoration: underline; text-underline-offset: 2px;
+        }
+        .bk-legal-link:hover { filter: brightness(.88); }
+        .bk-legal-link:focus-visible { outline: 2px solid var(--tg-theme-secondary, #ff7d2c); outline-offset: 2px; border-radius: 3px; }
+
+        /* Modale documenti legali */
+        .bk-legal-overlay { position: fixed; inset: 0; background: rgba(14,27,51,.55); display: flex; align-items: center; justify-content: center; z-index: 1090; padding: 1rem; }
+        .bk-legal-overlay[hidden] { display: none; }
+        .bk-legal-modal { background: #fff; border-radius: 18px; max-width: 760px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
+        .bk-legal-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #eef0f3; }
+        .bk-legal-head h5 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #0E1B33; }
+        .bk-legal-close { background: none; border: 0; font-size: 1.6rem; line-height: 1; color: #64748b; cursor: pointer; padding: 0 .25rem; }
+        .bk-legal-close:hover { color: #0E1B33; }
+        /* Il corpo scorre: i documenti sono lunghi e il modale non deve uscire dallo schermo. */
+        .bk-legal-body { padding: 1rem 1.25rem 1.5rem; overflow-y: auto; font-size: .88rem; line-height: 1.6; color: #0E1B33; }
+        .bk-legal-body h2 { font-size: 1rem; font-weight: 700; margin: 1.2rem 0 .5rem; }
+        .bk-legal-body h3 { font-size: .92rem; font-weight: 700; margin: 1rem 0 .4rem; }
+        .bk-legal-body p { margin-bottom: .6rem; }
 
         /* Modale split catamarani */
         .bk-modal-overlay { position: fixed; inset: 0; background: rgba(14,27,51,.55); display: flex; align-items: center; justify-content: center; z-index: 1080; padding: 1rem; }
@@ -664,4 +713,46 @@
             })();
         </script>
     @endif
+
+    {{-- Apertura/chiusura dei modali legali. Fuori dall'@if del datepicker:
+         la checkbox dei termini c'e' sempre, anche senza calendario. Delega
+         sul document, cosi' sopravvive ai re-render di Livewire senza doversi
+         riagganciare. --}}
+    <script>
+        (function () {
+            if (window.__bkLegalModals) return; // una volta sola per pagina
+            window.__bkLegalModals = true;
+
+            function apri(tipo) {
+                const el = document.getElementById('bk-legal-' + tipo);
+                if (!el) return;
+                el.hidden = false;
+                document.body.style.overflow = 'hidden'; // niente scroll dietro al modale
+                const chiudi = el.querySelector('[data-legal-close]');
+                chiudi && chiudi.focus();
+            }
+
+            function chiudiTutti() {
+                document.querySelectorAll('.bk-legal-overlay').forEach(function (el) { el.hidden = true; });
+                document.body.style.overflow = '';
+            }
+
+            document.addEventListener('click', function (e) {
+                const trigger = e.target.closest('.bk-legal-link');
+                if (trigger) {
+                    e.preventDefault();
+                    apri(trigger.dataset.legal);
+                    return;
+                }
+                // Chiusura: pulsante X, oppure click sullo sfondo fuori dal riquadro.
+                if (e.target.closest('[data-legal-close]') || e.target.classList.contains('bk-legal-overlay')) {
+                    chiudiTutti();
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') chiudiTutti();
+            });
+        })();
+    </script>
 </div>

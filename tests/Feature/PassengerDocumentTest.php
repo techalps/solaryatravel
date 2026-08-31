@@ -266,20 +266,26 @@ class PassengerDocumentTest extends TestCase
     }
 
     /**
-     * Regressione: i link legali (termini/privacy) nel form devono puntare al
-     * DOMINIO PRINCIPALE anche in modalità b2b/widget, dove le rotte legali non
-     * esistono (404 sull'host b2b).
+     * Regressione: termini e privacy devono essere consultabili dal form anche
+     * in modalità b2b/widget.
+     *
+     * Prima erano link al dominio principale, perché sull'host b2b le rotte
+     * legali non esistono (404). Ora sono modali con il testo incluso nella
+     * pagina: il problema del dominio non si pone più, ma il contenuto deve
+     * comunque esserci — su b2b e widget come sul sito.
      */
-    public function test_link_legali_puntano_al_dominio_principale_in_b2b(): void
+    public function test_documenti_legali_consultabili_dal_form_in_b2b(): void
     {
         [$tour, $dep] = $this->makeTourWithDeparture();
 
-        $mainBase = rtrim(config('app.url'), '/');
         $html = Livewire::test(BookingForm::class, ['tour' => $tour, 'departure' => $dep, 'b2bMode' => true])->html();
 
-        // I link devono contenere l'URL sul dominio principale, non l'host b2b.
-        $this->assertStringContainsString($mainBase . '/termini-condizioni', $html);
-        $this->assertStringContainsString($mainBase . '/privacy-policy', $html);
+        $this->assertStringContainsString('data-legal="terms"', $html);
+        $this->assertStringContainsString('data-legal="privacy"', $html);
+        $this->assertStringContainsString('Titolare del Servizio', $html);
+        $this->assertStringContainsString('Titolare del Trattamento', $html);
+
+        // Nessun link verso rotte che sull'host b2b darebbero 404.
         $this->assertStringNotContainsString(config('b2b.domain') . '/termini-condizioni', $html);
     }
 
