@@ -96,4 +96,32 @@ class LegalModalsTest extends TestCase
         $this->assertStringContainsString('--tg-theme-secondary', $html);
         $this->assertMatchesRegularExpression('/\.bk-legal-link\s*\{[^}]*color:/s', $html);
     }
+
+    /**
+     * I modali devono esserci anche PRIMA che la partenza sia scelta.
+     *
+     * Erano finiti dentro @if($departure): sulla pagina /prenota, dove il
+     * cliente arriva senza data selezionata, i pulsanti comparivano ma il
+     * modale non era nel DOM — cliccarli non apriva nulla. Se n'e' accorto
+     * solo il controllo in produzione, perche' i test partivano tutti con una
+     * partenza gia' impostata.
+     */
+    public function test_i_modali_ci_sono_anche_senza_partenza_selezionata(): void
+    {
+        [$tour] = $this->makeTourWithDeparture();
+
+        // Il tour ha partenze disponibili ma nessuna e' passata al componente:
+        // e' la pagina /prenota, dove il cliente sceglie la data dal calendario.
+        $html = Livewire::test(BookingForm::class, [
+            'tour' => $tour,
+            'availableDates' => [now()->addDays(10)->toDateString() => ['10:00']],
+        ])->html();
+
+        // I modali stanno fuori da @if($departure): esistono nel DOM da subito,
+        // pronti per quando la checkbox compare.
+        $this->assertStringContainsString('id="bk-legal-terms"', $html);
+        $this->assertStringContainsString('id="bk-legal-privacy"', $html);
+        $this->assertStringContainsString('Titolare del Servizio', $html);
+        $this->assertStringContainsString('Titolare del Trattamento', $html);
+    }
 }

@@ -510,38 +510,38 @@
                 </div>
             @endif
 
-            {{-- Modali documenti legali. Il contenuto arriva dagli stessi partial
-                 delle pagine /termini-condizioni e /privacy-policy: un solo testo
-                 da aggiornare, nessuna copia che diverge. Restano in italiano
-                 anche nelle altre lingue (sono testi contrattuali). --}}
-            <div class="bk-legal-overlay" id="bk-legal-terms" hidden>
-                <div class="bk-legal-modal" role="dialog" aria-modal="true" aria-labelledby="bk-legal-terms-title">
-                    <div class="bk-legal-head">
-                        <h5 id="bk-legal-terms-title">Termini e Condizioni</h5>
-                        <button type="button" class="bk-legal-close" data-legal-close aria-label="{{ __('common.a11y.close') }}">&times;</button>
-                    </div>
-                    <div class="bk-legal-body legal-page">
-                        @include('pages.partials._terms-body')
-                    </div>
-                </div>
-            </div>
-
-            <div class="bk-legal-overlay" id="bk-legal-privacy" hidden>
-                <div class="bk-legal-modal" role="dialog" aria-modal="true" aria-labelledby="bk-legal-privacy-title">
-                    <div class="bk-legal-head">
-                        <h5 id="bk-legal-privacy-title">Privacy Policy</h5>
-                        <button type="button" class="bk-legal-close" data-legal-close aria-label="{{ __('common.a11y.close') }}">&times;</button>
-                    </div>
-                    <div class="bk-legal-body legal-page">
-                        @include('pages.partials._privacy-body')
-                    </div>
-                </div>
-            </div>
-
             <small class="d-block text-muted text-center mt-2" style="font-size:.78rem">
                 <i class="fa-solid fa-shield-alt me-1"></i>{{ __('tours.booking.secure_payment') }}
             </small>
         @endif
+
+        {{-- Modali documenti legali. Il contenuto arriva dagli stessi partial
+             delle pagine /termini-condizioni e /privacy-policy: un solo testo
+             da aggiornare, nessuna copia che diverge. Restano in italiano
+             anche nelle altre lingue (sono testi contrattuali). --}}
+        <div class="bk-legal-overlay" id="bk-legal-terms" hidden>
+            <div class="bk-legal-modal" role="dialog" aria-modal="true" aria-labelledby="bk-legal-terms-title">
+                <div class="bk-legal-head">
+                    <h5 id="bk-legal-terms-title">Termini e Condizioni</h5>
+                    <button type="button" class="bk-legal-close" data-legal-close aria-label="{{ __('common.a11y.close') }}">&times;</button>
+                </div>
+                <div class="bk-legal-body legal-page">
+                    @include('pages.partials._terms-body')
+                </div>
+            </div>
+        </div>
+
+        <div class="bk-legal-overlay" id="bk-legal-privacy" hidden>
+            <div class="bk-legal-modal" role="dialog" aria-modal="true" aria-labelledby="bk-legal-privacy-title">
+                <div class="bk-legal-head">
+                    <h5 id="bk-legal-privacy-title">Privacy Policy</h5>
+                    <button type="button" class="bk-legal-close" data-legal-close aria-label="{{ __('common.a11y.close') }}">&times;</button>
+                </div>
+                <div class="bk-legal-body legal-page">
+                    @include('pages.partials._privacy-body')
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- Styles --}}
