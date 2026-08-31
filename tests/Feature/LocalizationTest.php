@@ -224,7 +224,10 @@ class LocalizationTest extends TestCase
 
     public function test_lingua_non_supportata_ricade_su_italiano(): void
     {
-        $this->withHeader('Accept-Language', 'de-DE,de;q=0.9')
+        // Giapponese: fuori dal catalogo di config/locales.php. Prima qui c'era
+        // il tedesco, poi effettivamente tradotto e attivabile: l'esempio non
+        // valeva più e il test falliva pur essendo corretto il comportamento.
+        $this->withHeader('Accept-Language', 'ja-JP,ja;q=0.9')
             ->get('/')
             ->assertOk()
             ->assertSee('<html lang="it"', false);
@@ -509,5 +512,167 @@ class LocalizationTest extends TestCase
 
         $this->assertSame('Su richiesta', tdb('Su richiesta'));
         $this->assertNull(tdb(null));
+    }
+
+    /**
+     * Ogni lingua del catalogo deve avere i file di interfaccia completi.
+     *
+     * Una chiave mancante non rompe nulla in modo visibile: Laravel stampa la
+     * chiave grezza ("common.nav.home") in mezzo alla pagina, e ce ne si accorge
+     * solo guardando quella pagina in quella lingua. Il confronto e' con
+     * l'italiano, che e' la lingua di riferimento.
+     */
+    public function test_ogni_lingua_ha_le_stesse_chiavi_dell_italiano(): void
+    {
+        $flat = function (array $a, string $p = '') use (&$flat): array {
+            $out = [];
+            foreach ($a as $k => $v) {
+                $key = $p ? "$p.$k" : $k;
+                $out = array_merge($out, is_array($v) ? $flat($v, $key) : [$key]);
+            }
+
+            return $out;
+        };
+
+        // Elenco DINAMICO dai file italiani: un nuovo file di lingua entra nel
+        // test da solo, senza doverlo aggiungere qui (e senza che la sua
+        // mancanza nelle altre lingue passi inosservata).
+        // db.php e' un dizionario di contenuti (chiave = testo italiano), non
+        // un file di interfaccia: non ha senso confrontarne le chiavi.
+        $files = $this->interfaceLangFiles();
+
+        foreach ($files as $file) {
+            $it = $flat(require lang_path("it/$file.php"));
+
+            foreach (\App\Support\Locales::available() as $locale) {
+                if ($locale === 'it') {
+                    continue;
+                }
+
+                $path = lang_path("$locale/$file.php");
+                $this->assertFileExists($path, "Manca lang/$locale/$file.php: la lingua e' nel catalogo ma non tradotta.");
+
+                $mancanti = array_diff($it, $flat(require $path));
+                $this->assertSame([], array_values($mancanti),
+                    "lang/$locale/$file.php: chiavi mancanti rispetto all'italiano.");
+            }
+        }
+    }
+
+    /**
+     * I :placeholder devono restare identici in ogni lingua: tradurne uno per
+     * errore (":name" -> ":nome") lo lascia stampato com'e' nel messaggio.
+     */
+    public function test_i_placeholder_sono_identici_in_tutte_le_lingue(): void
+    {
+        $flat = function (array $a, string $p = '') use (&$flat): array {
+            $out = [];
+            foreach ($a as $k => $v) {
+                $key = $p ? "$p.$k" : $k;
+                if (is_array($v)) {
+                    $out += $flat($v, $key);
+                } else {
+                    $out[$key] = $v;
+                }
+            }
+
+            return $out;
+        };
+
+        $segna = function (string $testo): array {
+            preg_match_all('/:[a-z_]+/', $testo, $m);
+            sort($m[0]);
+
+            return $m[0];
+        };
+
+        foreach ($this->interfaceLangFiles() as $file) {
+            $it = $flat(require lang_path("it/$file.php"));
+
+            foreach (\App\Support\Locales::available() as $locale) {
+                if ($locale === 'it' || ! file_exists(lang_path("$locale/$file.php"))) {
+                    continue;
+                }
+
+                $tradotto = $flat(require lang_path("$locale/$file.php"));
+
+                foreach ($it as $chiave => $testoIt) {
+                    if (! isset($tradotto[$chiave])) {
+                        continue;
+                    }
+
+                    $this->assertSame(
+                        $segna((string) $testoIt),
+                        $segna((string) $tradotto[$chiave]),
+                        "lang/$locale/$file.php › $chiave: i placeholder non corrispondono all'italiano."
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * File di interfaccia da confrontare fra lingue: tutti quelli in lang/it/
+     * tranne db.php, che e' un dizionario di contenuti (chiave = testo italiano).
+     *
+     * @return array<int, string>
+     */
+    private function interfaceLangFiles(): array
+    {
+        return collect(glob(lang_path('it/*.php')))
+            ->map(fn ($p) => basename($p, '.php'))
+            ->reject(fn ($n) => $n === 'db')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Le pagine del percorso post-prenotazione non devono contenere testo
+     * italiano cablato.
+     *
+     * Erano tutte in italiano fisso: il cliente straniero navigava e prenotava
+     * nella sua lingua, poi dal pagamento in avanti trovava l'italiano — cioe'
+     * proprio nelle pagine che vede DOPO aver pagato. Il test guarda il markup
+     * (non la resa) cosi' segnala una stringa dimenticata appena viene aggiunta.
+     */
+    public function test_il_percorso_post_prenotazione_non_ha_testo_cablato(): void
+    {
+        $viste = [
+            'payments/show', 'payments/success', 'payments/cancel',
+            'bookings/index', 'bookings/show', 'bookings/tickets',
+            'bookings/balance', 'bookings/bank-transfer',
+        ];
+
+        // Parole italiane inequivocabili: se compaiono fuori da __() e' testo
+        // dimenticato. Sono scelte per non collidere con nomi di classi CSS,
+        // attributi Blade o codice PHP.
+        $spie = [
+            'Prenotazione', 'Prenotante', 'Riepilogo', 'Subtotale', 'Sconto',
+            'Totale', 'Partecipanti', 'Biglietti', 'Passeggero', 'Pagamento',
+            'Richieste speciali', 'Coordinate bancarie', 'Saldo',
+        ];
+
+        foreach ($viste as $vista) {
+            $file = resource_path("views/$vista.blade.php");
+            $this->assertFileExists($file);
+
+            $markup = file_get_contents($file);
+
+            // Righe di commento Blade/PHP: sono per gli sviluppatori, non per l'utente.
+            $righe = collect(explode("\n", $markup))
+                ->reject(fn ($r) => preg_match('/^\s*(\{\{--|\/\/|\*|\/\*)/', $r))
+                ->implode("\n");
+
+            foreach ($spie as $parola) {
+                // Ammessa dentro __('...') e nei nomi di rotta/sezione.
+                $fuoriTraduzione = preg_replace('/__\(\s*\x27[^\x27]*\x27[^)]*\)/', '', $righe);
+
+                $this->assertStringNotContainsString(
+                    $parola,
+                    $fuoriTraduzione,
+                    "$vista.blade.php contiene \"$parola\" fuori da __(): va tradotto in lang/*/account.php."
+                );
+            }
+        }
     }
 }

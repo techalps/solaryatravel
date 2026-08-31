@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Biglietti · ' . $booking->booking_number)
+@section('title', __('account.tickets.title') . ' · ' . $booking->booking_number)
 
 @php
     use Carbon\Carbon;
@@ -16,9 +16,9 @@
                 <a href="{{ route('booking.show', $booking->uuid) }}" class="text-white text-decoration-none small mb-2 d-inline-block opacity-75">
                     <i class="fa-solid fa-arrow-left me-1"></i>Torna alla prenotazione
                 </a>
-                <h1 class="mb-2 wow fadeInUp"><i class="fa-solid fa-ticket me-2"></i>I tuoi biglietti</h1>
+                <h1 class="mb-2 wow fadeInUp"><i class="fa-solid fa-ticket me-2"></i>{{ __('account.tickets.title') }}</h1>
                 <p class="lead mb-0 opacity-90">
-                    Prenotazione <span class="font-monospace">#{{ $booking->booking_number }}</span>
+                    {{ __('account.common.booking') }} <span class="font-monospace">#{{ $booking->booking_number }}</span>
                     · {{ $booking->seatRecords->count() }} {{ $booking->seatRecords->count() === 1 ? 'passeggero' : 'passeggeri' }}
                 </p>
             </div>
@@ -38,7 +38,7 @@
             <div class="alert alert-info border-0 rounded-3 d-flex align-items-start gap-2 mb-4 no-print" style="background:#dbeafe;color:#1e40af">
                 <i class="fa-solid fa-circle-info mt-1"></i>
                 <div class="small">
-                    <strong>Ogni passeggero ha il proprio biglietto.</strong> Mostralo all'imbarco (anche dal cellulare).
+                    <strong>{{ __('account.tickets.one_per_passenger') }}</strong> Mostralo all'imbarco (anche dal cellulare).
                     Il personale scansionerà il QR per verificare la presenza.
                 </div>
             </div>
@@ -53,24 +53,24 @@
                         <div class="ticket-info">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <div class="ticket-label">Passeggero</div>
+                                    <div class="ticket-label">{{ __('account.tickets.passenger') }}</div>
                                     <div class="ticket-pax-name">
                                         @if($seat->is_primary)<i class="fa-solid fa-star" style="color:#f59e0b"></i> @endif
                                         {{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: '— Da compilare —' }}
                                     </div>
                                     <div class="d-flex gap-1 mt-2 flex-wrap">
                                         @if($seat->is_primary)
-                                            <span class="ticket-badge" style="background:#fef3c7;color:#b45309">Prenotante</span>
+                                            <span class="ticket-badge" style="background:#fef3c7;color:#b45309">{{ __('account.common.lead_booker') }}</span>
                                         @endif
                                         @if($seat->ageBracket)
                                             <span class="ticket-badge" style="background:#dbeafe;color:#1e40af">{{ $seat->ageBracket->label }}</span>
                                         @else
-                                            <span class="ticket-badge" style="background:#ecfdf5;color:#059669">Adulto</span>
+                                            <span class="ticket-badge" style="background:#ecfdf5;color:#059669">{{ __('account.common.adult') }}</span>
                                         @endif
                                     </div>
                                 </div>
                                 <div class="text-end">
-                                    <div class="ticket-label">Posto</div>
+                                    <div class="ticket-label">{{ __('account.tickets.seat') }}</div>
                                     <div class="ticket-seat-num">#{{ $seat->seat_number ?? $loop->iteration }}</div>
                                 </div>
                             </div>
@@ -79,19 +79,19 @@
 
                             <div class="ticket-meta">
                                 <div>
-                                    <div class="ticket-label">Tour</div>
+                                    <div class="ticket-label">{{ __('account.tickets.tour') }}</div>
                                     <div class="ticket-value">{{ $booking->tour->name ?? '—' }}</div>
                                 </div>
                                 <div>
-                                    <div class="ticket-label">Data</div>
+                                    <div class="ticket-label">{{ __('account.common.date') }}</div>
                                     <div class="ticket-value">
                                         @if($booking->booking_date)
-                                            {{ $booking->booking_date->locale('it')->isoFormat('D MMM YYYY') }}
+                                            {{ $booking->booking_date->locale(app()->getLocale())->isoFormat('D MMM YYYY') }}
                                         @else — @endif
                                     </div>
                                 </div>
                                 <div>
-                                    <div class="ticket-label">Partenza</div>
+                                    <div class="ticket-label">{{ __('account.tickets.departure') }}</div>
                                     <div class="ticket-value">
                                         @if($booking->departure?->start_time)
                                             <i class="fa-regular fa-clock"></i> {{ Carbon::parse($booking->departure->start_time)->format('H:i') }}
@@ -100,13 +100,13 @@
                                 </div>
                                 @if($seat->catamaran)
                                     <div>
-                                        <div class="ticket-label">Catamarano</div>
+                                        <div class="ticket-label">{{ __('account.tickets.catamaran') }}</div>
                                         <div class="ticket-value">{{ $seat->catamaran->name }}</div>
                                     </div>
                                 @endif
                                 @if($booking->tour?->departure_point)
                                     <div class="grid-col-2">
-                                        <div class="ticket-label">Punto d'imbarco</div>
+                                        <div class="ticket-label">{{ __('account.tickets.boarding_point') }}</div>
                                         <div class="ticket-value"><i class="fa-solid fa-location-dot text-danger me-1"></i>{{ $booking->tour->departure_point }}</div>
                                     </div>
                                 @endif
@@ -120,9 +120,9 @@
                                      alt="QR biglietto" style="display:block;width:200px;height:200px">
                             </div>
                             <div class="ticket-code"><code>{{ $seat->qr_code }}</code></div>
-                            <div class="ticket-code-sub">Prenotazione #{{ $booking->booking_number }}</div>
+                            <div class="ticket-code-sub">{{ __('account.common.booking') }} #{{ $booking->booking_number }}</div>
                             @if($seat->boarded_at)
-                                <div class="ticket-stamp"><i class="fa-solid fa-check"></i>IMBARCATO</div>
+                                <div class="ticket-stamp"><i class="fa-solid fa-check"></i>{{ __('account.tickets.boarded') }}</div>
                             @endif
                         </div>
                     </div>

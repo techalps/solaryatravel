@@ -1,19 +1,19 @@
 @extends('layouts.public')
 
-@section('title', 'Prenotazione ' . $booking->booking_number)
+@section('title', __('account.common.booking') . ' ' . $booking->booking_number)
 
 @php
     use Carbon\Carbon;
     $statusMap = [
-        'pending' => ['label' => 'In attesa di pagamento', 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fef3c7'],
-        'deposit_paid' => ['label' => 'Acconto versato', 'icon' => 'fa-wallet', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
-        'awaiting_transfer' => ['label' => 'In attesa di bonifico', 'icon' => 'fa-building-columns', 'color' => '#d97706', 'bg' => '#fef3c7'],
-        'confirmed' => ['label' => 'Confermata', 'icon' => 'fa-circle-check', 'color' => '#059669', 'bg' => '#ecfdf5'],
-        'checked_in' => ['label' => 'Check-in effettuato', 'icon' => 'fa-user-check', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
-        'completed' => ['label' => 'Completata', 'icon' => 'fa-flag-checkered', 'color' => '#1d4ed8', 'bg' => '#dbeafe'],
-        'cancelled' => ['label' => 'Annullata', 'icon' => 'fa-circle-xmark', 'color' => '#dc2626', 'bg' => '#fee2e2'],
-        'refunded' => ['label' => 'Rimborsata', 'icon' => 'fa-rotate-left', 'color' => '#7c3aed', 'bg' => '#f5f3ff'],
-        'no_show' => ['label' => 'No show', 'icon' => 'fa-user-slash', 'color' => '#64748b', 'bg' => '#f1f5f9'],
+        'pending' => ['label' => __('account.status_labels.pending'), 'icon' => 'fa-hourglass-half', 'color' => '#d97706', 'bg' => '#fef3c7'],
+        'deposit_paid' => ['label' => __('account.status_labels.deposit_paid'), 'icon' => 'fa-wallet', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
+        'awaiting_transfer' => ['label' => __('account.status_labels.awaiting_transfer'), 'icon' => 'fa-building-columns', 'color' => '#d97706', 'bg' => '#fef3c7'],
+        'confirmed' => ['label' => __('account.status_labels.confirmed'), 'icon' => 'fa-circle-check', 'color' => '#059669', 'bg' => '#ecfdf5'],
+        'checked_in' => ['label' => __('account.status_labels.checked_in'), 'icon' => 'fa-user-check', 'color' => '#0284c7', 'bg' => '#e0f2fe'],
+        'completed' => ['label' => __('account.status_labels.completed'), 'icon' => 'fa-flag-checkered', 'color' => '#1d4ed8', 'bg' => '#dbeafe'],
+        'cancelled' => ['label' => __('account.status_labels.cancelled'), 'icon' => 'fa-circle-xmark', 'color' => '#dc2626', 'bg' => '#fee2e2'],
+        'refunded' => ['label' => __('account.status_labels.refunded'), 'icon' => 'fa-rotate-left', 'color' => '#7c3aed', 'bg' => '#f5f3ff'],
+        'no_show' => ['label' => __('account.status_labels.no_show'), 'icon' => 'fa-user-slash', 'color' => '#64748b', 'bg' => '#f1f5f9'],
     ];
     $key = $booking->status?->value ?? (string) $booking->status;
     $s = $statusMap[$key] ?? $statusMap['pending'];
@@ -27,7 +27,7 @@
         <div class="row align-items-center">
             <div class="col-md-9 text-white">
                 <a href="{{ route('bookings.my') }}" class="text-white text-decoration-none small mb-2 d-inline-block opacity-75">
-                    <i class="fa-solid fa-arrow-left me-1"></i>Le mie prenotazioni
+                    <i class="fa-solid fa-arrow-left me-1"></i>{{ __('account.my_bookings.title') }}
                 </a>
                 <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                     <span class="bk-status-badge d-inline-block fw-semibold" style="--sc:{{ $s['color'] }};--sb:{{ $s['bg'] }};border-radius:999px;padding:.35em .75em;font-size:.85em;line-height:1">
@@ -35,10 +35,10 @@
                     </span>
                     <span class="small opacity-75 font-monospace">#{{ $booking->booking_number }}</span>
                 </div>
-                <h1 class="mb-0 wow fadeInUp">{{ $booking->tour->name ?? 'Tour' }}</h1>
+                <h1 class="mb-0 wow fadeInUp">{{ $booking->tour->name ?? __('account.detail.tour_fallback') }}</h1>
             </div>
             <div class="col-md-3 text-md-end mt-3 mt-md-0">
-                <div class="text-white" style="opacity:.85">Totale</div>
+                <div class="text-white" style="opacity:.85">{{ __('account.common.total') }}</div>
                 <div class="text-white fw-bold" style="font-size:2rem;line-height:1">€{{ number_format($booking->total_amount, 2, ',', '.') }}</div>
             </div>
         </div>
@@ -54,17 +54,17 @@
 
                 {{-- Tour & Departure --}}
                 <div class="bk-show-card mb-4">
-                    <h3 class="bk-show-section-title"><i class="fa-solid fa-water text-primary"></i>Il tuo tour</h3>
+                    <h3 class="bk-show-section-title"><i class="fa-solid fa-water text-primary"></i>{{ __('account.common.your_tour') }}</h3>
                     <div class="d-flex gap-3 align-items-start">
                         @if($booking->tour?->primaryImage)
                             <img src="{{ $booking->tour->primaryImage->url }}"
                                  alt="" style="width:120px;height:120px;border-radius:14px;object-fit:cover;flex:0 0 auto">
                         @endif
                         <div class="flex-grow-1">
-                            <h4 class="fw-bold mb-2" style="color:#0E1B33">{{ $booking->tour->name ?? 'Tour' }}</h4>
+                            <h4 class="fw-bold mb-2" style="color:#0E1B33">{{ $booking->tour->name ?? __('account.detail.tour_fallback') }}</h4>
                             <div class="d-flex flex-wrap gap-3 small text-muted">
                                 @if($booking->booking_date)
-                                    <span><i class="fa-regular fa-calendar text-primary me-1"></i>{{ $booking->booking_date->locale('it')->isoFormat('dddd D MMMM YYYY') }}</span>
+                                    <span><i class="fa-regular fa-calendar text-primary me-1"></i>{{ $booking->booking_date->locale(app()->getLocale())->isoFormat('dddd D MMMM YYYY') }}</span>
                                 @endif
                                 @if($booking->departure?->start_time)
                                     <span><i class="fa-regular fa-clock text-primary me-1"></i>{{ Carbon::parse($booking->departure->start_time)->format('H:i') }}</span>
@@ -74,7 +74,7 @@
                                 <div class="small text-muted mt-2"><i class="fa-solid fa-location-dot text-primary me-1"></i>{{ $booking->tour->departure_point }}</div>
                             @endif
                             @if($booking->tour?->duration_hours)
-                                <div class="small text-muted mt-1"><i class="fa-regular fa-hourglass-half text-primary me-1"></i>Durata: {{ $booking->tour->duration_hours }}h</div>
+                                <div class="small text-muted mt-1"><i class="fa-regular fa-hourglass-half text-primary me-1"></i>{{ __('account.common.duration') }}: {{ __('account.common.hours_short', ['count' => $booking->tour->duration_hours]) }}</div>
                             @endif
                         </div>
                     </div>
@@ -82,19 +82,19 @@
 
                 {{-- Partecipanti --}}
                 <div class="bk-show-card mb-4">
-                    <h3 class="bk-show-section-title"><i class="fa-solid fa-users text-primary"></i>Partecipanti ({{ $booking->seatRecords->whereNull('cancelled_at')->count() }})</h3>
+                    <h3 class="bk-show-section-title"><i class="fa-solid fa-users text-primary"></i>{{ __('account.common.participants_count') }} ({{ $booking->seatRecords->whereNull('cancelled_at')->count() }})</h3>
                     <div class="bk-pax-list">
                         @foreach($booking->seatRecords as $seat)
                             <div class="bk-pax-row" @if($seat->cancelled_at) style="opacity:.6" @endif>
                                 <span class="bk-pax-num">{{ $seat->seat_number }}</span>
                                 <div class="flex-grow-1">
                                     <div class="fw-semibold" style="color:#0E1B33">
-                                        <span @if($seat->cancelled_at) style="text-decoration:line-through" @endif>{{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: '— Dati da compilare —' }}</span>
+                                        <span @if($seat->cancelled_at) style="text-decoration:line-through" @endif>{{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: __('account.detail.passenger_todo') }}</span>
                                         @if($seat->is_primary)
-                                            <span class="badge ms-1" style="background:#fef3c7;color:#b45309">Prenotante</span>
+                                            <span class="badge ms-1" style="background:#fef3c7;color:#b45309">{{ __('account.common.lead_booker') }}</span>
                                         @endif
                                         @if($seat->cancelled_at)
-                                            <span class="badge ms-1" style="background:#fee2e2;color:#dc2626">Disdetto</span>
+                                            <span class="badge ms-1" style="background:#fee2e2;color:#dc2626">{{ __('account.common.cancelled_item') }}</span>
                                         @endif
                                     </div>
                                     <div class="small text-muted">
@@ -104,7 +104,7 @@
                                                 · {{ $seat->guest_date_of_birth->format('d/m/Y') }}
                                             @endif
                                         @else
-                                            <i class="fa-regular fa-user me-1"></i>Adulto
+                                            <i class="fa-regular fa-user me-1"></i>{{ __('account.common.adult') }}
                                         @endif
                                         @if($seat->tax_code)
                                             · <span class="font-monospace">{{ $seat->tax_code }}</span>
@@ -132,7 +132,7 @@
                                     @endif
                                 </div>
                                 @if($seat->boarded_at)
-                                    <span class="badge" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-check me-1"></i>Imbarcato</span>
+                                    <span class="badge" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-check me-1"></i>{{ __('account.common.boarded') }}</span>
                                 @endif
                             </div>
                         @endforeach
@@ -142,15 +142,15 @@
                 {{-- Addons --}}
                 @if($booking->addons->isNotEmpty())
                     <div class="bk-show-card mb-4">
-                        <h3 class="bk-show-section-title"><i class="fa-solid fa-plus text-primary"></i>Extra prenotati</h3>
+                        <h3 class="bk-show-section-title"><i class="fa-solid fa-plus text-primary"></i>{{ __('account.detail.booked_extras') }}</h3>
                         <div class="bk-pax-list">
                             @foreach($booking->addons as $bookingAddon)
                                 <div class="bk-pax-row" @if($bookingAddon->cancelled_at) style="opacity:.6" @endif>
                                     <span class="bk-pax-num"><i class="fa-solid fa-gift"></i></span>
                                     <div class="flex-grow-1">
                                         <div class="fw-semibold" style="color:#0E1B33">
-                                            <span @if($bookingAddon->cancelled_at) style="text-decoration:line-through" @endif>{{ $bookingAddon->addon->name ?? 'Extra' }}</span>
-                                            @if($bookingAddon->cancelled_at)<span class="badge ms-1" style="background:#fee2e2;color:#dc2626">Disdetto</span>@endif
+                                            <span @if($bookingAddon->cancelled_at) style="text-decoration:line-through" @endif>{{ $bookingAddon->addon->name ?? __('account.detail.extra_fallback') }}</span>
+                                            @if($bookingAddon->cancelled_at)<span class="badge ms-1" style="background:#fee2e2;color:#dc2626">{{ __('account.common.cancelled_item') }}</span>@endif
                                         </div>
                                         <div class="small text-muted">Quantità: {{ $bookingAddon->quantity }}</div>
                                     </div>
@@ -164,7 +164,7 @@
                 {{-- Special requests --}}
                 @if($booking->special_requests)
                     <div class="bk-show-card mb-4">
-                        <h3 class="bk-show-section-title"><i class="fa-regular fa-message text-primary"></i>Richieste speciali</h3>
+                        <h3 class="bk-show-section-title"><i class="fa-regular fa-message text-primary"></i>{{ __('account.common.special_requests') }}</h3>
                         <p class="small text-muted mb-0">{{ $booking->special_requests }}</p>
                     </div>
                 @endif
@@ -176,32 +176,32 @@
 
                 {{-- Riepilogo importi --}}
                 <div class="bk-show-card mb-4">
-                    <h3 class="bk-show-section-title"><i class="fa-solid fa-receipt text-primary"></i>Riepilogo</h3>
+                    <h3 class="bk-show-section-title"><i class="fa-solid fa-receipt text-primary"></i>{{ __('account.common.summary') }}</h3>
                     <div class="bk-summary">
                         <div class="bk-summary-line">
-                            <span>Subtotale</span>
+                            <span>{{ __('account.common.subtotal') }}</span>
                             <span>€{{ number_format($booking->base_price, 2, ',', '.') }}</span>
                         </div>
                         @if($booking->addons_total > 0)
                             <div class="bk-summary-line">
-                                <span>Extra</span>
+                                <span>{{ __('account.common.extras') }}</span>
                                 <span>€{{ number_format($booking->addons_total, 2, ',', '.') }}</span>
                             </div>
                         @endif
                         @if($booking->discount_amount > 0)
                             <div class="bk-summary-line" style="color:#059669">
-                                <span><i class="fa-solid fa-tag me-1"></i>Sconto</span>
+                                <span><i class="fa-solid fa-tag me-1"></i>{{ __('account.common.discount') }}</span>
                                 <span>− €{{ number_format($booking->discount_amount, 2, ',', '.') }}</span>
                             </div>
                         @endif
                         @if($booking->tax_amount > 0)
                             <div class="bk-summary-line text-muted">
-                                <span>IVA</span>
+                                <span>{{ __('account.common.vat') }}</span>
                                 <span>€{{ number_format($booking->tax_amount, 2, ',', '.') }}</span>
                             </div>
                         @endif
                         <div class="bk-summary-total">
-                            <span>Totale</span>
+                            <span>{{ __('account.common.total') }}</span>
                             <span class="text-primary">€{{ number_format($booking->total_amount, 2, ',', '.') }}</span>
                         </div>
                     </div>
@@ -211,9 +211,9 @@
                 @if($booking->payments->isNotEmpty())
                     @php $payment = $booking->payments->sortByDesc('created_at')->first(); @endphp
                     <div class="bk-show-card mb-4">
-                        <h3 class="bk-show-section-title"><i class="fa-solid fa-credit-card text-primary"></i>Pagamento</h3>
+                        <h3 class="bk-show-section-title"><i class="fa-solid fa-credit-card text-primary"></i>{{ __('account.common.payment') }}</h3>
                         <div class="d-flex justify-content-between small mb-2">
-                            <span class="text-muted">Stato</span>
+                            <span class="text-muted">{{ __('account.common.status') }}</span>
                             <span class="fw-semibold">
                                 @if($payment->status?->value === 'succeeded')
                                     <i class="fa-solid fa-circle-check" style="color:#059669"></i> Riuscito
@@ -229,11 +229,11 @@
                             </span>
                         </div>
                         <div class="d-flex justify-content-between small mb-2">
-                            <span class="text-muted">Metodo</span>
+                            <span class="text-muted">{{ __('account.common.method') }}</span>
                             <span class="fw-semibold text-none">{{ $payment->gateway ?? '—' }}</span>
                         </div>
                         <div class="d-flex justify-content-between small">
-                            <span class="text-muted">Data</span>
+                            <span class="text-muted">{{ __('account.common.date') }}</span>
                             <span class="fw-semibold">{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->created_at->format('d/m/Y H:i') }}</span>
                         </div>
                     </div>
@@ -241,7 +241,7 @@
 
                 {{-- Azioni --}}
                 <div class="bk-show-card">
-                    <h3 class="bk-show-section-title"><i class="fa-solid fa-bolt text-primary"></i>Azioni</h3>
+                    <h3 class="bk-show-section-title"><i class="fa-solid fa-bolt text-primary"></i>{{ __('account.common.actions') }}</h3>
                     <div class="d-flex flex-column gap-2">
                         @if(in_array($key, ['confirmed', 'checked_in', 'completed']))
                             <a href="{{ route('booking.tickets', $booking->uuid) }}" class="btn btn-primary rounded-pill fw-semibold">

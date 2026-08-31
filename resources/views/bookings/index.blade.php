@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Le mie prenotazioni')
+@section('title', __('account.my_bookings.title'))
 
 @php
     use Carbon\Carbon;
@@ -24,8 +24,8 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8 text-white">
-                <h1 class="mb-2 wow fadeInUp">Le mie prenotazioni</h1>
-                <p class="lead mb-0 wow fadeInUp" style="opacity:.9">Storico, prossime partenze e biglietti dei tuoi tour.</p>
+                <h1 class="mb-2 wow fadeInUp">{{ __('account.my_bookings.title') }}</h1>
+                <p class="lead mb-0 wow fadeInUp" style="opacity:.9">{{ __('account.my_bookings.subtitle') }}</p>
             </div>
             <div class="col-md-4 text-md-end text-center mt-3 mt-md-0">
                 <a href="{{ route('tours.index') }}" class="btn btn-light rounded-pill px-4 py-2 fw-semibold">
@@ -46,7 +46,7 @@
                     <div class="pf-avatar">
                         {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
                     </div>
-                    <div class="pf-sidebar-name">{{ auth()->user()->name ?? 'Utente' }}</div>
+                    <div class="pf-sidebar-name">{{ auth()->user()->name ?? __('account.my_bookings.user_fallback') }}</div>
                     <div class="pf-sidebar-email">{{ auth()->user()->email }}</div>
                     <nav class="pf-sidebar-nav">
                         <a href="{{ route('profile') }}" class="pf-nav-link">
@@ -72,8 +72,8 @@
                          style="width:88px;height:88px;background:rgba(0,102,204,.08);color:#0066cc;font-size:2.2rem">
                         <i class="fa-regular fa-calendar"></i>
                     </div>
-                    <h2 class="h4 fw-bold mb-2" style="color:#0E1B33">Nessuna prenotazione ancora</h2>
-                    <p class="text-muted mb-4">Scopri i nostri tour in catamarano lungo la Costiera. La prossima esperienza inizia qui.</p>
+                    <h2 class="h4 fw-bold mb-2" style="color:#0E1B33">{{ __('account.my_bookings.empty_title') }}</h2>
+                    <p class="text-muted mb-4">{{ __('account.my_bookings.empty_text') }}</p>
                     <a href="{{ route('tours.index') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold">
                         <i class="fa-solid fa-compass me-2"></i>Esplora i tour
                     </a>
@@ -105,9 +105,9 @@
                                         </div>
                                     @endif
                                     @if($isToday)
-                                        <span class="bk-tag bk-tag-today"><i class="fa-solid fa-bolt me-1"></i>Oggi</span>
+                                        <span class="bk-tag bk-tag-today"><i class="fa-solid fa-bolt me-1"></i>{{ __('account.my_bookings.today') }}</span>
                                     @elseif($isUpcoming)
-                                        <span class="bk-tag bk-tag-upcoming"><i class="fa-regular fa-calendar me-1"></i>In arrivo</span>
+                                        <span class="bk-tag bk-tag-upcoming"><i class="fa-regular fa-calendar me-1"></i>{{ __('account.my_bookings.upcoming') }}</span>
                                     @endif
                                 </div>
 
@@ -119,15 +119,15 @@
                                             <i class="fa-solid {{ $s['icon'] }}"></i>{{ $s['label'] }}
                                         </span>
                                     </div>
-                                    <h3 class="bk-card-title">{{ $booking->tour->name ?? 'Tour' }}</h3>
+                                    <h3 class="bk-card-title">{{ $booking->tour->name ?? __('account.detail.tour_fallback') }}</h3>
                                     <div class="bk-card-meta">
                                         @if($booking->booking_date)
-                                            <span><i class="fa-regular fa-calendar"></i>{{ $booking->booking_date->locale('it')->isoFormat('ddd D MMM YYYY') }}</span>
+                                            <span><i class="fa-regular fa-calendar"></i>{{ $booking->booking_date->locale(app()->getLocale())->isoFormat('ddd D MMM YYYY') }}</span>
                                         @endif
                                         @if($booking->departure?->start_time)
                                             <span><i class="fa-regular fa-clock"></i>{{ Carbon::parse($booking->departure->start_time)->format('H:i') }}</span>
                                         @endif
-                                        <span><i class="fa-regular fa-user"></i>{{ $booking->seats }} {{ $booking->seats === 1 ? 'posto' : 'posti' }}</span>
+                                        <span><i class="fa-regular fa-user"></i>{{ trans_choice('account.common.seat', $booking->seats, ['count' => $booking->seats]) }}</span>
                                     </div>
                                 </div>
 
@@ -140,7 +140,7 @@
                                         </a>
                                         @if(in_array($key, ['confirmed', 'checked_in', 'completed']))
                                             <a href="{{ route('booking.tickets', $booking->uuid) }}" class="bk-btn bk-btn-ghost">
-                                                <i class="fa-solid fa-ticket"></i>Biglietti
+                                                <i class="fa-solid fa-ticket"></i>{{ __('account.tickets.title') }}
                                             </a>
                                         @endif
                                     </div>

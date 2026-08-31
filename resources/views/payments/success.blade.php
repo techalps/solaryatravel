@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Prenotazione confermata — ' . $booking->booking_number)
+@section('title', __('account.success.title') . ' — ' . $booking->booking_number)
 
 @section('content')
 
@@ -12,8 +12,8 @@
                     <div class="mb-3 wow fadeInUp" style="font-size:4rem">
                         <i class="fa-solid fa-circle-check"></i>
                     </div>
-                    <h1 class="mb-2 wow fadeInUp">Prenotazione confermata!</h1>
-                    <p class="lead mb-0">Grazie {{ $booking->customer_first_name }}, abbiamo ricevuto il tuo pagamento.</p>
+                    <h1 class="mb-2 wow fadeInUp">{{ __('account.success.title') }}</h1>
+                    <p class="lead mb-0">{{ __('account.success.intro', ['name' => $booking->customer_first_name]) }}</p>
                 </div>
             </div>
         </div>
@@ -27,20 +27,20 @@
                     {{-- Confirmation card --}}
                     @if($booking->hasBalanceDue())
                         <div class="text-center mb-4 p-4 rounded-4" style="background:#eff6ff;border:1px solid #bfdbfe">
-                            <h3 class="mb-2" style="color:#0E1B33">Acconto ricevuto · <strong>#{{ $booking->booking_number }}</strong></h3>
-                            <p class="mb-2 text-muted">Grazie! Abbiamo registrato l'acconto. Il tuo posto è confermato.</p>
-                            <p class="mb-3 fw-semibold" style="color:#0E1B33">Saldo residuo: € {{ number_format((float) $booking->balance_amount, 2, ',', '.') }}@if($booking->balance_due_at) · entro il {{ \Carbon\Carbon::parse($booking->balance_due_at)->format('d/m/Y H:i') }}@endif</p>
+                            <h3 class="mb-2" style="color:#0E1B33">{{ __('account.success.deposit_title') }} · <strong>#{{ $booking->booking_number }}</strong></h3>
+                            <p class="mb-2 text-muted">{{ __('account.success.deposit_intro') }}</p>
+                            <p class="mb-3 fw-semibold" style="color:#0E1B33">{{ __('account.balance.balance_due') }}: € {{ number_format((float) $booking->balance_amount, 2, ',', '.') }}@if($booking->balance_due_at) · {{ __('account.success.by_date', ['date' => \Carbon\Carbon::parse($booking->balance_due_at)->format('d/m/Y H:i')]) }}@endif</p>
                             <a href="{{ route('booking.balance', $booking->uuid) }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
-                                <i class="fa-solid fa-wallet me-2"></i>Paga il saldo
+                                <i class="fa-solid fa-wallet me-2"></i>{{ __('account.success.pay_balance') }}
                             </a>
-                            <p class="mb-0 mt-2 text-muted small">Riceverai i biglietti via email una volta completato il saldo.</p>
+                            <p class="mb-0 mt-2 text-muted small">{{ __('account.success.deposit_tickets_later') }}</p>
                         </div>
                     @else
                         <div class="text-center mb-4 p-4 rounded-4" style="background:#f0fdf4;border:1px solid #bbf7d0">
-                            <h3 class="mb-2" style="color:#0E1B33">Prenotazione <strong>#{{ $booking->booking_number }}</strong></h3>
+                            <h3 class="mb-2" style="color:#0E1B33">{{ __('account.common.booking') }} <strong>#{{ $booking->booking_number }}</strong></h3>
                             <p class="mb-0 text-muted">
                                 <i class="fa-regular fa-envelope me-1"></i>
-                                Abbiamo inviato i biglietti e la ricevuta a <strong>{{ $booking->customer_email }}</strong>
+                                {{ __('account.success.sent_to') }} <strong>{{ $booking->customer_email }}</strong>
                             </p>
                         </div>
                     @endif
@@ -50,7 +50,7 @@
 
                             {{-- Tour & Departure --}}
                             <div class="tg-tour-about-inner mb-30">
-                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-water text-primary me-2"></i>Il tuo tour</h4>
+                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-water text-primary me-2"></i>{{ __('account.common.your_tour') }}</h4>
                                 <div class="d-flex align-items-start gap-3 p-3 rounded-3" style="background:#fafafa;border:1px solid #eef0f3">
                                     @if($booking->tour->primaryImage)
                                         <img src="{{ $booking->tour->primaryImage->url }}" alt="" style="width:110px;height:110px;border-radius:12px;object-fit:cover;flex:0 0 auto">
@@ -60,7 +60,7 @@
                                         @if($booking->departure)
                                             <div class="text-muted small mb-1">
                                                 <i class="fa-regular fa-calendar me-1 text-primary"></i>
-                                                {{ \Carbon\Carbon::parse($booking->departure->departure_date)->locale('it')->isoFormat('dddd D MMMM Y') }}
+                                                {{ \Carbon\Carbon::parse($booking->departure->departure_date)->locale(app()->getLocale())->isoFormat('dddd D MMMM Y') }}
                                                 · <i class="fa-regular fa-clock ms-1 me-1 text-primary"></i>
                                                 {{ \Carbon\Carbon::parse($booking->departure->start_time)->format('H:i') }}
                                             </div>
@@ -68,7 +68,7 @@
                                         @if($booking->tour->departure_point)
                                             <div class="text-muted small"><i class="fa-solid fa-location-dot me-1 text-primary"></i>{{ $booking->tour->departure_point }}</div>
                                         @endif
-                                        <div class="text-muted small"><i class="fa-regular fa-user-group me-1 text-primary"></i>{{ $booking->seats }} {{ $booking->seats === 1 ? 'partecipante' : 'partecipanti' }}</div>
+                                        <div class="text-muted small"><i class="fa-regular fa-user-group me-1 text-primary"></i>{{ trans_choice('account.common.participant', $booking->seats, ['count' => $booking->seats]) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -79,9 +79,9 @@
                             @php $seats = $booking->seatRecords()->orderBy('seat_number')->get(); @endphp
                             @if($seats->isNotEmpty())
                                 <div class="tg-tour-about-inner mb-30">
-                                    <h4 class="tg-tour-about-title mb-10 text-center"><i class="fa-solid fa-qrcode text-primary me-2"></i>Biglietti di tutti i partecipanti</h4>
+                                    <h4 class="tg-tour-about-title mb-10 text-center"><i class="fa-solid fa-qrcode text-primary me-2"></i>{{ __('account.success.all_tickets') }}</h4>
                                     <p class="text-muted small text-center mb-4">
-                                        Ogni partecipante ha il proprio biglietto.
+                                        {{ __('account.tickets.one_per_passenger') }}
                                     </p>
 
                                     <div class="row g-3 justify-content-center">
@@ -89,15 +89,15 @@
                                             <div class="col-md-6">
                                                 <div class="p-3 rounded-3 text-center h-100" style="background:#fff;border:1px solid #eef0f3">
                                                     <div class="small fw-bold mb-2" style="color:#0E1B33">
-                                                        <i class="fa-solid fa-ticket me-1 text-primary"></i>Posto #{{ $seat->seat_number }}
+                                                        <i class="fa-solid fa-ticket me-1 text-primary"></i>{{ __('account.tickets.seat') }} #{{ $seat->seat_number }}
                                                         @if($seat->is_primary)
-                                                            <span class="badge bg-warning-subtle text-warning ms-1">Prenotante</span>
+                                                            <span class="badge bg-warning-subtle text-warning ms-1">{{ __('account.common.lead_booker') }}</span>
                                                         @elseif($seat->ageBracket)
                                                             <span class="badge bg-info-subtle text-info ms-1">{{ $seat->ageBracket->label }}</span>
                                                         @endif
                                                     </div>
                                                     <div class="small text-muted mb-2" style="min-height:1.4em">
-                                                        {{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: '— Nome da compilare —' }}
+                                                        {{ trim(($seat->guest_first_name ?? '') . ' ' . ($seat->guest_last_name ?? '')) ?: __('account.detail.passenger_todo') }}
                                                     </div>
                                                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ urlencode($seat->qr_code) }}" alt="QR" style="display:block;margin:0 auto;max-width:180px">
                                                     <div class="mt-2 small text-muted"><code>{{ $seat->qr_code }}</code></div>
@@ -117,32 +117,32 @@
 
                             {{-- Summary --}}
                             <div class="tg-tour-about-inner mb-30">
-                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-receipt text-primary me-2"></i>Riepilogo importi</h4>
+                                <h4 class="tg-tour-about-title mb-15"><i class="fa-solid fa-receipt text-primary me-2"></i>{{ __('account.common.amounts_summary') }}</h4>
                                 <div class="bk-summary-mini">
                                     <div class="bk-summary-line">
-                                        <span>Subtotale</span>
+                                        <span>{{ __('account.common.subtotal') }}</span>
                                         <span>€{{ number_format($booking->base_price, 2, ',', '.') }}</span>
                                     </div>
                                     @if($booking->addons_total > 0)
                                         <div class="bk-summary-line">
-                                            <span>Extra</span>
+                                            <span>{{ __('account.common.extras') }}</span>
                                             <span>€{{ number_format($booking->addons_total, 2, ',', '.') }}</span>
                                         </div>
                                     @endif
                                     @if($booking->discount_amount > 0)
                                         <div class="bk-summary-line discount">
-                                            <span><i class="fa-solid fa-tag me-1"></i>Sconto</span>
+                                            <span><i class="fa-solid fa-tag me-1"></i>{{ __('account.common.discount') }}</span>
                                             <span>− €{{ number_format($booking->discount_amount, 2, ',', '.') }}</span>
                                         </div>
                                     @endif
                                     @if($booking->tax_amount > 0)
                                         <div class="bk-summary-line text-muted">
-                                            <span>IVA</span>
+                                            <span>{{ __('account.common.vat') }}</span>
                                             <span>€{{ number_format($booking->tax_amount, 2, ',', '.') }}</span>
                                         </div>
                                     @endif
                                     <div class="bk-summary-line fw-bold pt-2 mt-2" style="border-top:1px solid #e4e4e4;font-size:1.1rem">
-                                        <span>Totale pagato</span>
+                                        <span>{{ __('account.success.total_paid') }}</span>
                                         <span class="text-primary">€{{ number_format($booking->total_amount, 2, ',', '.') }}</span>
                                     </div>
                                 </div>
@@ -163,8 +163,8 @@
                             @endif
 
                             <div class="text-center mt-4">
-                                <a href="{{ route('home') }}" class="tg-btn tg-btn-switch-animation me-2"><i class="fa-solid fa-house me-2"></i>Torna alla home</a>
-                                <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-transparent"><i class="fa-solid fa-compass me-2"></i>Esplora altri tour</a>
+                                <a href="{{ route('home') }}" class="tg-btn tg-btn-switch-animation me-2"><i class="fa-solid fa-house me-2"></i>{{ __('account.success.back_home') }}</a>
+                                <a href="{{ route('tours.index') }}" class="tg-btn tg-btn-transparent"><i class="fa-solid fa-compass me-2"></i>{{ __('account.success.explore_tours') }}</a>
                             </div>
 
                         </div>

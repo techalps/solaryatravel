@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Pagamento annullato — ' . $booking->booking_number)
+@section('title', __('account.cancel.title') . ' — ' . $booking->booking_number)
 
 @section('content')
 
@@ -11,8 +11,8 @@
                     <div class="mb-3 wow fadeInUp" style="font-size:4rem">
                         <i class="fa-solid fa-circle-xmark"></i>
                     </div>
-                    <h1 class="mb-2 wow fadeInUp">Pagamento annullato</h1>
-                    <p class="lead mb-0">La tua prenotazione è ancora in attesa — puoi riprovare quando vuoi.</p>
+                    <h1 class="mb-2 wow fadeInUp">{{ __('account.cancel.title') }}</h1>
+                    <p class="lead mb-0">{{ __('account.cancel.intro') }}</p>
                 </div>
             </div>
         </div>
@@ -24,8 +24,8 @@
                 <div class="col-xl-7 col-lg-8">
 
                     <div class="text-center mb-4 p-4 rounded-4" style="background:#fff7ed;border:1px solid #fed7aa">
-                        <h3 class="mb-2" style="color:#0E1B33">Prenotazione <strong>#{{ $booking->booking_number }}</strong></h3>
-                        <p class="mb-0 text-muted">Nessun importo è stato addebitato. La prenotazione resta valida fino alla scadenza.</p>
+                        <h3 class="mb-2" style="color:#0E1B33">{{ __('account.common.booking') }} <strong>#{{ $booking->booking_number }}</strong></h3>
+                        <p class="mb-0 text-muted">{{ __('account.cancel.no_charge') }}</p>
                     </div>
 
                     <div class="tg-tour-about-wrap">
@@ -36,12 +36,12 @@
                                 @if($booking->departure)
                                     <p class="lh-28 mb-2">
                                         <i class="fa-regular fa-calendar me-1 text-primary"></i>
-                                        {{ \Carbon\Carbon::parse($booking->departure->departure_date)->locale('it')->isoFormat('dddd D MMMM Y') }}
+                                        {{ \Carbon\Carbon::parse($booking->departure->departure_date)->locale(app()->getLocale())->isoFormat('dddd D MMMM Y') }}
                                         alle {{ \Carbon\Carbon::parse($booking->departure->start_time)->format('H:i') }}
                                     </p>
                                 @endif
                                 <p class="lh-28 mb-0">
-                                    <strong>Totale da pagare:</strong>
+                                    <strong>{{ __('account.cancel.total_due') }}</strong>
                                     <span class="text-primary fw-bold">€{{ number_format($booking->total_amount, 2, ',', '.') }}</span>
                                 </p>
                             </div>
@@ -58,7 +58,7 @@
                             @if($booking->payment_deadline)
                                 <p class="text-center text-muted small mt-3 mb-0">
                                     <i class="fa-regular fa-clock me-1"></i>
-                                    Scadenza pagamento: {{ \Carbon\Carbon::parse($booking->payment_deadline)->locale('it')->isoFormat('D MMM YYYY · HH:mm') }}
+                                    {{ __('account.common.deadline') }}: {{ \Carbon\Carbon::parse($booking->payment_deadline)->locale(app()->getLocale())->isoFormat('D MMM YYYY · HH:mm') }}
                                 </p>
                             @endif
 
