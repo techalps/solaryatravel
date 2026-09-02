@@ -90,9 +90,12 @@ class AddonController extends Controller
             'avg_quantity' => $addon->bookings()->avg('booking_addons.quantity') ?? 0,
         ];
 
+        // Come sopra: 'catamaran' sta su BookingSeat. E l'ordinamento va
+        // qualificato, perche' latest() su una relazione con pivot senza
+        // timestamp cerca booking_addons.created_at.
         $recentBookings = $addon->bookings()
-            ->with('catamaran')
-            ->latest()
+            ->with(['tour', 'seatRecords.catamaran'])
+            ->latest('bookings.created_at')
             ->limit(10)
             ->get();
 

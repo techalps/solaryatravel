@@ -60,9 +60,11 @@ class Addon extends Model
 
     public function bookings(): BelongsToMany
     {
+        // La pivot booking_addons ha solo created_at: withTimestamps() secco
+        // fa cercare anche booking_addons.updated_at, che non esiste, e ogni
+        // query sulla relazione va in errore.
         return $this->belongsToMany(Booking::class, 'booking_addons')
-            ->withPivot(['quantity', 'unit_price', 'total_price'])
-            ->withTimestamps();
+            ->withPivot(['quantity', 'unit_price', 'total_price', 'created_at']);
     }
 
     // Scopes

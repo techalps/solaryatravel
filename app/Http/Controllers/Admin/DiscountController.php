@@ -104,8 +104,10 @@ class DiscountController extends Controller
      */
     public function show(DiscountCode $discount): View
     {
+        // 'catamaran' e' una relazione di BookingSeat, non di Booking: qui
+        // faceva andare in 500 la pagina di dettaglio del codice sconto.
         $recentBookings = $discount->bookings()
-            ->with('catamaran')
+            ->with(['tour', 'seatRecords.catamaran'])
             ->latest()
             ->limit(10)
             ->get();
