@@ -184,6 +184,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::get('/bookings-api/tours/{tour:id}/departures', [AdminBookingController::class, 'departuresJson'])->name('bookings.departures.json');
     // Disponibilità catamarani per uso esclusivo su un periodo (date libere).
     Route::get('/bookings-api/tours/{tour:id}/catamaran-availability', [AdminBookingController::class, 'catamaranAvailability'])->name('bookings.catamaran-availability');
+    // Centro notifiche: il feed è interrogato dal polling della campanella.
+    Route::get('/notifiche', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifiche/feed', [\App\Http\Controllers\Admin\NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::post('/notifiche/segna-tutte-lette', [\App\Http\Controllers\Admin\NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('/notifiche/elimina-tutte', [\App\Http\Controllers\Admin\NotificationController::class, 'destroyAll'])->name('notifications.destroy-all');
+    Route::get('/notifiche/{notification}/apri', [\App\Http\Controllers\Admin\NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('/notifiche/{notification}/letta', [\App\Http\Controllers\Admin\NotificationController::class, 'readAjax'])->name('notifications.read-ajax');
+    Route::delete('/notifiche/{notification}', [\App\Http\Controllers\Admin\NotificationController::class, 'destroy'])->name('notifications.destroy');
+
     // Completamento in blocco dall'elenco (deve stare prima di /bookings/{booking}).
     Route::post('/bookings/completa-in-blocco', [AdminBookingController::class, 'bulkComplete'])->name('bookings.bulk-complete');
     Route::post('/bookings/{booking}/completa', [AdminBookingController::class, 'complete'])->name('bookings.complete');

@@ -147,11 +147,18 @@ ogni ora), con questi percorsi (relativi alla home, senza `..`):
 ```
 www/cron/send-reminders.php
 www/cron/expire-unpaid.php
+www/cron/scan-notifications.php
 ```
 
 I comandi sono idempotenti (ogni email parte una sola volta, flag `*_sent_at`) e usano
 finestre ampie, quindi il passo orario è sufficiente. Senza questi cron, i reminder e
 le scadenze non partono.
+
+`scan-notifications.php` genera le notifiche admin che dipendono da una **condizione**
+(prenotazioni in scadenza, saldi scaduti, documenti mancanti a partenza vicina). Anche
+questo è idempotente: una segnalazione per prenotazione, non ripetuta a ogni giro.
+Le notifiche di **evento** (nuova prenotazione, incasso, annullamento) NON dipendono dal
+cron: le crea l'observer nell'istante in cui accadono.
 
 ### 1.9 Pagamenti: acconto, bonifico, penali
 

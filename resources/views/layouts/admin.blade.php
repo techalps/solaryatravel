@@ -77,6 +77,19 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.notifications.index') }}" class="nav-link d-flex align-items-center {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}">
+                            <i class="bi bi-bell me-2"></i>Notifiche
+                            {{-- Contatore lato server: la campanella in alto lo
+                                 aggiorna via polling, qui vale al caricamento. --}}
+                            @php($nonLetteMenu = auth()->user()?->hasFullAdminAccess()
+                                ? app(\App\Services\AdminNotificationService::class)->unreadCount(auth()->user())
+                                : 0)
+                            @if($nonLetteMenu > 0)
+                                <span class="badge rounded-pill bg-danger ms-auto">{{ $nonLetteMenu > 99 ? '99+' : $nonLetteMenu }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.schedule') }}" class="nav-link {{ request()->routeIs('admin.schedule') ? 'active' : '' }}">
                             <i class="bi bi-calendar2-event me-2"></i>Programma Oggi
                         </a>
@@ -213,6 +226,38 @@
                         <a href="{{ route('booking.start') }}" target="_blank" class="btn btn-sm btn-primary d-none d-sm-inline-flex align-items-center">
                             <i class="bi bi-box-arrow-up-right me-2"></i>Vedi Sito
                         </a>
+                        {{-- Campanella notifiche: badge e menu si aggiornano da
+                             soli via polling (vedi lo script in fondo). --}}
+                        <div class="dropdown" id="notifBell">
+                            <button class="btn btn-link text-secondary p-2 position-relative" type="button"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                    aria-label="Notifiche" title="Notifiche">
+                                <i class="bi bi-bell fs-5"></i>
+                                <span class="badge rounded-pill bg-danger position-absolute d-none"
+                                      id="notifBadge"
+                                      style="top:2px;right:0;font-size:.65rem;min-width:1.15rem">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-0"
+                                 style="width:360px;max-width:92vw">
+                                <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+                                    <strong class="small">Notifiche</strong>
+                                    <form method="POST" action="{{ route('admin.notifications.read-all') }}" class="m-0">
+                                        @csrf
+                                        <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none small">
+                                            Segna tutte lette
+                                        </button>
+                                    </form>
+                                </div>
+                                <div id="notifList" style="max-height:min(60vh,420px);overflow-y:auto">
+                                    <div class="text-muted small text-center py-4">Caricamento…</div>
+                                </div>
+                                <a href="{{ route('admin.notifications.index') }}"
+                                   class="d-block text-center small py-2 border-top text-decoration-none">
+                                    Vedi tutte
+                                </a>
+                            </div>
+                        </div>
+
                         <span class="d-none d-xl-inline-flex align-items-center gap-2 px-3 py-2 bg-light rounded-3 small text-muted">
                             <i class="bi bi-calendar3"></i>
                             {{ now()->locale('it')->isoFormat('D MMM YYYY') }}
@@ -277,6 +322,114 @@
             backdrop?.addEventListener('click', hide);
         })();
     </script>
+    {{-- Toast notifiche, in alto a destra --}}
+    <div id="notifToasts" class="position-fixed d-flex flex-column gap-2"
+         style="top:76px;right:1rem;z-index:1085;max-width:360px;width:calc(100vw - 2rem)"></div>
+
+    <script>
+        // ===== Notifiche: badge, menu e toast =====
+        //
+        // Polling e non WebSocket: su hosting condiviso OVH non si possono
+        // tenere processi persistenti, quindi si interroga il feed ogni 30s.
+        // Il ritardo massimo percepito è mezzo minuto.
+        (function () {
+            const badge = document.getElementById('notifBadge');
+            const lista = document.getElementById('notifList');
+            const toasts = document.getElementById('notifToasts');
+            if (!badge || !lista) return;
+
+            const feedUrl = @json(route('admin.notifications.feed'));
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+            const readUrlTpl = @json(route('admin.notifications.read-ajax', ['notification' => '__ID__']));
+            const mostrati = new Set();   // toast già comparsi in questa pagina
+
+            function escapeHtml(v) {
+                const d = document.createElement('div');
+                d.textContent = v == null ? '' : String(v);
+                return d.innerHTML;
+            }
+
+            function renderBadge(n) {
+                badge.textContent = n > 99 ? '99+' : n;
+                badge.classList.toggle('d-none', n === 0);
+            }
+
+            function renderLista(items) {
+                if (!items.length) {
+                    lista.innerHTML = '<div class="text-muted small text-center py-4">Nessuna notifica.</div>';
+                    return;
+                }
+                lista.innerHTML = items.map(function (i) {
+                    return '<a href="' + i.url + '" class="d-flex gap-2 px-3 py-2 text-decoration-none border-bottom'
+                        + (i.read ? '' : ' bg-light') + '">'
+                        + '<i class="bi ' + escapeHtml(i.icon) + ' text-' + escapeHtml(i.color) + ' mt-1"></i>'
+                        + '<span class="flex-grow-1 small">'
+                        + '<span class="d-block fw-semibold text-dark">' + escapeHtml(i.title) + '</span>'
+                        + (i.body ? '<span class="d-block text-muted">' + escapeHtml(i.body) + '</span>' : '')
+                        + '<span class="d-block text-muted" style="font-size:.72rem">' + escapeHtml(i.ago) + '</span>'
+                        + '</span>'
+                        + (i.read ? '' : '<span class="badge bg-primary align-self-start" style="font-size:.6rem">nuova</span>')
+                        + '</a>';
+                }).join('');
+            }
+
+            function mostraToast(t) {
+                if (mostrati.has(t.id)) return;   // non ripetere a ogni ciclo
+                mostrati.add(t.id);
+
+                const el = document.createElement('div');
+                el.className = 'bg-white shadow rounded-4 border-0 overflow-hidden';
+                el.innerHTML = '<div class="d-flex gap-2 p-3">'
+                    + '<i class="bi ' + escapeHtml(t.icon) + ' text-' + escapeHtml(t.color) + ' fs-5"></i>'
+                    + '<div class="flex-grow-1 small">'
+                    + '<a href="' + t.url + '" class="fw-semibold text-dark d-block text-decoration-none">' + escapeHtml(t.title) + '</a>'
+                    + (t.body ? '<span class="text-muted">' + escapeHtml(t.body) + '</span>' : '')
+                    + '</div>'
+                    + '<button type="button" class="btn-close" aria-label="Chiudi"></button>'
+                    + '</div>';
+
+                function chiudi() {
+                    el.remove();
+                    // Segnala letta: il toast è stato visto, non deve ricomparire.
+                    if (csrf) {
+                        fetch(readUrlTpl.replace('__ID__', t.id), {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                        }).then(function (r) { return r.json(); })
+                          .then(function (d) { if (d && typeof d.unread === 'number') renderBadge(d.unread); })
+                          .catch(function () {});
+                    }
+                }
+
+                el.querySelector('.btn-close').addEventListener('click', chiudi);
+                toasts.appendChild(el);
+                setTimeout(chiudi, 12000);   // si chiude da sé
+            }
+
+            function aggiorna() {
+                // Con la scheda in background non serve interrogare il server.
+                if (document.hidden) return;
+
+                fetch(feedUrl, { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (!d) return;
+                        renderBadge(d.unread);
+                        renderLista(d.items || []);
+                        (d.toasts || []).forEach(mostraToast);
+                    })
+                    .catch(function () { /* rete assente: riprova al ciclo dopo */ });
+            }
+
+            aggiorna();
+            setInterval(aggiorna, 30000);
+            // Tornando sulla scheda si aggiorna subito, senza aspettare il ciclo.
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) aggiorna();
+            });
+        })();
+    </script>
+
     @stack('end-of-body')
 </body>
 </html>

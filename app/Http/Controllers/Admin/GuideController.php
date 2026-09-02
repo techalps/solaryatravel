@@ -21,6 +21,11 @@ class GuideController extends Controller
             'icon' => 'bi-book',
             'desc' => 'Panoramica del gestionale e come muoversi.',
         ],
+        'notifiche' => [
+            'title' => 'Centro notifiche',
+            'icon' => 'bi-bell',
+            'desc' => 'Campanella, avvisi a schermo e stato letto per operatore.',
+        ],
         'prenotazioni' => [
             'title' => 'Creare una prenotazione',
             'icon' => 'bi-journal-plus',

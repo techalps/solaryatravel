@@ -22,3 +22,10 @@ Schedule::command('bookings:expire-unpaid')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Notifiche admin che dipendono da una condizione (scadenze, documenti).
+// In produzione su OVH gira dal wrapper cron/scan-notifications.php: lo
+// scheduler serve in locale e su ambienti con schedule:run.
+Schedule::command('admin:scan-notifications')
+    ->hourly()
+    ->withoutOverlapping();
